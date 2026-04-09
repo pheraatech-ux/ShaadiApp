@@ -1,0 +1,2 @@
+-- Optional local seed data.
+-- Add insert statements here if you want to preload local development data.
