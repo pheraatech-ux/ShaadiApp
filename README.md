@@ -18,10 +18,11 @@ Professional starter platform for building a full-stack wedding planning product
 npm install
 ```
 
-2. Copy environment variables:
+2. Create `.env.local` in project root:
 
 ```bash
-cp .env.example .env.local
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
 3. Fill the Supabase values in `.env.local`.

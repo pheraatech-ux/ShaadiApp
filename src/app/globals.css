@@ -128,3 +128,8 @@
     @apply font-sans;
   }
 }
+
+/* intl-tel-input: force full width */
+.iti-full-width .iti {
+  width: 100%;
+}

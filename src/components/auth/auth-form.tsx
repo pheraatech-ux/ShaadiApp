@@ -1,12 +1,14 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { ArrowRight, Check, Loader2 } from "lucide-react";
+import { ArrowRight, Check, Eye, EyeOff, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Separator } from "@/components/ui/separator";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type AuthMode = "login" | "signup";
 
@@ -17,12 +19,24 @@ const features = [
   "Family and vendor portals included",
 ];
 
+const inputClass =
+  "h-12 rounded-xl bg-muted/50 px-4 text-[15px] transition-colors placeholder:text-muted-foreground/50 focus-visible:bg-background";
+const labelClass =
+  "text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground";
+
 export function AuthForm() {
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const router = useRouter();
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [mode, setMode] = useState<AuthMode>("login");
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +56,8 @@ export function AuthForm() {
       if (signInError) {
         setError(signInError.message);
       } else {
-        setMessage("Login successful. You are ready to continue.");
+        setMessage("Login successful. Redirecting...");
+        router.replace("/app");
       }
       setLoading(false);
       return;
@@ -53,7 +68,10 @@ export function AuthForm() {
       password,
       options: {
         data: {
-          full_name: fullName || null,
+          first_name: firstName || null,
+          last_name: lastName || null,
+          business_name: businessName || null,
+          phone: phone || null,
         },
       },
     });
@@ -61,7 +79,8 @@ export function AuthForm() {
     if (signUpError) {
       setError(signUpError.message);
     } else {
-      setMessage("Account created. Check your email if confirmation is enabled.");
+      setMessage("Account created. You can now sign in.");
+      setMode("login");
     }
     setLoading(false);
   }
@@ -132,7 +151,7 @@ export function AuthForm() {
             <p className="text-base text-muted-foreground">
               {mode === "login"
                 ? "Sign in to your planner account to continue."
-                : "Create your account and start planning faster."}
+                : "Set up your planner profile in 30 seconds."}
             </p>
           </div>
 
@@ -158,54 +177,88 @@ export function AuthForm() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Create Account
+              Sign Up
             </button>
           </div>
 
           {/* Form */}
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-5" onSubmit={handleSubmit}>
             {mode === "signup" && (
-              <div className="space-y-2.5">
-                <label
-                  htmlFor="full_name"
-                  className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground"
-                >
-                  Full Name
-                </label>
-                <Input
-                  id="full_name"
-                  value={fullName}
-                  placeholder="Aarav Sharma"
-                  className="h-12 rounded-xl bg-muted/50 px-4 text-[15px] transition-colors placeholder:text-muted-foreground/50 focus-visible:bg-background"
-                  onChange={(e) => setFullName(e.target.value)}
-                />
-              </div>
+              <>
+                {/* First / Last Name row */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="first_name" className={labelClass}>
+                      First Name
+                    </label>
+                    <Input
+                      id="first_name"
+                      value={firstName}
+                      required
+                      placeholder="Meera"
+                      className={inputClass}
+                      onChange={(e) => setFirstName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="last_name" className={labelClass}>
+                      Last Name
+                    </label>
+                    <Input
+                      id="last_name"
+                      value={lastName}
+                      required
+                      placeholder="Sharma"
+                      className={inputClass}
+                      onChange={(e) => setLastName(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Business Name */}
+                <div className="space-y-2">
+                  <label htmlFor="business_name" className={labelClass}>
+                    Business Name
+                  </label>
+                  <Input
+                    id="business_name"
+                    value={businessName}
+                    placeholder="Meera Events"
+                    className={inputClass}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                  />
+                </div>
+              </>
             )}
 
-            <div className="space-y-2.5">
-              <label
-                htmlFor="email"
-                className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground"
-              >
-                Email Address
+            {/* Email */}
+            <div className="space-y-2">
+              <label htmlFor="email" className={labelClass}>
+                Email
               </label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 required
-                placeholder="meera@planner.com"
-                className="h-12 rounded-xl bg-muted/50 px-4 text-[15px] transition-colors placeholder:text-muted-foreground/50 focus-visible:bg-background"
+                placeholder="your@email.com"
+                className={inputClass}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
 
-            <div className="space-y-2.5">
+            {/* Phone Number (signup only) */}
+            {mode === "signup" && (
+              <div className="space-y-2">
+                <label className={labelClass}>Phone Number</label>
+                <PhoneInput value={phone} onChangeNumber={setPhone} />
+              </div>
+            )}
+
+            {/* Password */}
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label
-                  htmlFor="password"
-                  className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground"
-                >
+                <label htmlFor="password" className={labelClass}>
                   Password
                 </label>
                 {mode === "login" && (
@@ -217,15 +270,29 @@ export function AuthForm() {
                   </button>
                 )}
               </div>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                required
-                placeholder="Min. 6 characters"
-                className="h-12 rounded-xl bg-muted/50 px-4 text-[15px] transition-colors placeholder:text-muted-foreground/50 focus-visible:bg-background"
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  required
+                  placeholder="Min. 6 characters"
+                  className={`${inputClass} pr-11`}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="size-[18px]" />
+                  ) : (
+                    <Eye className="size-[18px]" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <Button
@@ -240,7 +307,7 @@ export function AuthForm() {
                 </>
               ) : (
                 <>
-                  {mode === "login" ? "Sign In" : "Create Account"}
+                  {mode === "login" ? "Sign In" : "Create my account"}
                   <ArrowRight className="size-4" />
                 </>
               )}
@@ -317,11 +384,17 @@ export function AuthForm() {
           {/* Footer */}
           <p className="mt-8 text-center text-xs text-muted-foreground">
             By continuing, you agree to our{" "}
-            <button type="button" className="font-medium underline underline-offset-2 hover:text-foreground">
+            <button
+              type="button"
+              className="font-medium underline underline-offset-2 hover:text-foreground"
+            >
               Terms
             </button>{" "}
             and{" "}
-            <button type="button" className="font-medium underline underline-offset-2 hover:text-foreground">
+            <button
+              type="button"
+              className="font-medium underline underline-offset-2 hover:text-foreground"
+            >
               Privacy Policy
             </button>
             .
