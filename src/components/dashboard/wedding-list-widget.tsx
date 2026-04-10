@@ -1,18 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, CalendarDays, MapPin } from "lucide-react";
+import { CalendarDays, MapPin } from "lucide-react";
 
+import { AddWeddingFlowDialog } from "@/components/dashboard/add-wedding-flow-dialog";
 import { DonutChart } from "@/components/dashboard/donut-chart";
+import { NewWeddingPlaceholderCard } from "@/components/dashboard/new-wedding-placeholder-card";
 import { SectionCard } from "@/components/dashboard/section-card";
+import { WeddingHeaderActions } from "@/components/dashboard/wedding-header-actions";
 import { WeddingItem, WeddingStatus } from "@/components/dashboard/types";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type WeddingListWidgetProps = {
   items: WeddingItem[];
+  onCreateWedding?: () => void;
+  onViewAll?: () => void;
 };
 
 type FilterTab = "all" | WeddingStatus;
@@ -84,11 +88,21 @@ function WeddingCard({ item }: { item: WeddingItem }) {
   );
 }
 
-export function WeddingListWidget({ items }: WeddingListWidgetProps) {
+export function WeddingListWidget({
+  items,
+  onCreateWedding,
+  onViewAll,
+}: WeddingListWidgetProps) {
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
+  const [openCreateDialog, setOpenCreateDialog] = useState(false);
 
   const filtered =
     activeTab === "all" ? items : items.filter((w) => w.status === activeTab);
+
+  function handleCreateWedding() {
+    onCreateWedding?.();
+    setOpenCreateDialog(true);
+  }
 
   const filterBar = (
     <div className="flex w-fit gap-0.5 rounded-lg bg-muted/60 p-0.5">
@@ -115,26 +129,24 @@ export function WeddingListWidget({ items }: WeddingListWidgetProps) {
       title="My weddings"
       middle={filterBar}
       action={
-        <Button variant="ghost" size="sm" className="rounded-xl">
-          View all
-          <ArrowRight />
-        </Button>
+        <WeddingHeaderActions
+          onCreateWedding={handleCreateWedding}
+          onViewAll={onViewAll}
+        />
       }
       contentClassName="px-3 py-3 sm:px-4 sm:py-3"
     >
       <div className="scrollbar-hide flex gap-3 overflow-x-auto pb-1">
-        {filtered.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground w-full">
-            No weddings in this category.
-          </p>
-        ) : (
-          filtered.map((item) => (
-            <div key={item.id} className="w-[320px] shrink-0">
-              <WeddingCard item={item} />
-            </div>
-          ))
-        )}
+        {filtered.map((item) => (
+          <div key={item.id} className="w-[320px] shrink-0">
+            <WeddingCard item={item} />
+          </div>
+        ))}
+        <div className="w-[320px] shrink-0">
+          <NewWeddingPlaceholderCard onCreateWedding={handleCreateWedding} />
+        </div>
       </div>
+      <AddWeddingFlowDialog open={openCreateDialog} onOpenChange={setOpenCreateDialog} />
     </SectionCard>
   );
 }
