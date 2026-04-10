@@ -3,9 +3,20 @@ import { CalendarCheck2, ClipboardList, LayoutGrid, MessageSquare, Wallet } from
 import { ComponentType } from "react";
 
 import { SidebarProfileMenu } from "@/components/dashboard/sidebar-profile-menu";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+} from "@/components/ui/sidebar";
 
 type SidebarItem = {
   label: string;
@@ -29,10 +40,6 @@ const sidebarItems: SidebarItem[] = [
   { label: "Messages", href: "/app/messages", icon: MessageSquare, badgeCount: 3 },
 ];
 
-type AppSidebarCompactProps = {
-  currentPath?: string;
-};
-
 export function AppSidebar({
   workspaceName,
   userName,
@@ -40,68 +47,50 @@ export function AppSidebar({
   currentPath = "/app",
 }: AppSidebarProps) {
   return (
-    <div className="flex h-full w-full flex-col px-3 py-4">
-      <div className="rounded-xl border border-sidebar-border/70 bg-sidebar-accent/60 px-3 py-3">
-        <p className="text-base font-semibold">{workspaceName}</p>
-        <p className="text-xs text-sidebar-foreground/70">Workspace</p>
-      </div>
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <div className="flex min-h-14 items-center rounded-xl border border-sidebar-border/70 bg-sidebar-accent/60 px-3 py-3 group-data-[collapsible=icon]:min-h-8 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0">
+          <p className="truncate text-base font-semibold group-data-[collapsible=icon]:hidden">
+            {workspaceName}
+          </p>
+          <p className="hidden text-sm font-semibold group-data-[collapsible=icon]:block">
+            {workspaceName.slice(0, 1).toUpperCase()}
+          </p>
+          <p className="text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden">Workspace</p>
+        </div>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {sidebarItems.map((item) => {
+                const active = currentPath === item.href;
+                const Icon = item.icon;
 
-      <nav className="mt-5 flex-1 space-y-1.5">
-        {sidebarItems.map((item) => {
-          const active = currentPath === item.href;
-          const Icon = item.icon;
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex h-11 w-full items-center gap-2.5 rounded-xl px-3 text-sidebar-foreground transition-colors hover:bg-sidebar-accent",
-                active && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90",
-              )}
-            >
-              <Icon className="size-4 shrink-0" />
-              <span className="truncate text-base font-semibold">{item.label}</span>
-              {item.badgeCount ? (
-                <Badge
-                  variant={active ? "secondary" : "outline"}
-                  className="ml-auto rounded-full border-sidebar-border bg-sidebar px-2 text-[10px] text-sidebar-foreground"
-                >
-                  {item.badgeCount}
-                </Badge>
-              ) : null}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <SidebarProfileMenu userName={userName} userEmail={userEmail} />
-    </div>
-  );
-}
-
-export function AppSidebarCompact({ currentPath = "/app" }: AppSidebarCompactProps) {
-  return (
-    <nav className="flex gap-2 overflow-x-auto pb-1">
-      {sidebarItems.map((item) => {
-        const active = currentPath === item.href;
-        const Icon = item.icon;
-
-        return (
-          <Button
-            key={item.href}
-            asChild
-            variant={active ? "default" : "outline"}
-            size="sm"
-            className="rounded-xl"
-          >
-            <Link href={item.href}>
-              <Icon className="size-3.5" />
-              {item.label}
-            </Link>
-          </Button>
-        );
-      })}
-    </nav>
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      render={<Link href={item.href} />}
+                      isActive={active}
+                      size="lg"
+                      tooltip={item.label}
+                    >
+                      <Icon className="size-4 shrink-0" />
+                      <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                    </SidebarMenuButton>
+                    {item.badgeCount ? <SidebarMenuBadge>{item.badgeCount}</SidebarMenuBadge> : null}
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        <SidebarProfileMenu userName={userName} userEmail={userEmail} />
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
   );
 }

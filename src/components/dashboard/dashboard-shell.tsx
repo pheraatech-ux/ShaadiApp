@@ -1,29 +1,24 @@
 import { ReactNode } from "react";
 
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+
 type DashboardShellProps = {
   sidebar: ReactNode;
   topbar: ReactNode;
-  mobileSidebar?: ReactNode;
   children: ReactNode;
 };
 
-export function DashboardShell({ sidebar, topbar, mobileSidebar, children }: DashboardShellProps) {
+export function DashboardShell({ sidebar, topbar, children }: DashboardShellProps) {
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto flex min-h-screen w-full max-w-[1600px]">
-        <aside className="hidden h-screen w-72 shrink-0 border-r bg-sidebar text-sidebar-foreground lg:sticky lg:top-0 lg:flex">
-          {sidebar}
-        </aside>
-        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-          <header className="border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 sm:px-6">
-            {topbar}
-          </header>
-          {mobileSidebar ? (
-            <div className="border-b px-4 py-2 lg:hidden sm:px-6">{mobileSidebar}</div>
-          ) : null}
-          <main className="flex-1 px-4 py-5 sm:px-6 sm:py-6">{children}</main>
-        </div>
-      </div>
-    </div>
+    <SidebarProvider defaultOpen>
+      {sidebar}
+      <SidebarInset className="h-svh overflow-hidden">
+        <header className="shrink-0 flex items-center gap-2 border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 sm:px-6">
+          <SidebarTrigger className="-ml-1" />
+          <div className="min-w-0 flex-1">{topbar}</div>
+        </header>
+        <main className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

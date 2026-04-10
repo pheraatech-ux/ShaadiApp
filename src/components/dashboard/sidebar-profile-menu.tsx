@@ -53,18 +53,18 @@ export function SidebarProfileMenu({ userName, userEmail }: SidebarProfileMenuPr
   return (
     <Popover>
       <PopoverTrigger
-        className="mt-auto flex w-full items-center gap-2.5 rounded-xl border border-sidebar-border/70 bg-sidebar-accent/50 px-3 py-2.5 text-left transition-colors hover:bg-sidebar-accent"
+        className="flex w-full items-center gap-2.5 rounded-xl border border-sidebar-border/70 bg-sidebar-accent/50 px-2.5 py-2.5 text-left transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:p-0"
       >
         <Avatar size="default">
           <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-xs font-semibold">
             {getInitials(userName)}
           </AvatarFallback>
         </Avatar>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
           <p className="truncate text-sm font-medium text-sidebar-foreground">{userName}</p>
           <p className="truncate text-xs text-sidebar-foreground/60">{userEmail}</p>
         </div>
-        <Ellipsis className="size-4 shrink-0 text-sidebar-foreground/50" />
+        <Ellipsis className="size-4 shrink-0 text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden" />
       </PopoverTrigger>
 
       <PopoverContent side="top" align="start" sideOffset={8} className="w-64 rounded-xl p-0">

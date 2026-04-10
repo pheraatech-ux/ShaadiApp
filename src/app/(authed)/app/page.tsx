@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 
-import { AppSidebarCompact } from "@/components/dashboard/app-sidebar";
 import { DashboardContent } from "@/components/dashboard/dashboard-content";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeletons";
@@ -20,7 +19,6 @@ export default function AppHomePage() {
           <DashboardTopbarLive />
         </Suspense>
       }
-      mobileSidebar={<AppSidebarCompact currentPath="/app" />}
     >
       <Suspense fallback={<DashboardSkeleton />}>
         <DashboardContent />
