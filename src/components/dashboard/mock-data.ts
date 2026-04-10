@@ -1,0 +1,125 @@
+import { DashboardViewModel } from "@/components/dashboard/types";
+
+export const dashboardMockData: DashboardViewModel = {
+  greeting: "Good morning, Meera",
+  workspaceName: "Shaadios Plannersuite",
+  userName: "Meera Events",
+  userEmail: "meera@events.co",
+  stats: [
+    {
+      id: "active-weddings",
+      title: "Active Weddings",
+      value: "4",
+      helperText: "2 this month",
+      progress: 68,
+    },
+    {
+      id: "tasks-overdue",
+      title: "Tasks Overdue",
+      value: "7",
+      helperText: "Needs attention",
+      progress: 28,
+    },
+    {
+      id: "total-budget",
+      title: "Total Budget Managed",
+      value: "1.6Cr",
+      helperText: "48L advance paid",
+      progress: 61,
+    },
+    {
+      id: "vendors-unconfirmed",
+      title: "Vendors Unconfirmed",
+      value: "18",
+      helperText: "9 of 26 total (69%)",
+      progress: 31,
+    },
+  ],
+  alerts: [
+    {
+      id: "overdue",
+      message:
+        "7 tasks are overdue across your active weddings - Priya & Rahul (3), Sneha & Karan (4).",
+      ctaLabel: "Review now",
+    },
+  ],
+  weddings: [
+    {
+      id: "priya-rahul",
+      name: "Priya & Rahul",
+      city: "Mumbai",
+      firstEventDate: "Dec 15",
+      daysLeft: 52,
+      tasksDone: 8,
+      tasksTotal: 26,
+      status: "upcoming",
+    },
+    {
+      id: "sneha-karan",
+      name: "Sneha & Karan",
+      city: "Delhi",
+      firstEventDate: "Dec 22",
+      daysLeft: 7,
+      tasksDone: 21,
+      tasksTotal: 26,
+      status: "upcoming",
+    },
+    {
+      id: "ananya-dev",
+      name: "Ananya & Dev",
+      city: "Jaipur",
+      firstEventDate: "Feb 14",
+      daysLeft: 80,
+      tasksDone: 6,
+      tasksTotal: 24,
+      status: "upcoming",
+    },
+    {
+      id: "ritu-arjun",
+      name: "Ritu & Arjun",
+      city: "Udaipur",
+      firstEventDate: "Oct 5",
+      daysLeft: 0,
+      tasksDone: 30,
+      tasksTotal: 30,
+      status: "completed",
+    },
+  ],
+  urgentTasks: [
+    {
+      id: "task-1",
+      title: "Confirm mehendi artist arrival",
+      owner: "Vendor",
+      overdueLabel: "2d overdue",
+    },
+    {
+      id: "task-2",
+      title: "Venue walkthrough sign-off",
+      owner: "Planner",
+      overdueLabel: "1d overdue",
+    },
+    {
+      id: "task-3",
+      title: "Finalize menu with caterer",
+      owner: "Vendor",
+    },
+    {
+      id: "task-4",
+      title: "Book florist for reception",
+      owner: "Planner",
+    },
+    {
+      id: "task-5",
+      title: "Book DJ for sangeet",
+      owner: "Done",
+      completed: true,
+    },
+  ],
+  weeklyCompletion: [
+    { id: "monday", label: "M", value: 42 },
+    { id: "tuesday", label: "T", value: 58 },
+    { id: "wednesday", label: "W", value: 36 },
+    { id: "thursday", label: "T", value: 72 },
+    { id: "friday", label: "F", value: 66 },
+  ],
+};

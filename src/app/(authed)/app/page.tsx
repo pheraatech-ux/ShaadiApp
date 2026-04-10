@@ -1,10 +1,30 @@
+import { Suspense } from "react";
+
+import { AppSidebarCompact } from "@/components/dashboard/app-sidebar";
+import { DashboardContent } from "@/components/dashboard/dashboard-content";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeletons";
+import { DashboardTopbarLive } from "@/components/dashboard/dashboard-topbar-live";
+import { SidebarLive } from "@/components/dashboard/sidebar-live";
+
 export default function AppHomePage() {
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-4 py-10 sm:px-8">
-      <h1 className="text-3xl font-semibold tracking-tight">Authenticated App Area</h1>
-      <p className="mt-3 text-muted-foreground">
-        You are signed in. Build protected planner modules under this route group.
-      </p>
-    </main>
+    <DashboardShell
+      sidebar={
+        <Suspense>
+          <SidebarLive />
+        </Suspense>
+      }
+      topbar={
+        <Suspense>
+          <DashboardTopbarLive />
+        </Suspense>
+      }
+      mobileSidebar={<AppSidebarCompact currentPath="/app" />}
+    >
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardContent />
+      </Suspense>
+    </DashboardShell>
   );
 }

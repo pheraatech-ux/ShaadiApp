@@ -55,11 +55,14 @@ export function AuthForm() {
 
       if (signInError) {
         setError(signInError.message);
+        setLoading(false);
       } else {
-        setMessage("Login successful. Redirecting...");
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 1500);
+        });
+        router.refresh();
         router.replace("/app");
       }
-      setLoading(false);
       return;
     }
 
@@ -303,7 +306,7 @@ export function AuthForm() {
               {loading ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Please wait…
+                  {mode === "login" ? "Signing in…" : "Please wait…"}
                 </>
               ) : (
                 <>
