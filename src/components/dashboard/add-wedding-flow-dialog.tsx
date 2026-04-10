@@ -8,6 +8,10 @@ import {
   type AddWeddingCoupleForm,
 } from "@/components/dashboard/add-wedding-couple-step";
 import {
+  AddWeddingEventsStep,
+  type EventsTab,
+} from "@/components/dashboard/add-wedding-events-step";
+import {
   AddWeddingStepper,
   type WeddingFlowStep,
 } from "@/components/dashboard/add-wedding-stepper";
@@ -21,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import type { CultureId } from "../../../weddingCultures";
 
 type AddWeddingFlowDialogProps = {
   open: boolean;
@@ -30,6 +35,9 @@ type AddWeddingFlowDialogProps = {
 export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialogProps) {
   const [step, setStep] = useState<WeddingFlowStep>(1);
   const [showStepOneErrors, setShowStepOneErrors] = useState(false);
+  const [showCultureErrors, setShowCultureErrors] = useState(false);
+  const [eventsTab, setEventsTab] = useState<EventsTab>("choose-culture");
+  const [selectedCultureIds, setSelectedCultureIds] = useState<CultureId[]>([]);
   const [coupleForm, setCoupleForm] = useState<AddWeddingCoupleForm>({
     brideName: "",
     groomName: "",
@@ -43,6 +51,9 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
   function resetFlowState() {
     setStep(1);
     setShowStepOneErrors(false);
+    setShowCultureErrors(false);
+    setEventsTab("choose-culture");
+    setSelectedCultureIds([]);
     setCoupleForm({
       brideName: "",
       groomName: "",
@@ -66,6 +77,7 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
   }
 
   const isLastStep = step === 3;
+  const isReviewEventsTab = step === 2 && eventsTab === "review-events";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -93,9 +105,18 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
               showErrors={showStepOneErrors}
             />
           ) : step === 2 ? (
-            <div className="rounded-xl border border-dashed border-border/80 p-8 text-center text-muted-foreground">
-              Events step coming next.
-            </div>
+            <AddWeddingEventsStep
+              selectedCultures={selectedCultureIds}
+              onSelectedCulturesChange={(next) => {
+                setSelectedCultureIds(next);
+                if (next.length > 0) {
+                  setShowCultureErrors(false);
+                }
+              }}
+              activeTab={eventsTab}
+              onActiveTabChange={setEventsTab}
+              showCultureError={showCultureErrors}
+            />
           ) : (
             <div className="rounded-xl border border-dashed border-border/80 p-8 text-center text-muted-foreground">
               Budget and review step coming next.
@@ -109,7 +130,13 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
               variant="ghost"
               className="rounded-xl"
               disabled={step === 1}
-              onClick={() => setStep((prev) => (prev > 1 ? ((prev - 1) as WeddingFlowStep) : prev))}
+              onClick={() => {
+                if (isReviewEventsTab) {
+                  setEventsTab("choose-culture");
+                  return;
+                }
+                setStep((prev) => (prev > 1 ? ((prev - 1) as WeddingFlowStep) : prev));
+              }}
             >
               Back
             </Button>
@@ -124,11 +151,29 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
                   setShowStepOneErrors(true);
                   return;
                 }
+                if (step === 2) {
+                  if (selectedCultureIds.length === 0) {
+                    setShowCultureErrors(true);
+                    setEventsTab("choose-culture");
+                    return;
+                  }
+                  setShowCultureErrors(false);
+                  if (eventsTab === "choose-culture") {
+                    setEventsTab("review-events");
+                    return;
+                  }
+                }
                 setShowStepOneErrors(false);
                 setStep((prev) => (prev < 3 ? ((prev + 1) as WeddingFlowStep) : prev));
               }}
             >
-              {isLastStep ? "Create wedding" : "Continue"}
+              {isLastStep
+                ? "Create wedding"
+                : step === 2 && eventsTab === "choose-culture"
+                  ? "Review events"
+                  : step === 2 && eventsTab === "review-events"
+                    ? "Continue to budget"
+                    : "Continue"}
               <ArrowRight />
             </Button>
           </div>
