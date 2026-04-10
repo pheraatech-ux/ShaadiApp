@@ -1,5 +1,7 @@
 "use client";
 
+import { Check } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 export type WeddingFlowStep = 1 | 2 | 3;
@@ -15,30 +17,36 @@ type AddWeddingStepperProps = {
 };
 
 export function AddWeddingStepper({ step }: AddWeddingStepperProps) {
-  const progress = ((step - 1) / (steps.length - 1)) * 100;
-
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <p className="text-sm font-medium text-muted-foreground">Step {step} of 3</p>
-      <div className="h-1.5 w-full rounded-full bg-muted">
-        <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${progress}%` }} />
-      </div>
       <div className="grid grid-cols-3 gap-2 text-xs">
-        {steps.map((item) => (
-          <div key={item.id} className="flex items-center gap-2">
-            <span
-              className={cn(
-                "flex size-5 items-center justify-center rounded-full text-[11px] font-semibold",
-                item.id <= step ? "bg-foreground text-background" : "bg-muted text-muted-foreground",
-              )}
-            >
-              {item.id}
-            </span>
-            <span className={cn(item.id <= step ? "text-foreground" : "text-muted-foreground")}>
-              {item.label}
-            </span>
-          </div>
-        ))}
+        {steps.map((item) => {
+          const isDone = item.id < step;
+          const isCurrent = item.id === step;
+          const isActive = item.id <= step;
+
+          return (
+            <div key={item.id} className="space-y-2">
+              <div className={cn("h-1 rounded-full transition-colors", isActive ? "bg-emerald-500" : "bg-muted")} />
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "flex size-5 items-center justify-center rounded-full text-[11px] font-semibold",
+                    isDone
+                      ? "bg-emerald-500 text-white"
+                      : isCurrent
+                        ? "bg-foreground text-background"
+                        : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {isDone ? <Check className="size-3" /> : item.id}
+                </span>
+                <span className={cn(isActive ? "text-foreground" : "text-muted-foreground")}>{item.label}</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

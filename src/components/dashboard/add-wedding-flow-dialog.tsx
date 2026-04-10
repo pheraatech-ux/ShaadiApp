@@ -11,6 +11,7 @@ import {
   AddWeddingEventsStep,
   type EventsTab,
 } from "@/components/dashboard/add-wedding-events-step";
+import { AddWeddingBudgetStep } from "@/components/dashboard/add-wedding-budget-step";
 import {
   AddWeddingStepper,
   type WeddingFlowStep,
@@ -25,7 +26,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { CultureId } from "../../../weddingCultures";
+import { cn } from "@/lib/utils";
+import {
+  getEventsForCultures,
+  type CultureId,
+  type WeddingEvent,
+} from "../../../weddingCultures";
 
 type AddWeddingFlowDialogProps = {
   open: boolean;
@@ -38,6 +44,7 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
   const [showCultureErrors, setShowCultureErrors] = useState(false);
   const [eventsTab, setEventsTab] = useState<EventsTab>("choose-culture");
   const [selectedCultureIds, setSelectedCultureIds] = useState<CultureId[]>([]);
+  const [reviewEvents, setReviewEvents] = useState<WeddingEvent[]>([]);
   const [coupleForm, setCoupleForm] = useState<AddWeddingCoupleForm>({
     brideName: "",
     groomName: "",
@@ -54,6 +61,7 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
     setShowCultureErrors(false);
     setEventsTab("choose-culture");
     setSelectedCultureIds([]);
+    setReviewEvents([]);
     setCoupleForm({
       brideName: "",
       groomName: "",
@@ -97,7 +105,12 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
           </div>
         </DialogHeader>
 
-        <div className="max-h-[64vh] overflow-y-auto px-6 py-5">
+        <div
+          className={cn(
+            "px-6 py-5",
+            step === 3 ? "h-[64vh] overflow-hidden" : "max-h-[64vh] overflow-y-auto",
+          )}
+        >
           {step === 1 ? (
             <AddWeddingCoupleStep
               value={coupleForm}
@@ -109,18 +122,23 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
               selectedCultures={selectedCultureIds}
               onSelectedCulturesChange={(next) => {
                 setSelectedCultureIds(next);
+                setReviewEvents(getEventsForCultures(next));
                 if (next.length > 0) {
                   setShowCultureErrors(false);
                 }
               }}
+              reviewEvents={reviewEvents}
+              onReviewEventsChange={setReviewEvents}
               activeTab={eventsTab}
               onActiveTabChange={setEventsTab}
               showCultureError={showCultureErrors}
             />
           ) : (
-            <div className="rounded-xl border border-dashed border-border/80 p-8 text-center text-muted-foreground">
-              Budget and review step coming next.
-            </div>
+            <AddWeddingBudgetStep
+              coupleForm={coupleForm}
+              selectedCultures={selectedCultureIds}
+              reviewEvents={reviewEvents}
+            />
           )}
         </div>
 

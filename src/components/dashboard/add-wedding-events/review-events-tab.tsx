@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { ChevronDown, ChevronUp, GripVertical, Plus, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { CULTURE_MAP, TASKS_BY_EVENT, getEventsForCultures, type CultureId, type WeddingEvent } from "../../../../weddingCultures";
+import { CULTURE_MAP, TASKS_BY_EVENT, type CultureId, type WeddingEvent } from "../../../../weddingCultures";
 
 type ReviewEventsTabProps = {
   selectedCultures: CultureId[];
+  reviewEvents: WeddingEvent[];
+  onReviewEventsChange: (next: WeddingEvent[]) => void;
 };
 
 function reorderEvents(items: WeddingEvent[], fromId: string, toId: string) {
@@ -24,36 +26,18 @@ function reorderEvents(items: WeddingEvent[], fromId: string, toId: string) {
   return next;
 }
 
-export function ReviewEventsTab({ selectedCultures }: ReviewEventsTabProps) {
-  const baseEvents = useMemo(() => getEventsForCultures(selectedCultures), [selectedCultures]);
-  const [reviewEvents, setReviewEvents] = useState<WeddingEvent[]>(baseEvents);
-  const [expandedEventIds, setExpandedEventIds] = useState<Record<string, boolean>>({});
+export function ReviewEventsTab({
+  selectedCultures,
+  reviewEvents,
+  onReviewEventsChange,
+}: ReviewEventsTabProps) {
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [draggedEventId, setDraggedEventId] = useState<string | null>(null);
   const [dragOverEventId, setDragOverEventId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setReviewEvents(baseEvents);
-  }, [baseEvents]);
-
-  useEffect(() => {
-    if (reviewEvents.length === 0) {
-      setExpandedEventIds({});
-      return;
-    }
-
-    setExpandedEventIds((prev) => {
-      const next: Record<string, boolean> = {};
-      reviewEvents.forEach((event) => {
-        if (prev[event.id]) {
-          next[event.id] = true;
-        }
-      });
-      if (!Object.values(next).some(Boolean)) {
-        next[reviewEvents[0].id] = true;
-      }
-      return next;
-    });
-  }, [reviewEvents]);
+  const effectiveExpandedEventId =
+    expandedEventId && reviewEvents.some((event) => event.id === expandedEventId)
+      ? expandedEventId
+      : reviewEvents[0]?.id ?? null;
 
   if (selectedCultures.length === 0) {
     return (
@@ -83,7 +67,7 @@ export function ReviewEventsTab({ selectedCultures }: ReviewEventsTabProps) {
       ) : (
         <div className="space-y-2">
           {reviewEvents.map((event) => {
-            const isExpanded = Boolean(expandedEventIds[event.id]);
+            const isExpanded = effectiveExpandedEventId === event.id;
             const eventTaskTemplates = TASKS_BY_EVENT[event.id] ?? [];
             const visibleTasks = eventTaskTemplates.slice(0, 3);
             const hiddenTaskCount = Math.max(eventTaskTemplates.length - visibleTasks.length, 0);
@@ -102,7 +86,7 @@ export function ReviewEventsTab({ selectedCultures }: ReviewEventsTabProps) {
                 onDrop={(e) => {
                   e.preventDefault();
                   if (!draggedEventId) return;
-                  setReviewEvents((prev) => reorderEvents(prev, draggedEventId, event.id));
+                  onReviewEventsChange(reorderEvents(reviewEvents, draggedEventId, event.id));
                   setDraggedEventId(null);
                   setDragOverEventId(null);
                 }}
@@ -120,12 +104,7 @@ export function ReviewEventsTab({ selectedCultures }: ReviewEventsTabProps) {
                     <div className="min-w-0 flex-1">
                       <button
                         type="button"
-                        onClick={() =>
-                          setExpandedEventIds((prev) => ({
-                            ...prev,
-                            [event.id]: !prev[event.id],
-                          }))
-                        }
+                        onClick={() => setExpandedEventId((prev) => (prev === event.id ? null : event.id))}
                         className="flex w-full items-start justify-between gap-3 text-left"
                       >
                         <div className="min-w-0 space-y-2">
@@ -142,7 +121,7 @@ export function ReviewEventsTab({ selectedCultures }: ReviewEventsTabProps) {
                           </div>
                           <p className="text-xs text-muted-foreground">Drag to reorder and tap event name to expand.</p>
                         </div>
-                        <div className="mt-0.5 text-muted-foreground">
+                        <div className="mt-0.5 shrink-0 text-muted-foreground">
                           {isExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
                         </div>
                       </button>
@@ -173,7 +152,7 @@ export function ReviewEventsTab({ selectedCultures }: ReviewEventsTabProps) {
                       variant="ghost"
                       size="icon-sm"
                       className="mt-0.5 rounded-md text-muted-foreground hover:text-destructive"
-                      onClick={() => setReviewEvents((prev) => prev.filter((item) => item.id !== event.id))}
+                      onClick={() => onReviewEventsChange(reviewEvents.filter((item) => item.id !== event.id))}
                       aria-label={`Remove ${event.name}`}
                     >
                       <Trash2 className="size-4" />

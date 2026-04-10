@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { CultureId } from "../../../weddingCultures";
+import type { CultureId, WeddingEvent } from "../../../weddingCultures";
 import { CultureSelector } from "@/components/dashboard/add-wedding-events/culture-selector";
 import { ReviewEventsTab } from "@/components/dashboard/add-wedding-events/review-events-tab";
 
@@ -10,6 +10,8 @@ export type EventsTab = "choose-culture" | "review-events";
 type AddWeddingEventsStepProps = {
   selectedCultures: CultureId[];
   onSelectedCulturesChange: (next: CultureId[]) => void;
+  reviewEvents: WeddingEvent[];
+  onReviewEventsChange: (next: WeddingEvent[]) => void;
   activeTab: EventsTab;
   onActiveTabChange: (next: EventsTab) => void;
   showCultureError?: boolean;
@@ -18,6 +20,8 @@ type AddWeddingEventsStepProps = {
 export function AddWeddingEventsStep({
   selectedCultures,
   onSelectedCulturesChange,
+  reviewEvents,
+  onReviewEventsChange,
   activeTab,
   onActiveTabChange,
   showCultureError = false,
@@ -60,7 +64,11 @@ export function AddWeddingEventsStep({
           showCultureError={showCultureError}
         />
       ) : (
-        <ReviewEventsTab selectedCultures={selectedCultures} />
+        <ReviewEventsTab
+          selectedCultures={selectedCultures}
+          reviewEvents={reviewEvents}
+          onReviewEventsChange={onReviewEventsChange}
+        />
       )}
     </div>
   );
