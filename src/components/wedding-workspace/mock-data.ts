@@ -13,7 +13,7 @@ const workspaceByWeddingId: Record<string, WeddingWorkspaceViewModel> = {
     eventCountLabel: "11 events",
     navItems: [
       { id: "overview", label: "Overview" },
-      { id: "team", label: "Team", badge: "1/3" },
+      { id: "team", label: "Team", badge: "2/3" },
       { id: "vendors", label: "Vendors", badge: 0 },
       { id: "tasks", label: "Tasks", badge: 5 },
       { id: "budget", label: "Budget" },

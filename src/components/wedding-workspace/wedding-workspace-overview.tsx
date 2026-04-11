@@ -4,8 +4,7 @@ import { SetupBanner } from "@/components/wedding-workspace/setup-banner";
 import { TeamPanel } from "@/components/wedding-workspace/team-panel";
 import { TimelinePanel } from "@/components/wedding-workspace/timeline-panel";
 import { VendorsNeededPanel } from "@/components/wedding-workspace/vendors-needed-panel";
-import { WorkspaceHeader } from "@/components/wedding-workspace/workspace-header";
-import { WorkspaceKpiGrid } from "@/components/wedding-workspace/workspace-kpi-grid";
+import { WorkspaceCoupleHeader } from "@/components/wedding-workspace/workspace-couple-header";
 import { WorkspaceNav } from "@/components/wedding-workspace/workspace-nav";
 import { WeddingWorkspaceViewModel } from "@/components/wedding-workspace/types";
 
@@ -14,13 +13,19 @@ type WeddingWorkspaceOverviewProps = {
 };
 
 export function WeddingWorkspaceOverview({ workspace }: WeddingWorkspaceOverviewProps) {
+  const overviewSubtitle = `Overview — ${workspace.plannerName} • ${workspace.eventCountLabel} • ${workspace.dateLabel}`;
+
   return (
     <div className="space-y-4">
-      <WorkspaceHeader workspace={workspace} />
+      <WorkspaceCoupleHeader
+        avatarLabel={workspace.avatarLabel}
+        coupleName={workspace.coupleName}
+        subtitleLine={overviewSubtitle}
+        cultureTags={workspace.cultureTags.map((label) => ({ label }))}
+      />
       <WorkspaceNav workspace={workspace} />
       <SetupBanner workspace={workspace} />
       <LeadBanner workspace={workspace} />
-      <WorkspaceKpiGrid workspace={workspace} />
       <AIBriefBanner workspace={workspace} />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <TimelinePanel workspace={workspace} />

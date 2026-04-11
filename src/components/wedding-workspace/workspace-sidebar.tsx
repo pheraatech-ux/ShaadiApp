@@ -9,6 +9,7 @@ import {
   FileText,
   Globe,
   Mail,
+  Sparkles,
   Square,
   Users,
 } from "lucide-react";
@@ -63,7 +64,7 @@ export function WorkspaceSidebar({
 
   const items: NavItem[] = [
     { id: "overview", label: "Overview", hrefSuffix: "", icon: Square },
-    { id: "team", label: "Team", hrefSuffix: "/team", icon: Users, badge: { text: "1/3", tone: "emerald" } },
+    { id: "team", label: "Team", hrefSuffix: "/team", icon: Users, badge: { text: "2/3", tone: "emerald" } },
     {
       id: "vendors",
       label: "Vendors",
@@ -157,6 +158,27 @@ export function WorkspaceSidebar({
                   </SidebarMenuItem>
                 );
               })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Intelligence</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={<Link href={`${base}/ai-report`} />}
+                  isActive={pathname.startsWith(`${base}/ai-report`)}
+                  size="lg"
+                  tooltip="AI report"
+                >
+                  <Sparkles className="size-4 shrink-0" />
+                  <span className="group-data-[collapsible=icon]:hidden">AI report</span>
+                  <span className="ml-auto rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[10px] font-medium text-violet-700 group-data-[collapsible=icon]:hidden dark:text-violet-200">
+                    AI
+                  </span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
