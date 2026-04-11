@@ -1,20 +1,20 @@
-import { AppSidebar } from "@/components/dashboard/app-sidebar";
 import { dashboardMockData } from "@/components/dashboard/mock-data";
+import { WorkspaceSidebar } from "@/components/wedding-workspace/workspace-sidebar";
 import { getCurrentPlanner } from "@/lib/get-current-planner";
 
-type SidebarLiveProps = {
-  currentPath?: string;
+type WorkspaceSidebarLiveProps = {
+  weddingId: string;
 };
 
-export async function SidebarLive({ currentPath = "/app/dashboard" }: SidebarLiveProps) {
+export async function WorkspaceSidebarLive({ weddingId }: WorkspaceSidebarLiveProps) {
   const planner = await getCurrentPlanner();
 
   return (
-    <AppSidebar
+    <WorkspaceSidebar
+      weddingId={weddingId}
       workspaceName={dashboardMockData.workspaceName}
       userName={planner.displayName}
       userEmail={planner.email}
-      currentPath={currentPath}
     />
   );
 }

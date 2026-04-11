@@ -13,7 +13,7 @@ export function DashboardShell({ sidebar, topbar, children }: DashboardShellProp
     <SidebarProvider defaultOpen>
       {sidebar}
       <SidebarInset className="h-svh overflow-hidden">
-        <header className="shrink-0 flex items-center gap-2 border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 sm:px-6">
+        <header className="flex min-h-16 shrink-0 items-center gap-2 border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 sm:px-6">
           <SidebarTrigger className="-ml-1" />
           <div className="min-w-0 flex-1">{topbar}</div>
         </header>

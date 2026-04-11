@@ -46,6 +46,10 @@ export function AppSidebar({
   userEmail,
   currentPath = "/app/dashboard",
 }: AppSidebarProps) {
+  function isPathActive(href: string) {
+    return currentPath === href || currentPath.startsWith(`${href}/`);
+  }
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -65,7 +69,7 @@ export function AppSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               {sidebarItems.map((item) => {
-                const active = currentPath === item.href;
+                const active = isPathActive(item.href);
                 const Icon = item.icon;
 
                 return (

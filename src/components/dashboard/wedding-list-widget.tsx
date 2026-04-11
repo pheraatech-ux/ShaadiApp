@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarDays, MapPin } from "lucide-react";
 
@@ -41,51 +42,54 @@ function WeddingCard({ item }: { item: WeddingItem }) {
   const percent = item.tasksTotal > 0 ? Math.round((item.tasksDone / item.tasksTotal) * 100) : 0;
 
   return (
-    <article className="flex flex-col rounded-2xl border border-border/70 bg-card shadow-sm transition-shadow hover:shadow-md">
-      <div className="flex items-start gap-3 p-5">
-        <Avatar size="lg">
-          <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
-            {getInitials(item.name)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-semibold">{item.name}</p>
-          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="size-3 shrink-0" />
-            <span className="truncate">{item.city}</span>
+    <Link href={`/app/weddings/${item.id}`} className="block">
+      <article className="flex flex-col rounded-2xl border border-border/70 bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+        <div className="flex items-start gap-3 p-5">
+          <Avatar size="lg">
+            <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+              {getInitials(item.name)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-base font-semibold">{item.name}</p>
+            <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="size-3 shrink-0" />
+              <span className="truncate">{item.city}</span>
+            </div>
           </div>
+          {item.status === "completed" ? (
+            <Badge variant="secondary" className="rounded-full text-[10px]">
+              Done
+            </Badge>
+          ) : item.daysLeft <= 7 ? (
+            <Badge variant="destructive" className="rounded-full text-[10px]">
+              {item.daysLeft}d left
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="rounded-full text-[10px]">
+              {item.daysLeft}d left
+            </Badge>
+          )}
         </div>
-        {item.status === "completed" ? (
-          <Badge variant="secondary" className="rounded-full text-[10px]">
-            Done
-          </Badge>
-        ) : item.daysLeft <= 7 ? (
-          <Badge variant="destructive" className="rounded-full text-[10px]">
-            {item.daysLeft}d left
-          </Badge>
-        ) : (
-          <Badge variant="outline" className="rounded-full text-[10px]">
-            {item.daysLeft}d left
-          </Badge>
-        )}
-      </div>
 
-      <div className="flex items-center gap-5 border-t border-border/70 px-5 py-4">
-        <DonutChart value={item.tasksDone} total={item.tasksTotal} size={56} strokeWidth={5} />
-        <div className="flex-1 space-y-1.5">
-          <p className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">{item.tasksDone}</span>/{item.tasksTotal} tasks done
-          </p>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <CalendarDays className="size-3 shrink-0" />
-            {item.firstEventDate}
+        <div className="flex items-center gap-5 border-t border-border/70 px-5 py-4">
+          <DonutChart value={item.tasksDone} total={item.tasksTotal} size={56} strokeWidth={5} />
+          <div className="flex-1 space-y-1.5">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">{item.tasksDone}</span>/{item.tasksTotal} tasks
+              done
+            </p>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CalendarDays className="size-3 shrink-0" />
+              {item.firstEventDate}
+            </div>
           </div>
+          {percent < 100 && (
+            <span className="text-2xl font-semibold tracking-tight text-foreground">{percent}%</span>
+          )}
         </div>
-        {percent < 100 && (
-          <span className="text-2xl font-semibold tracking-tight text-foreground">{percent}%</span>
-        )}
-      </div>
-    </article>
+      </article>
+    </Link>
   );
 }
 
@@ -96,14 +100,14 @@ export function WeddingListWidget({
 }: WeddingListWidgetProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const openFromQuery = searchParams.get("createWedding") === "1";
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
 
   useEffect(() => {
-    if (searchParams.get("createWedding") !== "1") return;
-    setOpenCreateDialog(true);
+    if (!openFromQuery) return;
     router.replace("/app/dashboard");
-  }, [searchParams, router]);
+  }, [openFromQuery, router]);
 
   const filtered =
     activeTab === "all" ? items : items.filter((w) => w.status === activeTab);
@@ -111,6 +115,11 @@ export function WeddingListWidget({
   function handleCreateWedding() {
     onCreateWedding?.();
     setOpenCreateDialog(true);
+  }
+
+  function handleViewAll() {
+    onViewAll?.();
+    router.push("/app/weddings");
   }
 
   const filterBar = (
@@ -140,7 +149,7 @@ export function WeddingListWidget({
       action={
         <WeddingHeaderActions
           onCreateWedding={handleCreateWedding}
-          onViewAll={onViewAll}
+          onViewAll={handleViewAll}
         />
       }
       contentClassName="px-3 py-3 sm:px-4 sm:py-3"
@@ -155,7 +164,10 @@ export function WeddingListWidget({
           <NewWeddingPlaceholderCard onCreateWedding={handleCreateWedding} />
         </div>
       </div>
-      <AddWeddingFlowDialog open={openCreateDialog} onOpenChange={setOpenCreateDialog} />
+      <AddWeddingFlowDialog
+        open={openCreateDialog || openFromQuery}
+        onOpenChange={setOpenCreateDialog}
+      />
     </SectionCard>
   );
 }
