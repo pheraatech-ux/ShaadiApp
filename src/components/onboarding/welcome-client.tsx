@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowRight, Check, Clock } from "lucide-react";
+import { useState, useTransition } from "react";
+import { ArrowRight, Check, Clock, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -26,16 +26,26 @@ export function WelcomeClient({
   city,
 }: WelcomeClientProps) {
   const router = useRouter();
-  const [leaving, setLeaving] = useState(false);
+  const [leaving, setLeaving] = useState<null | "dashboard" | "wedding">(null);
+  const [isNavPending, startNav] = useTransition();
   const headlineName = firstName.trim() || "there";
 
-  async function leave(href: string) {
-    setLeaving(true);
-    const supabase = getSupabaseBrowserClient();
-    await supabase.auth.updateUser({
-      data: { onboarding_welcome_pending: false },
-    });
-    router.replace(href);
+  const actionBusy = leaving !== null || isNavPending;
+
+  async function leave(href: string, which: "dashboard" | "wedding") {
+    setLeaving(which);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { error } = await supabase.auth.updateUser({
+        data: { onboarding_welcome_pending: false },
+      });
+      if (error) throw error;
+      startNav(() => {
+        router.replace(href);
+      });
+    } catch {
+      setLeaving(null);
+    }
   }
 
   return (
@@ -53,7 +63,7 @@ export function WelcomeClient({
           </div>
 
           <h1 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">
-            Welcome to ShaadiOS, {headlineName}.
+            Welcome to ShaadiOS, {headlineName}! 🎉
           </h1>
           <p className="mt-4 text-pretty text-base leading-relaxed text-muted-foreground">
             {welcomeSubline(businessName, city)}
@@ -67,11 +77,11 @@ export function WelcomeClient({
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
               Up to{" "}
               <strong className="font-semibold text-foreground">
-                5 active weddings
+                3 active weddings
               </strong>{" "}
               and{" "}
               <strong className="font-semibold text-foreground">
-                3 team members
+                2 team members
               </strong>{" "}
               on the free plan. You&apos;re all set. Upgrade anytime from your
               dashboard if your business grows.
@@ -82,20 +92,38 @@ export function WelcomeClient({
             <Button
               type="button"
               variant="outline"
-              disabled={leaving}
-              className="h-12 flex-1 rounded-xl text-[15px] font-semibold sm:max-w-[220px]"
-              onClick={() => void leave("/app/dashboard")}
+              disabled={actionBusy}
+              className="h-12 min-w-[200px] flex-1 gap-2 rounded-xl text-[15px] font-semibold sm:max-w-[220px]"
+              onClick={() => void leave("/app/dashboard", "dashboard")}
             >
-              Go to dashboard
-              <ArrowRight className="size-4" />
+              {leaving === "dashboard" ? (
+                <>
+                  <Loader2 className="size-5 shrink-0 animate-spin" aria-hidden />
+                  Opening dashboard…
+                </>
+              ) : (
+                <>
+                  Go to dashboard
+                  <ArrowRight className="size-4" />
+                </>
+              )}
             </Button>
             <Button
               type="button"
-              disabled={leaving}
-              className="h-12 flex-1 rounded-xl bg-emerald-600 text-[15px] font-semibold hover:bg-emerald-700 sm:max-w-[220px] dark:bg-emerald-600 dark:hover:bg-emerald-700"
-              onClick={() => void leave("/app/dashboard?createWedding=1")}
+              disabled={actionBusy}
+              className="h-12 min-w-[200px] flex-1 gap-2 rounded-xl bg-emerald-600 text-[15px] font-semibold hover:bg-emerald-700 sm:max-w-[220px] dark:bg-emerald-600 dark:hover:bg-emerald-700"
+              onClick={() =>
+                void leave("/app/dashboard?createWedding=1", "wedding")
+              }
             >
-              Create first wedding
+              {leaving === "wedding" ? (
+                <>
+                  <Loader2 className="size-5 shrink-0 animate-spin" aria-hidden />
+                  Continuing…
+                </>
+              ) : (
+                "Create first wedding"
+              )}
             </Button>
           </div>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState, useTransition } from "react";
 import {
   ArrowRight,
   Check,
@@ -50,6 +50,7 @@ const businessTypes = [
 
 export function AuthForm() {
   const router = useRouter();
+  const [isProfileNavPending, startProfileNav] = useTransition();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [mode, setMode] = useState<AuthMode>("login");
   const [step, setStep] = useState<AuthStep>("auth");
@@ -220,8 +221,9 @@ export function AuthForm() {
     await new Promise<void>((resolve) => {
       setTimeout(resolve, 950);
     });
-    setProfileLoading(false);
-    router.replace("/app/welcome");
+    startProfileNav(() => {
+      router.replace("/app/welcome");
+    });
   }
 
   return (
@@ -667,14 +669,19 @@ export function AuthForm() {
               )}
 
               <Button
-                disabled={profileLoading}
+                disabled={profileLoading || isProfileNavPending}
                 className="h-12 w-full gap-2 rounded-xl text-[15px] font-bold"
                 type="submit"
               >
-                {profileLoading ? (
+                {profileLoading || isProfileNavPending ? (
                   <>
-                    <Loader2 className="size-4 animate-spin" />
-                    Completing profile...
+                    <Loader2
+                      className="size-5 shrink-0 animate-spin"
+                      aria-hidden
+                    />
+                    {isProfileNavPending
+                      ? "Opening welcome…"
+                      : "Completing profile…"}
                   </>
                 ) : (
                   <>
@@ -686,7 +693,7 @@ export function AuthForm() {
 
               <button
                 type="button"
-                disabled={profileLoading}
+                disabled={profileLoading || isProfileNavPending}
                 onClick={() => {
                   router.refresh();
                   router.replace("/app/dashboard");
