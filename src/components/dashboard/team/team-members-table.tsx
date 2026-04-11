@@ -28,67 +28,73 @@ export function TeamMembersTable({ members }: TeamMembersTableProps) {
         </Button>
       </CardHeader>
       <CardContent className="space-y-0 p-0">
-        {members.map((member) => (
-          <article
-            key={member.id}
-            className="grid gap-3 border-b border-border/60 px-4 py-4 last:border-none xl:grid-cols-[1.4fr_1fr_1fr_1fr_auto]"
-          >
-            <div className="flex min-w-0 items-center gap-3">
-              <Avatar className="size-10 border border-border/70">
-                <AvatarFallback className="text-xs font-semibold">{member.initials}</AvatarFallback>
-              </Avatar>
+        {members.length === 0 ? (
+          <p className="px-4 py-4 text-sm text-muted-foreground">
+            No team members yet. Invite your first teammate to start collaborating.
+          </p>
+        ) : (
+          members.map((member) => (
+            <article
+              key={member.id}
+              className="grid gap-3 border-b border-border/60 px-4 py-4 last:border-none xl:grid-cols-[1.4fr_1fr_1fr_1fr_auto]"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar className="size-10 border border-border/70">
+                  <AvatarFallback className="text-xs font-semibold">{member.initials}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{member.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {member.email} • {member.phone}
+                  </p>
+                </div>
+              </div>
+
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{member.name}</p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {member.email} • {member.phone}
-                </p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Business role</p>
+                <p className="mt-1 text-sm font-medium">{member.roleLabel}</p>
               </div>
-            </div>
 
-            <div className="min-w-0">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Business role</p>
-              <p className="mt-1 text-sm font-medium">{member.roleLabel}</p>
-            </div>
-
-            <div className="min-w-0">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Active weddings</p>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {member.activeWeddings.map((wedding) => (
-                  <Badge key={wedding} variant="secondary" className="rounded-full text-[10px]">
-                    {wedding}
-                  </Badge>
-                ))}
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Active weddings</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {member.activeWeddings.map((wedding) => (
+                    <Badge key={wedding} variant="secondary" className="rounded-full text-[10px]">
+                      {wedding}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Tasks this month</p>
-              <Link
-                href={`/app/team/${member.id}`}
-                className={cn(
-                  buttonVariants({
-                    variant: "ghost",
-                    className: "mt-1 h-auto w-full justify-start rounded-lg px-0 py-0 hover:bg-transparent",
-                  }),
-                )}
-              >
-                <TaskProgressBar completed={member.tasksCompleted} total={member.tasksTotal} />
-              </Link>
-              {member.overdueTasks > 0 ? (
-                <p className="mt-1 text-xs font-medium text-red-600 dark:text-red-300">{member.overdueTasks} overdue tasks</p>
-              ) : null}
-            </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Tasks this month</p>
+                <Link
+                  href={`/app/team/${member.id}`}
+                  className={cn(
+                    buttonVariants({
+                      variant: "ghost",
+                      className: "mt-1 h-auto w-full justify-start rounded-lg px-0 py-0 hover:bg-transparent",
+                    }),
+                  )}
+                >
+                  <TaskProgressBar completed={member.tasksCompleted} total={member.tasksTotal} />
+                </Link>
+                {member.overdueTasks > 0 ? (
+                  <p className="mt-1 text-xs font-medium text-red-600 dark:text-red-300">{member.overdueTasks} overdue tasks</p>
+                ) : null}
+              </div>
 
-            <div className="flex flex-col items-end gap-2">
-              <span className={cn("rounded-full px-2 py-1 text-[10px] font-semibold", statusClassName[member.status])}>
-                {member.lastActive}
-              </span>
-              <Button size="sm" variant="outline" className="h-7 rounded-md px-2 text-xs">
-                Remind
-              </Button>
-            </div>
-          </article>
-        ))}
+              <div className="flex flex-col items-end gap-2">
+                <span className={cn("rounded-full px-2 py-1 text-[10px] font-semibold", statusClassName[member.status])}>
+                  {member.lastActive}
+                </span>
+                <Button size="sm" variant="outline" className="h-7 rounded-md px-2 text-xs">
+                  Remind
+                </Button>
+              </div>
+            </article>
+          ))
+        )}
       </CardContent>
     </Card>
   );

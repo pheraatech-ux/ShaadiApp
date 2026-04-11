@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 
-import { dashboardMockData } from "@/components/dashboard/mock-data";
+import { getWeddingSlugList } from "@/lib/data/app-data";
 
-export default function WeddingsPage() {
-  const firstWeddingId = dashboardMockData.weddings[0]?.id;
+export default async function WeddingsPage() {
+  const weddingSlugs = await getWeddingSlugList();
+  const firstWeddingId = weddingSlugs[0];
 
   if (!firstWeddingId) {
     redirect("/app/dashboard");

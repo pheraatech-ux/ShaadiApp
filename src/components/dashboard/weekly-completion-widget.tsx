@@ -14,7 +14,7 @@ export function WeeklyCompletionWidget({ items }: WeeklyCompletionWidgetProps) {
             <div className="h-20 w-full rounded-lg bg-muted p-1">
               <div
                 className="h-full w-full rounded-md bg-primary/85 transition-all"
-                style={{ transform: `scaleY(${Math.max(0.1, Math.min(day.value, 100) / 100)})`, transformOrigin: "bottom" }}
+                style={{ transform: `scaleY(${Math.max(0, Math.min(day.value, 100) / 100)})`, transformOrigin: "bottom" }}
               />
             </div>
             <p className="text-xs text-muted-foreground">{day.label}</p>

@@ -27,23 +27,29 @@ export function VendorsNeededPanel({ workspace }: VendorsNeededPanelProps) {
         </Button>
       </header>
       <div className="divide-y divide-border/60">
-        {workspace.vendorsNeeded.map((vendor) => (
-          <article key={vendor.id} className="flex gap-3 px-4 py-3">
-            <span
-              className={cn("mt-1.5 size-2 shrink-0 rounded-full", urgencyDot[vendor.urgency])}
-              aria-hidden
-            />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-foreground">
-                {vendor.displayTitle ?? `${vendor.name} (${vendor.role})`}
-              </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {vendor.contextLine ?? vendor.note}
-              </p>
-            </div>
-            <span className="shrink-0 text-[11px] text-muted-foreground">{vendor.statusLabel}</span>
-          </article>
-        ))}
+        {workspace.vendorsNeeded.length === 0 ? (
+          <p className="px-4 py-4 text-sm text-muted-foreground">
+            No pending vendors.
+          </p>
+        ) : (
+          workspace.vendorsNeeded.map((vendor) => (
+            <article key={vendor.id} className="flex gap-3 px-4 py-3">
+              <span
+                className={cn("mt-1.5 size-2 shrink-0 rounded-full", urgencyDot[vendor.urgency])}
+                aria-hidden
+              />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground">
+                  {vendor.displayTitle ?? `${vendor.name} (${vendor.role})`}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {vendor.contextLine ?? vendor.note}
+                </p>
+              </div>
+              <span className="shrink-0 text-[11px] text-muted-foreground">{vendor.statusLabel}</span>
+            </article>
+          ))
+        )}
       </div>
       <footer className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border/70 px-4 py-2.5">
         <Button variant="link" size="sm" className="h-auto gap-0.5 px-0 text-xs text-primary">

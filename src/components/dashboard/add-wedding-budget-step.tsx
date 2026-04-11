@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { AddWeddingCoupleForm } from "@/components/dashboard/add-wedding-couple-step";
 import {
@@ -15,6 +15,12 @@ type AddWeddingBudgetStepProps = {
   coupleForm: AddWeddingCoupleForm;
   selectedCultures: CultureId[];
   reviewEvents: WeddingEvent[];
+  onBudgetChange?: (budget: {
+    totalBudgetPaise: number;
+    plannerFeeRupees: number;
+    paymentTerms: string;
+    budgetVisibility: BudgetVisibility;
+  }) => void;
 };
 
 const paymentTermLabels: Record<string, string> = {
@@ -44,7 +50,12 @@ function advancePercentFromTerms(terms: string) {
   return Number.isFinite(n) ? n : 50;
 }
 
-export function AddWeddingBudgetStep({ coupleForm, selectedCultures, reviewEvents }: AddWeddingBudgetStepProps) {
+export function AddWeddingBudgetStep({
+  coupleForm,
+  selectedCultures,
+  reviewEvents,
+  onBudgetChange,
+}: AddWeddingBudgetStepProps) {
   const [budgetRupees, setBudgetRupees] = useState("2500000");
   const [plannerFeeRupees, setPlannerFeeRupees] = useState("");
   const [budgetVisibility, setBudgetVisibility] = useState<BudgetVisibility>("planner");
@@ -80,6 +91,16 @@ export function AddWeddingBudgetStep({ coupleForm, selectedCultures, reviewEvent
   const contextLine = `${coupleLabel} · ${selectedCultures.length} culture${selectedCultures.length === 1 ? "" : "s"} · ${reviewEvents.length} events`;
   const plannerFeeLabel = plannerFeeRupees ? `INR ${parseNumber(plannerFeeRupees).toLocaleString("en-IN")}` : "Not set";
   const advanceDue = Math.round((advancePercentFromTerms(paymentTerms) / 100) * totalBudgetRupees);
+  const plannerFee = parseNumber(plannerFeeRupees);
+
+  useEffect(() => {
+    onBudgetChange?.({
+      totalBudgetPaise,
+      plannerFeeRupees: plannerFee,
+      paymentTerms,
+      budgetVisibility,
+    });
+  }, [budgetVisibility, onBudgetChange, paymentTerms, plannerFee, totalBudgetPaise]);
 
   return (
     <div className="grid h-full min-h-0 grid-cols-1 gap-4 lg:grid-cols-2">

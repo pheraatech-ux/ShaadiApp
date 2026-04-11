@@ -14,45 +14,420 @@ export type Database = {
   }
   public: {
     Tables: {
-      profiles: {
+      budget_items: {
         Row: {
-          id: string
-          first_name: string | null
-          last_name: string | null
-          business_name: string | null
-          phone: string | null
-          role: string
+          allocated_paise: number
+          category: string
           created_at: string
+          id: string
+          spent_paise: number
+          wedding_id: string
         }
         Insert: {
-          id: string
-          first_name?: string | null
-          last_name?: string | null
-          business_name?: string | null
-          phone?: string | null
-          role?: string
+          allocated_paise?: number
+          category: string
           created_at?: string
+          id?: string
+          spent_paise?: number
+          wedding_id: string
         }
         Update: {
+          allocated_paise?: number
+          category?: string
+          created_at?: string
           id?: string
-          first_name?: string | null
-          last_name?: string | null
+          spent_paise?: number
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_items_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          created_at: string
+          created_by_user_id: string | null
+          file_url: string | null
+          id: string
+          title: string
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id?: string | null
+          file_url?: string | null
+          id?: string
+          title: string
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string | null
+          file_url?: string | null
+          id?: string
+          title?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          author_user_id: string | null
+          body: string
+          created_at: string
+          id: string
+          wedding_id: string
+        }
+        Insert: {
+          author_user_id?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          wedding_id: string
+        }
+        Update: {
+          author_user_id?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_author_user_id_fkey"
+            columns: ["author_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          business_name: string | null
+          created_at: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          phone: string | null
+          role: string
+        }
+        Insert: {
           business_name?: string | null
+          created_at?: string
+          first_name?: string | null
+          id: string
+          last_name?: string | null
           phone?: string | null
           role?: string
+        }
+        Update: {
+          business_name?: string | null
           created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+          role?: string
         }
         Relationships: []
+      }
+      tasks: {
+        Row: {
+          assignee_user_id: string | null
+          completed_at: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          wedding_id: string
+        }
+        Insert: {
+          assignee_user_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["task_status"]
+          title: string
+          wedding_id: string
+        }
+        Update: {
+          assignee_user_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_assignee_user_id_fkey"
+            columns: ["assignee_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendors: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          status: Database["public"]["Enums"]["vendor_status"]
+          wedding_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["vendor_status"]
+          wedding_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["vendor_status"]
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendors_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wedding_events: {
+        Row: {
+          created_at: string
+          culture_label: string | null
+          event_date: string | null
+          id: string
+          title: string
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          culture_label?: string | null
+          event_date?: string | null
+          id?: string
+          title: string
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          culture_label?: string | null
+          event_date?: string | null
+          id?: string
+          title?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_events_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wedding_members: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          invited_email: string | null
+          role: Database["public"]["Enums"]["wedding_member_role"]
+          status: Database["public"]["Enums"]["wedding_member_status"]
+          user_id: string | null
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          invited_email?: string | null
+          role?: Database["public"]["Enums"]["wedding_member_role"]
+          status?: Database["public"]["Enums"]["wedding_member_status"]
+          user_id?: string | null
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          invited_email?: string | null
+          role?: Database["public"]["Enums"]["wedding_member_role"]
+          status?: Database["public"]["Enums"]["wedding_member_status"]
+          user_id?: string | null
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_members_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weddings: {
+        Row: {
+          bride_name: string
+          city: string | null
+          couple_name: string
+          created_at: string
+          creator_id: string
+          cultures: string[]
+          groom_name: string
+          id: string
+          slug: string
+          spent_budget_paise: number
+          status: Database["public"]["Enums"]["wedding_status"]
+          total_budget_paise: number
+          updated_at: string
+          venue_name: string | null
+          wedding_date: string | null
+        }
+        Insert: {
+          bride_name: string
+          city?: string | null
+          couple_name: string
+          created_at?: string
+          creator_id: string
+          cultures?: string[]
+          groom_name: string
+          id?: string
+          slug: string
+          spent_budget_paise?: number
+          status?: Database["public"]["Enums"]["wedding_status"]
+          total_budget_paise?: number
+          updated_at?: string
+          venue_name?: string | null
+          wedding_date?: string | null
+        }
+        Update: {
+          bride_name?: string
+          city?: string | null
+          couple_name?: string
+          created_at?: string
+          creator_id?: string
+          cultures?: string[]
+          groom_name?: string
+          id?: string
+          slug?: string
+          spent_budget_paise?: number
+          status?: Database["public"]["Enums"]["wedding_status"]
+          total_budget_paise?: number
+          updated_at?: string
+          venue_name?: string | null
+          wedding_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weddings_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_wedding_with_events: {
+        Args: {
+          p_bride_name: string
+          p_city?: string
+          p_cultures?: string[]
+          p_events?: Json
+          p_groom_name: string
+          p_slug?: string
+          p_total_budget_paise?: number
+          p_venue_name?: string
+          p_wedding_date?: string
+        }
+        Returns: {
+          id: string
+          slug: string
+        }[]
+      }
+      is_wedding_admin: {
+        Args: { target_wedding_id: string }
+        Returns: boolean
+      }
+      is_wedding_member: {
+        Args: { target_wedding_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      task_status: "todo" | "in_progress" | "done"
+      vendor_status: "pending" | "confirmed" | "declined"
+      wedding_member_role: "owner" | "lead" | "coordinator" | "viewer"
+      wedding_member_status: "active" | "invited" | "removed"
+      wedding_status: "upcoming" | "completed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -179,6 +554,12 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      task_status: ["todo", "in_progress", "done"],
+      vendor_status: ["pending", "confirmed", "declined"],
+      wedding_member_role: ["owner", "lead", "coordinator", "viewer"],
+      wedding_member_status: ["active", "invited", "removed"],
+      wedding_status: ["upcoming", "completed", "cancelled"],
+    },
   },
 } as const

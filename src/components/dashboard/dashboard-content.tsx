@@ -1,14 +1,14 @@
 import { Suspense } from "react";
 
 import { AlertsBanner } from "@/components/dashboard/alerts-banner";
-import { dashboardMockData } from "@/components/dashboard/mock-data";
 import { StatsGrid } from "@/components/dashboard/stats-grid";
 import { UrgentTasksWidget } from "@/components/dashboard/urgent-tasks-widget";
 import { WeeklyCompletionWidget } from "@/components/dashboard/weekly-completion-widget";
 import { WeddingListWidget } from "@/components/dashboard/wedding-list-widget";
+import { getDashboardView } from "@/lib/data/app-data";
 
 export async function DashboardContent() {
-  const data = dashboardMockData;
+  const data = await getDashboardView();
 
   return (
     <div className="space-y-4 sm:space-y-5">

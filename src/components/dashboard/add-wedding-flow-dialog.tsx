@@ -2,6 +2,7 @@
 
 import { ArrowRight, X } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   AddWeddingCoupleStep,
@@ -12,6 +13,7 @@ import {
   type EventsTab,
 } from "@/components/dashboard/add-wedding-events-step";
 import { AddWeddingBudgetStep } from "@/components/dashboard/add-wedding-budget-step";
+import type { BudgetVisibility } from "@/components/dashboard/add-wedding-budget/budget-editor-panel";
 import {
   AddWeddingStepper,
   type WeddingFlowStep,
@@ -39,12 +41,26 @@ type AddWeddingFlowDialogProps = {
 };
 
 export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialogProps) {
+  const router = useRouter();
   const [step, setStep] = useState<WeddingFlowStep>(1);
   const [showStepOneErrors, setShowStepOneErrors] = useState(false);
   const [showCultureErrors, setShowCultureErrors] = useState(false);
   const [eventsTab, setEventsTab] = useState<EventsTab>("choose-culture");
   const [selectedCultureIds, setSelectedCultureIds] = useState<CultureId[]>([]);
   const [reviewEvents, setReviewEvents] = useState<WeddingEvent[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [budgetState, setBudgetState] = useState<{
+    totalBudgetPaise: number;
+    plannerFeeRupees: number;
+    paymentTerms: string;
+    budgetVisibility: BudgetVisibility;
+  }>({
+    totalBudgetPaise: 0,
+    plannerFeeRupees: 0,
+    paymentTerms: "50-50",
+    budgetVisibility: "planner",
+  });
   const [coupleForm, setCoupleForm] = useState<AddWeddingCoupleForm>({
     brideName: "",
     groomName: "",
@@ -62,6 +78,8 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
     setEventsTab("choose-culture");
     setSelectedCultureIds([]);
     setReviewEvents([]);
+    setIsSubmitting(false);
+    setSubmitError(null);
     setCoupleForm({
       brideName: "",
       groomName: "",
@@ -75,6 +93,45 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
 
   function isStepOneValid() {
     return Boolean(coupleForm.brideName.trim()) && Boolean(coupleForm.groomName.trim());
+  }
+
+  async function handleCreateWedding() {
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      const response = await fetch("/api/weddings", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brideName: coupleForm.brideName,
+          groomName: coupleForm.groomName,
+          weddingDate: coupleForm.weddingDate ? coupleForm.weddingDate.toISOString().slice(0, 10) : null,
+          city: coupleForm.city,
+          venueName: coupleForm.venueName,
+          cultures: selectedCultureIds,
+          totalBudgetPaise: budgetState.totalBudgetPaise,
+          events: reviewEvents.map((event) => ({
+            title: event.name,
+            cultureLabel: event.cultures[0] ?? null,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        const errBody = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(errBody?.error ?? "Unable to create wedding right now.");
+      }
+
+      const payload = (await response.json()) as { weddingSlug: string };
+      handleOpenChange(false);
+      router.refresh();
+      router.push(`/app/weddings/${payload.weddingSlug}`);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Unable to create wedding.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -138,6 +195,7 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
               coupleForm={coupleForm}
               selectedCultures={selectedCultureIds}
               reviewEvents={reviewEvents}
+              onBudgetChange={setBudgetState}
             />
           )}
         </div>
@@ -147,7 +205,7 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
             <Button
               variant="ghost"
               className="rounded-xl"
-              disabled={step === 1}
+              disabled={step === 1 || isSubmitting}
               onClick={() => {
                 if (isReviewEventsTab) {
                   setEventsTab("choose-culture");
@@ -160,9 +218,10 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
             </Button>
             <Button
               className="rounded-xl"
+              disabled={isSubmitting}
               onClick={() => {
                 if (isLastStep) {
-                  handleOpenChange(false);
+                  void handleCreateWedding();
                   return;
                 }
                 if (step === 1 && !isStepOneValid()) {
@@ -186,7 +245,9 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
               }}
             >
               {isLastStep
-                ? "Create wedding"
+                ? isSubmitting
+                  ? "Creating..."
+                  : "Create wedding"
                 : step === 2 && eventsTab === "choose-culture"
                   ? "Review events"
                   : step === 2 && eventsTab === "review-events"
@@ -195,6 +256,9 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
               <ArrowRight />
             </Button>
           </div>
+          {submitError ? (
+            <p className="pb-2 text-sm text-destructive">{submitError}</p>
+          ) : null}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -26,19 +26,23 @@ export function MemberTaskList({ tasks }: MemberTaskListProps) {
         <CardTitle className="text-base">Assigned tasks</CardTitle>
       </CardHeader>
       <CardContent className="space-y-0 p-0">
-        {tasks.map((task) => (
-          <article key={task.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 px-4 py-3 last:border-none">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{task.title}</p>
-              <p className="text-xs text-muted-foreground">
-                {task.weddingLabel} • {task.dueLabel}
-              </p>
-            </div>
-            <Badge className={cn("rounded-full text-[10px]", taskStatusTone[task.status])}>
-              {taskStatusLabel[task.status]}
-            </Badge>
-          </article>
-        ))}
+        {tasks.length === 0 ? (
+          <p className="px-4 py-4 text-sm text-muted-foreground">No assigned tasks yet.</p>
+        ) : (
+          tasks.map((task) => (
+            <article key={task.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 px-4 py-3 last:border-none">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{task.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {task.weddingLabel} • {task.dueLabel}
+                </p>
+              </div>
+              <Badge className={cn("rounded-full text-[10px]", taskStatusTone[task.status])}>
+                {taskStatusLabel[task.status]}
+              </Badge>
+            </article>
+          ))
+        )}
       </CardContent>
     </Card>
   );

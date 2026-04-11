@@ -20,27 +20,33 @@ export function TeamPanel({ workspace }: TeamPanelProps) {
         </Button>
       </header>
       <div className="space-y-2 p-3">
-        {workspace.teamMembers.map((member) => (
-          <div
-            key={member.id}
-            className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/30 px-3 py-2.5"
-          >
-            <div className="flex min-w-0 items-center gap-3">
-              <Avatar className="size-9 border border-border/70">
-                <AvatarFallback className="text-xs font-semibold">{member.avatarLabel}</AvatarFallback>
-              </Avatar>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">{member.name}</p>
-                <p className="truncate text-xs text-muted-foreground">{member.subtitle}</p>
+        {workspace.teamMembers.length === 0 ? (
+          <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-3 text-sm text-muted-foreground">
+            No team members assigned yet.
+          </p>
+        ) : (
+          workspace.teamMembers.map((member) => (
+            <div
+              key={member.id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/30 px-3 py-2.5"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar className="size-9 border border-border/70">
+                  <AvatarFallback className="text-xs font-semibold">{member.avatarLabel}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">{member.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{member.subtitle}</p>
+                </div>
               </div>
+              {member.badge ? (
+                <Badge variant="secondary" className="shrink-0 text-[10px]">
+                  {member.badge}
+                </Badge>
+              ) : null}
             </div>
-            {member.badge ? (
-              <Badge variant="secondary" className="shrink-0 text-[10px]">
-                {member.badge}
-              </Badge>
-            ) : null}
-          </div>
-        ))}
+          ))
+        )}
         {workspace.teamInvites.map((slot) => (
           <button
             key={slot.id}

@@ -3,10 +3,12 @@ import { Suspense } from "react";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { DashboardTopbarLive } from "@/components/dashboard/dashboard-topbar-live";
 import { SidebarLive } from "@/components/dashboard/sidebar-live";
-import { teamListPageMockData } from "@/components/dashboard/team/team-mock-data";
 import { TeamPageView } from "@/components/dashboard/team/team-page-view";
+import { getTeamListView } from "@/lib/data/app-data";
 
-export default function TeamPage() {
+export default async function TeamPage() {
+  const view = await getTeamListView();
+
   return (
     <DashboardShell
       sidebar={
@@ -20,7 +22,7 @@ export default function TeamPage() {
         </Suspense>
       }
     >
-      <TeamPageView view={teamListPageMockData} />
+      <TeamPageView view={view} />
     </DashboardShell>
   );
 }

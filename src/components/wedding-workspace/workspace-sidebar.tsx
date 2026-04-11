@@ -29,12 +29,14 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import type { WorkspaceSidebarBadgeCounts } from "@/lib/data/app-data";
 
 type WorkspaceSidebarProps = {
   weddingId: string;
   workspaceName: string;
   userName: string;
   userEmail: string;
+  badgeCounts: WorkspaceSidebarBadgeCounts;
 };
 
 type NavItem = {
@@ -58,33 +60,40 @@ export function WorkspaceSidebar({
   workspaceName,
   userName,
   userEmail,
+  badgeCounts,
 }: WorkspaceSidebarProps) {
   const pathname = usePathname();
   const base = `/app/weddings/${weddingId}`;
 
   const items: NavItem[] = [
     { id: "overview", label: "Overview", hrefSuffix: "", icon: Square },
-    { id: "team", label: "Team", hrefSuffix: "/team", icon: Users, badge: { text: "2/3", tone: "emerald" } },
+    {
+      id: "team",
+      label: "Team",
+      hrefSuffix: "/team",
+      icon: Users,
+      badge: { text: `${badgeCounts.teamCount}/${badgeCounts.memberCap}`, tone: "emerald" },
+    },
     {
       id: "vendors",
       label: "Vendors",
       hrefSuffix: "/vendors",
       icon: Globe,
-      badge: { text: "0", tone: "amber" },
+      badge: { text: String(badgeCounts.vendorPendingCount), tone: "amber" },
     },
     {
       id: "tasks",
       label: "Tasks",
       hrefSuffix: "/tasks",
       icon: CheckSquare,
-      badge: { text: "5", tone: "red" },
+      badge: { text: String(badgeCounts.taskOverdueCount), tone: "red" },
     },
     {
       id: "messages",
       label: "Messages",
       hrefSuffix: "/messages",
       icon: Mail,
-      badge: { text: "0", tone: "red" },
+      badge: { text: String(badgeCounts.messageCount), tone: "red" },
     },
     { id: "budget", label: "Budget", hrefSuffix: "/budget", icon: FileText },
     { id: "documents", label: "Documents", hrefSuffix: "/documents", icon: File },

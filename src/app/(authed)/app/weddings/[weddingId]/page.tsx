@@ -1,5 +1,7 @@
-import { getWeddingWorkspaceMock } from "@/components/wedding-workspace/mock-data";
+import { notFound } from "next/navigation";
+
 import { WeddingWorkspaceOverview } from "@/components/wedding-workspace/wedding-workspace-overview";
+import { getWeddingWorkspaceBySlug } from "@/lib/data/app-data";
 
 type WeddingWorkspacePageProps = {
   params: Promise<{
@@ -9,7 +11,10 @@ type WeddingWorkspacePageProps = {
 
 export default async function WeddingWorkspacePage({ params }: WeddingWorkspacePageProps) {
   const { weddingId } = await params;
-  const workspace = getWeddingWorkspaceMock(weddingId);
+  const workspace = await getWeddingWorkspaceBySlug(weddingId);
+  if (!workspace) {
+    notFound();
+  }
 
   return <WeddingWorkspaceOverview workspace={workspace} />;
 }

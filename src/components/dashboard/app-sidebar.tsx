@@ -17,6 +17,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import type { AppSidebarCounts } from "@/lib/data/app-data";
 
 type SidebarItem = {
   label: string;
@@ -30,23 +31,25 @@ type AppSidebarProps = {
   userName: string;
   userEmail: string;
   currentPath?: string;
+  counts: AppSidebarCounts;
 };
-
-const sidebarItems: SidebarItem[] = [
-  { label: "Dashboard", href: "/app/dashboard", icon: LayoutGrid },
-  { label: "All Weddings", href: "/app/weddings", icon: CalendarCheck2, badgeCount: 4 },
-  { label: "Teams", href: "/app/team", icon: Users, badgeCount: 4 },
-  { label: "Tasks", href: "/app/tasks", icon: ClipboardList, badgeCount: 7 },
-  { label: "Budget", href: "/app/budget", icon: Wallet },
-  { label: "Messages", href: "/app/messages", icon: MessageSquare, badgeCount: 3 },
-];
 
 export function AppSidebar({
   workspaceName,
   userName,
   userEmail,
   currentPath = "/app/dashboard",
+  counts,
 }: AppSidebarProps) {
+  const sidebarItems: SidebarItem[] = [
+    { label: "Dashboard", href: "/app/dashboard", icon: LayoutGrid },
+    { label: "All Weddings", href: "/app/weddings", icon: CalendarCheck2, badgeCount: counts.weddings },
+    { label: "Teams", href: "/app/team", icon: Users, badgeCount: counts.team },
+    { label: "Tasks", href: "/app/tasks", icon: ClipboardList, badgeCount: counts.tasksOverdue },
+    { label: "Budget", href: "/app/budget", icon: Wallet },
+    { label: "Messages", href: "/app/messages", icon: MessageSquare, badgeCount: counts.messages },
+  ];
+
   function isPathActive(href: string) {
     return currentPath === href || currentPath.startsWith(`${href}/`);
   }
