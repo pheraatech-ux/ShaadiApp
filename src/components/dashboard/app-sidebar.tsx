@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarCheck2, ClipboardList, LayoutGrid, MessageSquare, Wallet } from "lucide-react";
+import { CalendarCheck2, ClipboardList, LayoutGrid, MessageSquare, Users, Wallet } from "lucide-react";
 import { ComponentType } from "react";
 
 import { SidebarProfileMenu } from "@/components/dashboard/sidebar-profile-menu";
@@ -35,6 +35,7 @@ type AppSidebarProps = {
 const sidebarItems: SidebarItem[] = [
   { label: "Dashboard", href: "/app/dashboard", icon: LayoutGrid },
   { label: "All Weddings", href: "/app/weddings", icon: CalendarCheck2, badgeCount: 4 },
+  { label: "Teams", href: "/app/team", icon: Users, badgeCount: 4 },
   { label: "Tasks", href: "/app/tasks", icon: ClipboardList, badgeCount: 7 },
   { label: "Budget", href: "/app/budget", icon: Wallet },
   { label: "Messages", href: "/app/messages", icon: MessageSquare, badgeCount: 3 },

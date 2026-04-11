@@ -7,11 +7,19 @@ import { UserPlus } from "lucide-react";
 
 import { InviteTeamMemberDialog } from "@/components/wedding-workspace/team/invite-team-member-dialog";
 import type { TeamPageViewModel } from "@/components/wedding-workspace/team/team-types";
+import { TaskProgressBar } from "@/components/dashboard/team/task-progress-bar";
 import { WorkspaceCoupleHeader } from "@/components/wedding-workspace/workspace-couple-header";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 type WorkspaceTeamViewProps = {
   view: TeamPageViewModel;
   defaultInviteOpen?: boolean;
@@ -25,7 +33,6 @@ export function WorkspaceTeamView({ view, defaultInviteOpen = false }: Workspace
   useEffect(() => {
     if (!defaultInviteOpen || clearedInviteQuery.current) return;
     clearedInviteQuery.current = true;
-    setInviteOpen(true);
     router.replace(`/app/weddings/${view.weddingId}/team`, { scroll: false });
   }, [defaultInviteOpen, router, view.weddingId]);
 
@@ -64,32 +71,87 @@ export function WorkspaceTeamView({ view, defaultInviteOpen = false }: Workspace
         </CardHeader>
       </Card>
 
+      <section className="grid gap-3 sm:grid-cols-3">
+        {view.kpis.map((kpi) => (
+          <Card key={kpi.id} className="rounded-2xl border-border/70">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {kpi.title}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-semibold tracking-tight">{kpi.value}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{kpi.helperText}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
+
       <Card className="rounded-2xl border-border/70">
         <CardHeader className="border-b border-border/60 pb-3">
           <CardTitle className="text-base">Members</CardTitle>
         </CardHeader>
         <CardContent className="space-y-0 divide-y divide-border/60 p-0">
           {view.members.map((m) => (
-            <div key={m.id} className="flex items-center gap-3 px-4 py-3">
+            <div key={m.id} className="grid gap-3 px-4 py-3 xl:grid-cols-[1.2fr_1fr_auto_auto] xl:items-center">
               {m.status === "placeholder" ? (
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/50">
-                  <UserPlus className="size-4 text-muted-foreground" />
-                </span>
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/50">
+                    <UserPlus className="size-4 text-muted-foreground" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground">{m.name}</p>
+                    <p className="text-xs text-muted-foreground">{m.subtitle}</p>
+                  </div>
+                  <Button variant="outline" size="sm" className="h-8 shrink-0 rounded-lg" onClick={() => setInviteOpen(true)}>
+                    {m.rightLabel}
+                  </Button>
+                </div>
               ) : (
-                <Avatar className="size-10 shrink-0 border border-border/60">
-                  <AvatarFallback className={cn("text-xs font-semibold", m.avatarClassName)}>{m.avatarLabel}</AvatarFallback>
-                </Avatar>
+                <div className="flex min-w-0 items-center gap-3">
+                  <Avatar className="size-10 shrink-0 border border-border/60">
+                    <AvatarFallback className={cn("text-xs font-semibold", m.avatarClassName)}>{m.avatarLabel}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground">{m.name}</p>
+                    <p className="text-xs text-muted-foreground">{m.subtitle}</p>
+                  </div>
+                </div>
               )}
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-foreground">{m.name}</p>
-                <p className="text-xs text-muted-foreground">{m.subtitle}</p>
-              </div>
+
               {m.status === "placeholder" ? (
-                <Button variant="outline" size="sm" className="h-8 shrink-0 rounded-lg" onClick={() => setInviteOpen(true)}>
-                  {m.rightLabel}
-                </Button>
+                <p className="text-xs text-muted-foreground">No active tasks yet</p>
               ) : (
-                <span className={cn("shrink-0 text-xs font-medium", m.rightClassName)}>{m.rightLabel}</span>
+                <div className="min-w-0">
+                  <TaskProgressBar completed={m.completedTaskCount} total={m.activeTaskCount} />
+                  {m.overdueTaskCount > 0 ? (
+                    <p className="mt-1 text-xs font-medium text-red-600 dark:text-red-300">
+                      {m.overdueTaskCount} overdue tasks
+                    </p>
+                  ) : null}
+                </div>
+              )}
+
+              {m.status === "placeholder" ? null : (
+                <Select defaultValue={m.accessLevel}>
+                  <SelectTrigger className="h-8 w-[150px] rounded-lg text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent align="end">
+                    <SelectItem value="full">Full access</SelectItem>
+                    <SelectItem value="coordinator">Coordinator</SelectItem>
+                    <SelectItem value="removed">Remove</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+
+              {m.status === "placeholder" ? null : (
+                <div className="flex items-center gap-2 justify-self-end">
+                  <span className={cn("shrink-0 text-xs font-medium", m.rightClassName)}>{m.rightLabel}</span>
+                  <Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-xs text-destructive hover:text-destructive">
+                    Remove
+                  </Button>
+                </div>
               )}
             </div>
           ))}
