@@ -130,7 +130,7 @@ export function AuthForm() {
           setTimeout(resolve, 1500);
         });
         router.refresh();
-        router.replace("/app");
+        router.replace("/app/dashboard");
       }
       return;
     }
@@ -200,6 +200,7 @@ export function AuthForm() {
         onboarding_completed: true,
         onboarding_completed_at: new Date().toISOString(),
         onboarding_title: `Let's make ${displayBusinessName} scalable!`,
+        onboarding_welcome_pending: true,
       },
     });
 
@@ -219,8 +220,8 @@ export function AuthForm() {
     await new Promise<void>((resolve) => {
       setTimeout(resolve, 950);
     });
-    router.refresh();
-    router.replace("/app");
+    setProfileLoading(false);
+    router.replace("/app/welcome");
   }
 
   return (
@@ -688,7 +689,7 @@ export function AuthForm() {
                 disabled={profileLoading}
                 onClick={() => {
                   router.refresh();
-                  router.replace("/app");
+                  router.replace("/app/dashboard");
                 }}
                 className="w-full text-center text-sm font-medium text-muted-foreground transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
               >

@@ -1,28 +1,5 @@
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
-import { DashboardContent } from "@/components/dashboard/dashboard-content";
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeletons";
-import { DashboardTopbarLive } from "@/components/dashboard/dashboard-topbar-live";
-import { SidebarLive } from "@/components/dashboard/sidebar-live";
-
-export default function AppHomePage() {
-  return (
-    <DashboardShell
-      sidebar={
-        <Suspense>
-          <SidebarLive />
-        </Suspense>
-      }
-      topbar={
-        <Suspense>
-          <DashboardTopbarLive />
-        </Suspense>
-      }
-    >
-      <Suspense fallback={<DashboardSkeleton />}>
-        <DashboardContent />
-      </Suspense>
-    </DashboardShell>
-  );
+export default function AppIndexPage() {
+  redirect("/app/dashboard");
 }

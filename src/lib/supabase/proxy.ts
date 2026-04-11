@@ -49,7 +49,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isAuthRoute) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = AUThed_ROUTE_PREFIX;
+    redirectUrl.pathname = `${AUThed_ROUTE_PREFIX}/dashboard`;
     redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);
   }

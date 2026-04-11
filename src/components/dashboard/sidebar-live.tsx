@@ -10,7 +10,7 @@ export async function SidebarLive() {
       workspaceName={dashboardMockData.workspaceName}
       userName={planner.displayName}
       userEmail={planner.email}
-      currentPath="/app"
+      currentPath="/app/dashboard"
     />
   );
 }

@@ -33,7 +33,7 @@ type AppSidebarProps = {
 };
 
 const sidebarItems: SidebarItem[] = [
-  { label: "Dashboard", href: "/app", icon: LayoutGrid },
+  { label: "Dashboard", href: "/app/dashboard", icon: LayoutGrid },
   { label: "All Weddings", href: "/app/weddings", icon: CalendarCheck2, badgeCount: 4 },
   { label: "Tasks", href: "/app/tasks", icon: ClipboardList, badgeCount: 7 },
   { label: "Budget", href: "/app/budget", icon: Wallet },
@@ -44,7 +44,7 @@ export function AppSidebar({
   workspaceName,
   userName,
   userEmail,
-  currentPath = "/app",
+  currentPath = "/app/dashboard",
 }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon">

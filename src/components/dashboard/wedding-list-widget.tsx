@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarDays, MapPin } from "lucide-react";
 
 import { AddWeddingFlowDialog } from "@/components/dashboard/add-wedding-flow-dialog";
@@ -93,8 +94,16 @@ export function WeddingListWidget({
   onCreateWedding,
   onViewAll,
 }: WeddingListWidgetProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("createWedding") !== "1") return;
+    setOpenCreateDialog(true);
+    router.replace("/app/dashboard");
+  }, [searchParams, router]);
 
   const filtered =
     activeTab === "all" ? items : items.filter((w) => w.status === activeTab);
