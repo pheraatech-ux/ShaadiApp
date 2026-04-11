@@ -1,6 +1,5 @@
 import { AIBriefBanner } from "@/components/wedding-workspace/ai-brief-banner";
-import { LeadBanner } from "@/components/wedding-workspace/lead-banner";
-import { SetupBanner } from "@/components/wedding-workspace/setup-banner";
+import { WorkspaceSetupAndLead } from "@/components/wedding-workspace/workspace-setup-and-lead";
 import { TeamPanel } from "@/components/wedding-workspace/team-panel";
 import { TimelinePanel } from "@/components/wedding-workspace/timeline-panel";
 import { VendorsNeededPanel } from "@/components/wedding-workspace/vendors-needed-panel";
@@ -24,8 +23,7 @@ export function WeddingWorkspaceOverview({ workspace }: WeddingWorkspaceOverview
         cultureTags={workspace.cultureTags.map((label) => ({ label }))}
       />
       <WorkspaceNav workspace={workspace} />
-      <SetupBanner workspace={workspace} />
-      <LeadBanner workspace={workspace} />
+      <WorkspaceSetupAndLead workspace={workspace} />
       <AIBriefBanner workspace={workspace} />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <TimelinePanel workspace={workspace} />
