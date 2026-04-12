@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { CalendarCheck2, ClipboardList, LayoutGrid, MessageSquare, Users, Wallet } from "lucide-react";
 import { ComponentType } from "react";
 
@@ -30,7 +33,6 @@ type AppSidebarProps = {
   workspaceName: string;
   userName: string;
   userEmail: string;
-  currentPath?: string;
   counts: AppSidebarCounts;
 };
 
@@ -38,9 +40,9 @@ export function AppSidebar({
   workspaceName,
   userName,
   userEmail,
-  currentPath = "/app/dashboard",
   counts,
 }: AppSidebarProps) {
+  const pathname = usePathname() ?? "/app/dashboard";
   const sidebarItems: SidebarItem[] = [
     { label: "Dashboard", href: "/app/dashboard", icon: LayoutGrid },
     { label: "All Weddings", href: "/app/weddings", icon: CalendarCheck2, badgeCount: counts.weddings },
@@ -51,7 +53,7 @@ export function AppSidebar({
   ];
 
   function isPathActive(href: string) {
-    return currentPath === href || currentPath.startsWith(`${href}/`);
+    return pathname === href || pathname.startsWith(`${href}/`);
   }
 
   return (

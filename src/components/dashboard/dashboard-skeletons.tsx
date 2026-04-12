@@ -117,3 +117,37 @@ export function DashboardSkeleton() {
     </div>
   );
 }
+
+/** Matches app sidebar width (16rem) so the shell does not jump while data loads. */
+export function SidebarChromeSkeleton() {
+  return (
+    <div
+      className="flex h-full w-64 flex-col gap-4 border-r border-sidebar-border bg-sidebar p-3"
+      aria-hidden
+    >
+      <Skeleton className="h-[4.5rem] w-full rounded-xl" />
+      <div className="space-y-1.5 px-1">
+        <Skeleton className="h-3 w-20" />
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full rounded-lg" />
+        ))}
+      </div>
+      <div className="mt-auto border-t border-sidebar-border pt-3">
+        <Skeleton className="h-12 w-full rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
+export function DashboardTopbarSkeleton() {
+  return (
+    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <Skeleton className="h-7 w-48 sm:h-8" />
+      <div className="flex items-center gap-2 sm:gap-3">
+        <Skeleton className="hidden h-9 max-w-sm flex-1 rounded-xl sm:block sm:w-64" />
+        <Skeleton className="h-9 w-28 rounded-xl" />
+        <Skeleton className="size-9 rounded-xl" />
+      </div>
+    </div>
+  );
+}

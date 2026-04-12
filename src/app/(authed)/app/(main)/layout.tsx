@@ -1,28 +1,28 @@
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import {
+  DashboardTopbarSkeleton,
+  SidebarChromeSkeleton,
+} from "@/components/dashboard/dashboard-skeletons";
 import { DashboardTopbarLive } from "@/components/dashboard/dashboard-topbar-live";
 import { SidebarLive } from "@/components/dashboard/sidebar-live";
-import { TeamPageView } from "@/components/dashboard/team/team-page-view";
-import { getTeamListView } from "@/lib/data/app-data";
 
-export default async function TeamPage() {
-  const view = await getTeamListView();
-
+export default function MainAppShellLayout({ children }: { children: ReactNode }) {
   return (
     <DashboardShell
       sidebar={
-        <Suspense>
-          <SidebarLive currentPath="/app/team" />
+        <Suspense fallback={<SidebarChromeSkeleton />}>
+          <SidebarLive />
         </Suspense>
       }
       topbar={
-        <Suspense>
+        <Suspense fallback={<DashboardTopbarSkeleton />}>
           <DashboardTopbarLive />
         </Suspense>
       }
     >
-      <TeamPageView view={view} />
+      {children}
     </DashboardShell>
   );
 }
