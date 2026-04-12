@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BookHeart,
   CheckSquare,
-  ChevronLeft,
   File,
   FileText,
   Globe,
+  LayoutGrid,
   Mail,
   Sparkles,
   Square,
@@ -119,21 +120,37 @@ export function WorkspaceSidebar({
           </p>
           <p className="text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden">Workspace</p>
         </div>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              render={<Link href="/app/weddings" />}
-              size="sm"
-              className="text-sidebar-foreground/70 hover:text-sidebar-foreground"
-              tooltip="All weddings"
-            >
-              <ChevronLeft className="size-4 shrink-0" />
-              <span className="group-data-[collapsible=icon]:hidden">All weddings</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>App</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={<Link href="/app/dashboard" />}
+                  isActive={pathname === "/app/dashboard" || pathname.startsWith("/app/dashboard/")}
+                  size="lg"
+                  tooltip="Dashboard"
+                >
+                  <LayoutGrid className="size-4 shrink-0" />
+                  <span className="group-data-[collapsible=icon]:hidden">Dashboard</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={<Link href="/app/weddings" />}
+                  isActive={pathname === "/app/weddings"}
+                  size="lg"
+                  tooltip="All weddings"
+                >
+                  <BookHeart className="size-4 shrink-0" />
+                  <span className="group-data-[collapsible=icon]:hidden">All weddings</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel>This wedding</SidebarGroupLabel>
           <SidebarGroupContent>

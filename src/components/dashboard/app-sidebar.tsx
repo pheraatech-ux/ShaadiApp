@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarCheck2, ClipboardList, LayoutGrid, MessageSquare, Users, Wallet } from "lucide-react";
+import { BookHeart, ClipboardList, LayoutGrid, MessageSquare, Users, Wallet } from "lucide-react";
 import { ComponentType } from "react";
 
 import { SidebarProfileMenu } from "@/components/dashboard/sidebar-profile-menu";
@@ -45,7 +45,7 @@ export function AppSidebar({
   const pathname = usePathname() ?? "/app/dashboard";
   const sidebarItems: SidebarItem[] = [
     { label: "Dashboard", href: "/app/dashboard", icon: LayoutGrid },
-    { label: "All Weddings", href: "/app/weddings", icon: CalendarCheck2, badgeCount: counts.weddings },
+    { label: "All Weddings", href: "/app/weddings", icon: BookHeart, badgeCount: counts.weddings },
     { label: "Teams", href: "/app/team", icon: Users, badgeCount: counts.team },
     { label: "Tasks", href: "/app/tasks", icon: ClipboardList, badgeCount: counts.tasksOverdue },
     { label: "Budget", href: "/app/budget", icon: Wallet },
