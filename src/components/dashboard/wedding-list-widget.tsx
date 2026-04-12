@@ -152,7 +152,7 @@ export function WeddingListWidget({
           onViewAll={handleViewAll}
         />
       }
-      contentClassName="px-3 py-3 sm:px-4 sm:py-3"
+      contentClassName="px-3 pt-0 pb-3 sm:px-4 sm:pb-3"
     >
       <div className="scrollbar-hide flex gap-3 overflow-x-auto pb-1">
         {filtered.map((item) => (

@@ -14,7 +14,6 @@ export async function WorkspaceSidebarLive({ weddingId }: WorkspaceSidebarLivePr
   return (
     <WorkspaceSidebar
       weddingId={weddingId}
-      workspaceName={planner.workspaceName}
       userName={planner.userName}
       userEmail={planner.userEmail}
       badgeCounts={counts}

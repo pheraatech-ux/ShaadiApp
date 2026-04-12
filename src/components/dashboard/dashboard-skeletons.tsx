@@ -18,24 +18,9 @@ export function StatsGridSkeleton() {
   );
 }
 
-export function AlertsBannerSkeleton() {
-  return (
-    <div className="rounded-2xl border border-border/70 bg-muted/30 px-4 py-3">
-      <div className="flex items-center gap-2.5">
-        <Skeleton className="size-4 rounded-full" />
-        <Skeleton className="h-4 w-3/4" />
-      </div>
-    </div>
-  );
-}
-
 export function WeddingListSkeleton() {
   return (
     <div className="rounded-2xl border border-border/70 bg-card py-0 shadow-sm">
-      <div className="flex items-center justify-between border-b border-border/70 px-4 py-3 sm:px-5">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-6 w-16 rounded-xl" />
-      </div>
       <div className="space-y-4 px-4 py-4 sm:px-5">
         <Skeleton className="h-8 w-full rounded-xl" />
         <div className="flex gap-3">
@@ -108,7 +93,6 @@ export function DashboardSkeleton() {
   return (
     <div className="space-y-4 sm:space-y-5">
       <StatsGridSkeleton />
-      <AlertsBannerSkeleton />
       <WeddingListSkeleton />
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
         <UrgentTasksSkeleton />
@@ -122,18 +106,22 @@ export function DashboardSkeleton() {
 export function SidebarChromeSkeleton() {
   return (
     <div
-      className="flex h-full w-64 flex-col gap-4 border-r border-sidebar-border bg-sidebar p-3"
+      className="flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar"
       aria-hidden
     >
-      <Skeleton className="h-[4.5rem] w-full rounded-xl" />
-      <div className="space-y-1.5 px-1">
-        <Skeleton className="h-3 w-20" />
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-10 w-full rounded-lg" />
-        ))}
+      <div className="shrink-0 border-b border-sidebar-border/60 px-2 py-3 sm:px-3">
+        <Skeleton className="h-[39px] w-full rounded-xl" />
       </div>
-      <div className="mt-auto border-t border-sidebar-border pt-3">
-        <Skeleton className="h-12 w-full rounded-xl" />
+      <div className="flex flex-1 flex-col gap-4 p-3">
+        <div className="space-y-1.5 px-1">
+          <Skeleton className="h-3 w-20" />
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full rounded-lg" />
+          ))}
+        </div>
+        <div className="mt-auto border-t border-sidebar-border pt-3">
+          <Skeleton className="h-12 w-full rounded-xl" />
+        </div>
       </div>
     </div>
   );

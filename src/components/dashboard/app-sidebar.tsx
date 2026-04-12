@@ -30,18 +30,12 @@ type SidebarItem = {
 };
 
 type AppSidebarProps = {
-  workspaceName: string;
   userName: string;
   userEmail: string;
   counts: AppSidebarCounts;
 };
 
-export function AppSidebar({
-  workspaceName,
-  userName,
-  userEmail,
-  counts,
-}: AppSidebarProps) {
+export function AppSidebar({ userName, userEmail, counts }: AppSidebarProps) {
   const pathname = usePathname() ?? "/app/dashboard";
   const sidebarItems: SidebarItem[] = [
     { label: "Dashboard", href: "/app/dashboard", icon: LayoutGrid },
@@ -58,15 +52,12 @@ export function AppSidebar({
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <div className="flex min-h-14 items-center rounded-xl border border-sidebar-border/70 bg-sidebar-accent/60 px-3 py-3 group-data-[collapsible=icon]:min-h-8 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0">
-          <p className="truncate text-base font-semibold group-data-[collapsible=icon]:hidden">
-            {workspaceName}
+      <SidebarHeader className="min-h-[63px] shrink-0 justify-center gap-0 border-b border-sidebar-border/60 p-0 px-2 py-3 sm:px-3">
+        <div className="flex h-[39px] w-full min-w-0 items-center justify-center rounded-xl border border-sidebar-border/70 bg-sidebar-accent/60 px-3 py-0 group-data-[collapsible=icon]:px-1">
+          <p className="truncate text-sm font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
+            ShaadiOS
           </p>
-          <p className="hidden text-sm font-semibold group-data-[collapsible=icon]:block">
-            {workspaceName.slice(0, 1).toUpperCase()}
-          </p>
-          <p className="text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden">Workspace</p>
+          <p className="hidden text-sm font-semibold group-data-[collapsible=icon]:block">S</p>
         </div>
       </SidebarHeader>
       <SidebarContent>
