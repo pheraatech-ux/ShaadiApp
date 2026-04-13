@@ -1,6 +1,10 @@
 import { Suspense, type ReactNode } from "react";
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import {
+  WorkspaceSidebarSkeleton,
+  WorkspaceTopbarSkeleton,
+} from "@/components/wedding-workspace/skeletons";
 import { WorkspaceSidebarLive } from "@/components/wedding-workspace/workspace-sidebar-live";
 import { WorkspaceTopbar } from "@/components/wedding-workspace/workspace-topbar";
 
@@ -15,11 +19,15 @@ export default async function WeddingWorkspaceLayout({ children, params }: Weddi
   return (
     <DashboardShell
       sidebar={
-        <Suspense>
+        <Suspense fallback={<WorkspaceSidebarSkeleton />}>
           <WorkspaceSidebarLive weddingId={weddingId} />
         </Suspense>
       }
-      topbar={<WorkspaceTopbar />}
+      topbar={
+        <Suspense fallback={<WorkspaceTopbarSkeleton />}>
+          <WorkspaceTopbar />
+        </Suspense>
+      }
     >
       {children}
     </DashboardShell>
