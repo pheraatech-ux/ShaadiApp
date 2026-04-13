@@ -237,6 +237,58 @@ export type Database = {
           },
         ]
       }
+      task_comments: {
+        Row: {
+          author_user_id: string | null
+          body: string
+          created_at: string
+          id: string
+          is_system: boolean
+          task_id: string
+          wedding_id: string
+        }
+        Insert: {
+          author_user_id?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          is_system?: boolean
+          task_id: string
+          wedding_id: string
+        }
+        Update: {
+          author_user_id?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          is_system?: boolean
+          task_id?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_author_user_id_fkey"
+            columns: ["author_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendors: {
         Row: {
           category: string
@@ -453,7 +505,7 @@ export type Database = {
     }
     Enums: {
       task_priority: "high" | "medium" | "low"
-      task_status: "todo" | "in_progress" | "done"
+      task_status: "todo" | "in_progress" | "needs_review" | "done"
       task_visibility: "team_only" | "client_family" | "vendor"
       vendor_status: "pending" | "confirmed" | "declined"
       wedding_member_role: "owner" | "lead" | "coordinator" | "viewer"
@@ -587,7 +639,7 @@ export const Constants = {
   public: {
     Enums: {
       task_priority: ["high", "medium", "low"],
-      task_status: ["todo", "in_progress", "done"],
+      task_status: ["todo", "in_progress", "needs_review", "done"],
       task_visibility: ["team_only", "client_family", "vendor"],
       vendor_status: ["pending", "confirmed", "declined"],
       wedding_member_role: ["owner", "lead", "coordinator", "viewer"],

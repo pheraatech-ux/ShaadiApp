@@ -76,7 +76,7 @@ type TaskRow = {
   wedding_id: string;
   title: string;
   assignee_user_id: string | null;
-  status: "todo" | "in_progress" | "done";
+  status: "todo" | "in_progress" | "needs_review" | "done";
   due_date: string | null;
   completed_at: string | null;
 };
@@ -526,7 +526,7 @@ export const getWeddingWorkspaceBySlug = cache(
           .eq("wedding_id", wedding.id),
       ]);
 
-    const tasks = (tasksData ?? []) as { id: string; title: string; status: "todo" | "in_progress" | "done"; due_date: string | null }[];
+    const tasks = (tasksData ?? []) as { id: string; title: string; status: "todo" | "in_progress" | "needs_review" | "done"; due_date: string | null }[];
     const events = (eventsData ?? []) as { id: string; title: string; event_date: string | null; culture_label: string | null }[];
     const vendors = (vendorsData ?? []) as { id: string; name: string; category: string; notes: string | null; status: "pending" | "confirmed" | "declined" }[];
     const members = (membersData ?? []) as WeddingMemberRow[];
@@ -704,7 +704,7 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
   ]);
 
   const members = (memberRows ?? []) as WeddingMemberRow[];
-  const tasks = (taskRows ?? []) as { id: string; wedding_id: string; assignee_user_id: string | null; status: "todo" | "in_progress" | "done"; due_date: string | null }[];
+  const tasks = (taskRows ?? []) as { id: string; wedding_id: string; assignee_user_id: string | null; status: "todo" | "in_progress" | "needs_review" | "done"; due_date: string | null }[];
   const userIds = [...new Set(members.map((row) => row.user_id).filter(Boolean))] as string[];
   const { data: profileRows } =
     userIds.length > 0
@@ -808,7 +808,7 @@ export const getTeamMemberProfileView = cache(
       .order("created_at", { ascending: false });
 
     const weddingNameById = new Map(weddings.map((wedding) => [wedding.id, wedding.couple_name]));
-    const tasks: TeamTaskItem[] = ((taskRows ?? []) as { id: string; title: string; status: "todo" | "in_progress" | "done"; due_date: string | null; wedding_id: string }[]).map((task) => ({
+    const tasks: TeamTaskItem[] = ((taskRows ?? []) as { id: string; title: string; status: "todo" | "in_progress" | "needs_review" | "done"; due_date: string | null; wedding_id: string }[]).map((task) => ({
       id: task.id,
       title: task.title,
       weddingLabel: weddingNameById.get(task.wedding_id) ?? "Wedding",
@@ -851,7 +851,7 @@ export const getWeddingTeamViewBySlug = cache(
     ]);
 
     const members = (memberRows ?? []) as WeddingMemberRow[];
-    const tasks = (taskRows ?? []) as { id: string; status: "todo" | "in_progress" | "done"; assignee_user_id: string | null; due_date: string | null }[];
+    const tasks = (taskRows ?? []) as { id: string; status: "todo" | "in_progress" | "needs_review" | "done"; assignee_user_id: string | null; due_date: string | null }[];
     const today = new Date().toISOString().slice(0, 10);
 
     const rows = members.map((member) => {
@@ -915,7 +915,7 @@ export const getWeddingTasksBoardViewBySlug = cache(
     if (!wedding) return null;
 
     const supabase = await createSupabaseServerClient();
-    const [{ data: taskRows }, { data: memberRows }, { data: eventRows }] = await Promise.all([
+    const [{ data: taskRows }, { data: memberRows }, { data: eventRows }, { data: commentRows }] = await Promise.all([
       supabase
         .from("tasks")
         .select("id, title, description, status, priority, due_date, linked_event_id, assignee_user_id, raised_by_user_id, visibility, created_at")
@@ -931,6 +931,10 @@ export const getWeddingTasksBoardViewBySlug = cache(
         .select("id, title, event_date")
         .eq("wedding_id", wedding.id)
         .order("event_date", { ascending: true }),
+      supabase
+        .from("task_comments")
+        .select("task_id")
+        .eq("wedding_id", wedding.id),
     ]);
 
     const activeMembers = (memberRows ?? []) as WeddingMemberRow[];
@@ -986,12 +990,16 @@ export const getWeddingTasksBoardViewBySlug = cache(
     const today = new Date().toISOString().slice(0, 10);
     const oneWeekFromNow = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
     const eventById = new Map((eventRows ?? []).map((event) => [event.id, event]));
+    const commentCountByTaskId = new Map<string, number>();
+    for (const row of commentRows ?? []) {
+      commentCountByTaskId.set(row.task_id, (commentCountByTaskId.get(row.task_id) ?? 0) + 1);
+    }
 
     const tasks: WeddingTasksBoardTask[] = ((taskRows ?? []) as {
       id: string;
       title: string;
       description: string | null;
-      status: "todo" | "in_progress" | "done";
+      status: "todo" | "in_progress" | "needs_review" | "done";
       priority: "high" | "medium" | "low";
       due_date: string | null;
       linked_event_id: string | null;
@@ -1019,6 +1027,7 @@ export const getWeddingTasksBoardViewBySlug = cache(
         raisedByUserId: task.raised_by_user_id,
         raisedByLabel: raisedBy?.isCurrentUser ? `${raisedBy.label} (me)` : raisedBy?.label ?? "Team member",
         visibility: task.visibility ?? ["team_only"],
+        commentCount: commentCountByTaskId.get(task.id) ?? 0,
         isAssignedToCurrentUser: task.assignee_user_id === planner.userId,
         isOverdue: overdue,
         isDueThisWeek: dueThisWeek,
@@ -1148,7 +1157,7 @@ export async function getWeddingSectionSummaryBySlug(weddingSlug: string) {
 
   return {
     wedding,
-    tasks: (tasks ?? []) as { id: string; title: string; status: "todo" | "in_progress" | "done"; due_date: string | null }[],
+    tasks: (tasks ?? []) as { id: string; title: string; status: "todo" | "in_progress" | "needs_review" | "done"; due_date: string | null }[],
     vendors: (vendors ?? []) as { id: string; name: string; category: string; status: "pending" | "confirmed" | "declined" }[],
     messages: (messages ?? []) as { id: string; body: string; created_at: string }[],
     documents: (documents ?? []) as { id: string; title: string; file_url: string | null; created_at: string }[],

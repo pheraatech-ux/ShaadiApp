@@ -30,7 +30,7 @@ type UpdateTaskPayload = {
   status?: TaskStatus;
 };
 
-const VALID_STATUSES = new Set<TaskStatus>(["todo", "in_progress", "done"]);
+const VALID_STATUSES = new Set<TaskStatus>(["todo", "in_progress", "needs_review", "done"]);
 const VALID_PRIORITIES = new Set<TaskPriority>(["high", "medium", "low"]);
 const VALID_VISIBILITY = new Set<TaskVisibility>(["team_only", "client_family", "vendor"]);
 
@@ -215,5 +215,40 @@ export async function PATCH(
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch {
     return NextResponse.json({ error: "Unable to update task." }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ weddingSlug: string }> },
+) {
+  try {
+    const { weddingSlug } = await context.params;
+    const payload = (await request.json().catch(() => ({}))) as { taskId?: string };
+    if (!payload.taskId) {
+      return NextResponse.json({ error: "Task id is required." }, { status: 400 });
+    }
+
+    const lookup = await getWeddingIdBySlug(request, weddingSlug);
+    if ("errorResponse" in lookup) return lookup.errorResponse;
+    const { supabase, weddingId } = lookup;
+
+    const { data: task, error: taskError } = await supabase
+      .from("tasks")
+      .select("id")
+      .eq("id", payload.taskId)
+      .eq("wedding_id", weddingId)
+      .maybeSingle();
+    if (taskError || !task) {
+      return NextResponse.json({ error: "Task not found." }, { status: 404 });
+    }
+
+    const { error } = await supabase.from("tasks").delete().eq("id", payload.taskId);
+    if (error) {
+      return NextResponse.json({ error: error.message || "Unable to delete task." }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch {
+    return NextResponse.json({ error: "Unable to delete task." }, { status: 500 });
   }
 }

@@ -22,6 +22,7 @@ type TaskKanbanColumnProps = {
   onDropTaskToLane: (laneId: TaskLaneId) => void;
   onDragEnterLane: (laneId: TaskLaneId) => void;
   onDragLeaveLane: (laneId: TaskLaneId) => void;
+  onTaskClick: (taskId: string) => void;
 };
 
 function getAssigneeInitials(label: string) {
@@ -66,6 +67,7 @@ export function TaskKanbanColumn({
   onDropTaskToLane,
   onDragEnterLane,
   onDragLeaveLane,
+  onTaskClick,
 }: TaskKanbanColumnProps) {
   const laneDragActive = dragOverLaneId === laneId;
 
@@ -101,6 +103,7 @@ export function TaskKanbanColumn({
             <article
               key={task.id}
               draggable={busyTaskId !== task.id}
+              onClick={() => onTaskClick(task.id)}
               onDragStart={(event) => {
                 event.dataTransfer.effectAllowed = "move";
                 event.dataTransfer.setData("text/plain", task.id);
@@ -130,7 +133,7 @@ export function TaskKanbanColumn({
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1">
                     <MessageCircle className="size-3.5" />
-                    {(task.id.charCodeAt(0) % 4) + 1}
+                    {task.commentCount}
                   </span>
                   <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
                     {getAssigneeInitials(task.assigneeLabel)}

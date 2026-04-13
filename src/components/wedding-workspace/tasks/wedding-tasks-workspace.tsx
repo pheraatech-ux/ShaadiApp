@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search, Sparkles } from "lucide-react";
 
 import { NewTaskDialog } from "@/components/wedding-workspace/tasks/new-task-dialog";
+import { TaskDetailDialog } from "@/components/wedding-workspace/tasks/task-detail-dialog";
 import { TaskKanbanColumn, type TaskLaneId } from "@/components/wedding-workspace/tasks/task-kanban-column";
 import { TaskKpiCards } from "@/components/wedding-workspace/tasks/task-kpi-cards";
 import { TaskMemberStrip } from "@/components/wedding-workspace/tasks/task-member-strip";
@@ -24,11 +25,7 @@ type WeddingTasksWorkspaceProps = {
 };
 
 type TopFilter = "all" | "my" | "overdue" | "unassigned" | "flagged";
-type StatusFilter = "all" | WeddingTasksBoardStatus | "needs_review";
-
-function isNeedsReview(task: WeddingTasksBoardTask, currentUserId: string) {
-  return task.status === "in_progress" && task.assigneeId === currentUserId;
-}
+type StatusFilter = "all" | WeddingTasksBoardStatus;
 
 function enrichTask(task: WeddingTasksBoardTask) {
   const today = new Date().toISOString().slice(0, 10);
@@ -49,6 +46,8 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dragOverLaneId, setDragOverLaneId] = useState<TaskLaneId | null>(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [taskDetailOpen, setTaskDetailOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<TopFilter>("all");
   const [assigneeFilter, setAssigneeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -81,10 +80,13 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
       current = current.filter((task) => (assigneeFilter === "unassigned" ? !task.assigneeId : task.assigneeId === assigneeFilter));
     }
 
-    if (statusFilter === "todo" || statusFilter === "in_progress" || statusFilter === "done") {
+    if (
+      statusFilter === "todo" ||
+      statusFilter === "in_progress" ||
+      statusFilter === "needs_review" ||
+      statusFilter === "done"
+    ) {
       current = current.filter((task) => task.status === statusFilter);
-    } else if (statusFilter === "needs_review") {
-      current = current.filter((task) => isNeedsReview(task, view.currentUserId));
     }
 
     if (search.trim()) {
@@ -98,11 +100,11 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
   const columns = useMemo(() => {
     return {
       todo: filteredTasks.filter((task) => task.status === "todo"),
-      inProgress: filteredTasks.filter((task) => task.status === "in_progress" && !isNeedsReview(task, view.currentUserId)),
-      needsReview: filteredTasks.filter((task) => isNeedsReview(task, view.currentUserId)),
+      inProgress: filteredTasks.filter((task) => task.status === "in_progress"),
+      needsReview: filteredTasks.filter((task) => task.status === "needs_review"),
       done: filteredTasks.filter((task) => task.status === "done"),
     };
-  }, [filteredTasks, view.currentUserId]);
+  }, [filteredTasks]);
 
   async function patchTask(taskId: string, updates: { status?: WeddingTasksBoardStatus; assigneeUserId?: string | null }) {
     const previousTasks = tasks;
@@ -173,11 +175,13 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
       return;
     }
     if (laneId === "needs_review") {
-      await patchTask(taskId, { status: "in_progress", assigneeUserId: view.currentUserId });
+      await patchTask(taskId, { status: "needs_review" });
       return;
     }
     await patchTask(taskId, { status: "done" });
   }
+
+  const selectedTask = selectedTaskId ? tasks.find((item) => item.id === selectedTaskId) ?? null : null;
 
   return (
     <div className="space-y-4">
@@ -336,6 +340,10 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
           onDragLeaveLane={(lane) => {
             setDragOverLaneId((current) => (current === lane ? null : current));
           }}
+          onTaskClick={(taskId) => {
+            setSelectedTaskId(taskId);
+            setTaskDetailOpen(true);
+          }}
         />
         <TaskKanbanColumn
           laneId="in_progress"
@@ -360,6 +368,10 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
           onDragEnterLane={setDragOverLaneId}
           onDragLeaveLane={(lane) => {
             setDragOverLaneId((current) => (current === lane ? null : current));
+          }}
+          onTaskClick={(taskId) => {
+            setSelectedTaskId(taskId);
+            setTaskDetailOpen(true);
           }}
         />
         <TaskKanbanColumn
@@ -386,6 +398,10 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
           onDragLeaveLane={(lane) => {
             setDragOverLaneId((current) => (current === lane ? null : current));
           }}
+          onTaskClick={(taskId) => {
+            setSelectedTaskId(taskId);
+            setTaskDetailOpen(true);
+          }}
         />
         <TaskKanbanColumn
           laneId="done"
@@ -411,6 +427,10 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
           onDragLeaveLane={(lane) => {
             setDragOverLaneId((current) => (current === lane ? null : current));
           }}
+          onTaskClick={(taskId) => {
+            setSelectedTaskId(taskId);
+            setTaskDetailOpen(true);
+          }}
         />
       </section>
 
@@ -422,6 +442,31 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
         members={view.members}
         events={view.events}
         onTaskCreated={() => {
+          router.refresh();
+        }}
+      />
+      <TaskDetailDialog
+        weddingSlug={view.weddingSlug}
+        task={selectedTask}
+        members={view.members}
+        open={taskDetailOpen}
+        onOpenChange={setTaskDetailOpen}
+        onTaskUpdated={(taskId, updates) => {
+          setTasks((current) =>
+            current.map((task) =>
+              task.id === taskId
+                ? enrichTask({
+                    ...task,
+                    ...updates,
+                  })
+                : task,
+            ),
+          );
+          router.refresh();
+        }}
+        onTaskDeleted={(taskId) => {
+          setTasks((current) => current.filter((task) => task.id !== taskId));
+          setSelectedTaskId(null);
           router.refresh();
         }}
       />

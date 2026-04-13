@@ -25,10 +25,20 @@ export type WeddingTasksBoardTask = {
   raisedByUserId: string | null;
   raisedByLabel: string;
   visibility: WeddingTaskVisibility[];
+  commentCount: number;
   isAssignedToCurrentUser: boolean;
   isOverdue: boolean;
   isDueThisWeek: boolean;
   createdAt: string;
+};
+
+export type WeddingTaskComment = {
+  id: string;
+  body: string;
+  createdAt: string;
+  authorUserId: string | null;
+  authorLabel: string;
+  isSystem: boolean;
 };
 
 export type WeddingTasksBoardViewModel = {
