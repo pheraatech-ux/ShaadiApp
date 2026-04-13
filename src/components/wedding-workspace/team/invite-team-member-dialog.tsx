@@ -49,15 +49,15 @@ type InviteTeamMemberDialogProps = {
 };
 
 export function InviteTeamMemberDialog({ open, onOpenChange }: InviteTeamMemberDialogProps) {
-  const [name, setName] = useState("raman");
-  const [phone, setPhone] = useState("+919790813936");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<TeamRole>("assistant");
 
   function handleOpenChange(next: boolean) {
     if (!next) {
-      setName("raman");
-      setPhone("+919790813936");
+      setName("");
+      setPhone("");
       setEmail("");
       setRole("assistant");
     }
@@ -70,13 +70,12 @@ export function InviteTeamMemberDialog({ open, onOpenChange }: InviteTeamMemberD
         showCloseButton={false}
         className="max-h-[90vh] max-w-[calc(100%-2rem)] gap-0 overflow-y-auto rounded-2xl bg-card p-0 sm:max-w-[520px]"
       >
-        <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30" aria-hidden />
-        <DialogHeader className="relative space-y-1 border-b px-6 pt-2 pb-4">
-          <DialogClose render={<Button variant="ghost" size="icon-sm" className="absolute top-0 right-4 rounded-full" />}>
+        <DialogHeader className="relative space-y-1 border-b px-6 pt-5 pb-4">
+          <DialogClose render={<Button variant="ghost" size="icon-sm" className="absolute top-3 right-4 rounded-full" />}>
             <X className="size-4" />
             <span className="sr-only">Close</span>
           </DialogClose>
-          <DialogTitle className="pr-10 text-lg font-semibold">Invite team member</DialogTitle>
+          <DialogTitle className="pr-10">Invite team member</DialogTitle>
           <DialogDescription>
             They&apos;ll get a WhatsApp invite with a wedding-specific join link. Once joined they can only see this
             wedding.

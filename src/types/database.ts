@@ -165,36 +165,65 @@ export type Database = {
           assignee_user_id: string | null
           completed_at: string | null
           created_at: string
+          description: string | null
           due_date: string | null
           id: string
+          linked_event_id: string | null
+          priority: Database["public"]["Enums"]["task_priority"]
+          raised_by_user_id: string | null
           status: Database["public"]["Enums"]["task_status"]
           title: string
+          visibility: Database["public"]["Enums"]["task_visibility"][]
           wedding_id: string
         }
         Insert: {
           assignee_user_id?: string | null
           completed_at?: string | null
           created_at?: string
+          description?: string | null
           due_date?: string | null
           id?: string
+          linked_event_id?: string | null
+          priority?: Database["public"]["Enums"]["task_priority"]
+          raised_by_user_id?: string | null
           status?: Database["public"]["Enums"]["task_status"]
           title: string
+          visibility?: Database["public"]["Enums"]["task_visibility"][]
           wedding_id: string
         }
         Update: {
           assignee_user_id?: string | null
           completed_at?: string | null
           created_at?: string
+          description?: string | null
           due_date?: string | null
           id?: string
+          linked_event_id?: string | null
+          priority?: Database["public"]["Enums"]["task_priority"]
+          raised_by_user_id?: string | null
           status?: Database["public"]["Enums"]["task_status"]
           title?: string
+          visibility?: Database["public"]["Enums"]["task_visibility"][]
           wedding_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "tasks_assignee_user_id_fkey"
             columns: ["assignee_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_linked_event_id_fkey"
+            columns: ["linked_event_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_raised_by_user_id_fkey"
+            columns: ["raised_by_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -423,7 +452,9 @@ export type Database = {
       }
     }
     Enums: {
+      task_priority: "high" | "medium" | "low"
       task_status: "todo" | "in_progress" | "done"
+      task_visibility: "team_only" | "client_family" | "vendor"
       vendor_status: "pending" | "confirmed" | "declined"
       wedding_member_role: "owner" | "lead" | "coordinator" | "viewer"
       wedding_member_status: "active" | "invited" | "removed"
@@ -555,7 +586,9 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      task_priority: ["high", "medium", "low"],
       task_status: ["todo", "in_progress", "done"],
+      task_visibility: ["team_only", "client_family", "vendor"],
       vendor_status: ["pending", "confirmed", "declined"],
       wedding_member_role: ["owner", "lead", "coordinator", "viewer"],
       wedding_member_status: ["active", "invited", "removed"],

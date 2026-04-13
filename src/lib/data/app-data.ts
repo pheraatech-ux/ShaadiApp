@@ -10,6 +10,11 @@ import type {
 } from "@/components/dashboard/team/team-types";
 import type { AllWeddingRow, AllWeddingsPageView, AllWeddingsStage } from "@/components/all-weddings/types";
 import type { TeamPageViewModel } from "@/components/wedding-workspace/team/team-types";
+import type {
+  WeddingTasksBoardMemberOption,
+  WeddingTasksBoardTask,
+  WeddingTasksBoardViewModel,
+} from "@/components/wedding-workspace/tasks/types";
 import type { WeddingWorkspaceViewModel } from "@/components/wedding-workspace/types";
 import { buildTimeOfDayGreeting } from "@/lib/planner-display";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -898,6 +903,175 @@ export const getWeddingTeamViewBySlug = cache(
         { id: "overdue", title: "Overdue tasks", value: String(totalOverdue), helperText: "Needs follow-up" },
       ],
       members: rows,
+    };
+  },
+);
+
+export const getWeddingTasksBoardViewBySlug = cache(
+  async (weddingSlug: string): Promise<WeddingTasksBoardViewModel | null> => {
+    const planner = await getPlannerContext();
+    const weddings = await getAccessibleWeddings(planner.userId);
+    const wedding = weddings.find((row) => row.slug === weddingSlug);
+    if (!wedding) return null;
+
+    const supabase = await createSupabaseServerClient();
+    const [{ data: taskRows }, { data: memberRows }, { data: eventRows }] = await Promise.all([
+      supabase
+        .from("tasks")
+        .select("id, title, description, status, priority, due_date, linked_event_id, assignee_user_id, raised_by_user_id, visibility, created_at")
+        .eq("wedding_id", wedding.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("wedding_members")
+        .select("id, user_id, invited_email, display_name, role, status")
+        .eq("wedding_id", wedding.id)
+        .eq("status", "active"),
+      supabase
+        .from("wedding_events")
+        .select("id, title, event_date")
+        .eq("wedding_id", wedding.id)
+        .order("event_date", { ascending: true }),
+    ]);
+
+    const activeMembers = (memberRows ?? []) as WeddingMemberRow[];
+    const taskAssigneeIds = [...new Set((taskRows ?? []).map((task) => task.assignee_user_id).filter(Boolean))] as string[];
+    const memberUserIds = [...new Set([...activeMembers.map((member) => member.user_id).filter(Boolean), ...taskAssigneeIds])] as string[];
+    const { data: profileRows } =
+      memberUserIds.length > 0
+        ? await supabase
+            .from("profiles")
+            .select("id, first_name, last_name")
+            .in("id", memberUserIds)
+        : { data: [] as { id: string; first_name: string | null; last_name: string | null }[] };
+
+    const profileNameById = new Map(
+      (profileRows ?? []).map((profile) => {
+        const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim();
+        return [profile.id, fullName || "Team member"];
+      }),
+    );
+
+    const memberDisplayById = new Map(
+      activeMembers
+        .filter((member) => Boolean(member.user_id))
+        .map((member) => [member.user_id as string, member.display_name || member.invited_email || "Team member"]),
+    );
+
+    const memberOptions: WeddingTasksBoardMemberOption[] = activeMembers
+      .filter((member) => Boolean(member.user_id))
+      .map((member) => {
+        const userId = member.user_id as string;
+        const profileName = profileNameById.get(userId);
+        const safeLabel = profileName || member.display_name || member.invited_email || "Team member";
+        return {
+          id: userId,
+          label: safeLabel.match(/^[0-9a-f-]{32,}$/i) ? "Team member" : safeLabel,
+          role: member.role,
+          isCurrentUser: userId === planner.userId,
+        };
+      });
+
+    for (const assigneeId of taskAssigneeIds) {
+      if (memberOptions.some((member) => member.id === assigneeId)) continue;
+      memberOptions.push({
+        id: assigneeId,
+        label: profileNameById.get(assigneeId) || memberDisplayById.get(assigneeId) || "Archived member",
+        role: "viewer",
+        isCurrentUser: assigneeId === planner.userId,
+      });
+    }
+
+    memberOptions.sort((a, b) => a.label.localeCompare(b.label));
+
+    const today = new Date().toISOString().slice(0, 10);
+    const oneWeekFromNow = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+    const eventById = new Map((eventRows ?? []).map((event) => [event.id, event]));
+
+    const tasks: WeddingTasksBoardTask[] = ((taskRows ?? []) as {
+      id: string;
+      title: string;
+      description: string | null;
+      status: "todo" | "in_progress" | "done";
+      priority: "high" | "medium" | "low";
+      due_date: string | null;
+      linked_event_id: string | null;
+      assignee_user_id: string | null;
+      raised_by_user_id: string | null;
+      visibility: ("team_only" | "client_family" | "vendor")[] | null;
+      created_at: string;
+    }[]).map((task) => {
+      const assignee = memberOptions.find((member) => member.id === task.assignee_user_id) ?? null;
+      const raisedBy = memberOptions.find((member) => member.id === task.raised_by_user_id) ?? null;
+      const linkedEvent = task.linked_event_id ? eventById.get(task.linked_event_id) : null;
+      const overdue = Boolean(task.status !== "done" && task.due_date && task.due_date < today);
+      const dueThisWeek = Boolean(task.status !== "done" && task.due_date && task.due_date >= today && task.due_date <= oneWeekFromNow);
+      return {
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        status: task.status,
+        priority: task.priority ?? "medium",
+        dueDate: task.due_date,
+        linkedEventId: task.linked_event_id,
+        linkedEventLabel: linkedEvent?.title ?? "General (no event)",
+        assigneeId: task.assignee_user_id,
+        assigneeLabel: assignee?.isCurrentUser ? `${assignee.label} (you)` : assignee?.label ?? "Unassigned",
+        raisedByUserId: task.raised_by_user_id,
+        raisedByLabel: raisedBy?.isCurrentUser ? `${raisedBy.label} (me)` : raisedBy?.label ?? "Team member",
+        visibility: task.visibility ?? ["team_only"],
+        isAssignedToCurrentUser: task.assignee_user_id === planner.userId,
+        isOverdue: overdue,
+        isDueThisWeek: dueThisWeek,
+        createdAt: task.created_at,
+      };
+    });
+
+    const total = tasks.length;
+    const completed = tasks.filter((task) => task.status === "done").length;
+    const overdue = tasks.filter((task) => task.isOverdue).length;
+    const dueThisWeek = tasks.filter((task) => task.isDueThisWeek).length;
+    const flagged = tasks.filter((task) => task.isOverdue || !task.assigneeId).length;
+    const myTasks = tasks.filter((task) => task.isAssignedToCurrentUser).length;
+
+    const memberSummaries = memberOptions
+      .map((member) => {
+        const assignedTasks = tasks.filter((task) => task.assigneeId === member.id);
+        const doneCount = assignedTasks.filter((task) => task.status === "done").length;
+        const overdueCount = assignedTasks.filter((task) => task.isOverdue).length;
+        return {
+          id: member.id,
+          label: member.isCurrentUser ? `${member.label} (you)` : member.label,
+          assignedCount: assignedTasks.length,
+          doneCount,
+          overdueCount,
+          progressPercent: assignedTasks.length > 0 ? Math.round((doneCount / assignedTasks.length) * 100) : 0,
+        };
+      })
+      .sort((a, b) => b.assignedCount - a.assignedCount)
+      .slice(0, 4);
+
+    return {
+      weddingSlug,
+      coupleName: wedding.couple_name,
+      cultureTags: wedding.cultures ?? [],
+      currentUserId: planner.userId,
+      currentUserLabel: memberOptions.find((member) => member.id === planner.userId)?.label ?? planner.displayName,
+      members: memberOptions,
+      events: (eventRows ?? []).map((event) => ({
+        id: event.id,
+        label: event.title,
+        dateLabel: formatDateLabel(event.event_date),
+      })),
+      tasks,
+      summary: {
+        total,
+        myTasks,
+        completed,
+        overdue,
+        dueThisWeek,
+        flagged,
+      },
+      memberSummaries,
     };
   },
 );
