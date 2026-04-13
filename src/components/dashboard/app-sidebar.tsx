@@ -77,7 +77,7 @@ export function AppSidebar({ userName, userEmail, counts }: AppSidebarProps) {
                       size="lg"
                       tooltip={item.label}
                     >
-                      <Icon className="size-4 shrink-0" />
+                      <Icon className="size-5 shrink-0" />
                       <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                     </SidebarMenuButton>
                     {item.badgeCount ? <SidebarMenuBadge>{item.badgeCount}</SidebarMenuBadge> : null}

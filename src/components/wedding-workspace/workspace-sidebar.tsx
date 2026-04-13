@@ -128,7 +128,7 @@ export function WorkspaceSidebar({
                   size="lg"
                   tooltip="Dashboard"
                 >
-                  <LayoutGrid className="size-4 shrink-0" />
+                  <LayoutGrid className="size-5 shrink-0" />
                   <span className="group-data-[collapsible=icon]:hidden">Dashboard</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -139,7 +139,7 @@ export function WorkspaceSidebar({
                   size="lg"
                   tooltip="All weddings"
                 >
-                  <BookHeart className="size-4 shrink-0" />
+                  <BookHeart className="size-5 shrink-0" />
                   <span className="group-data-[collapsible=icon]:hidden">All weddings</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -163,7 +163,7 @@ export function WorkspaceSidebar({
                       size="lg"
                       tooltip={item.label}
                     >
-                      <Icon className="size-4 shrink-0" />
+                      <Icon className="size-5 shrink-0" />
                       <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                       {item.badge ? (
                         <span
@@ -193,7 +193,7 @@ export function WorkspaceSidebar({
                   size="lg"
                   tooltip="AI report"
                 >
-                  <Sparkles className="size-4 shrink-0" />
+                  <Sparkles className="size-5 shrink-0" />
                   <span className="group-data-[collapsible=icon]:hidden">AI report</span>
                   <span className="ml-auto rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[10px] font-medium text-violet-700 group-data-[collapsible=icon]:hidden dark:text-violet-200">
                     AI
