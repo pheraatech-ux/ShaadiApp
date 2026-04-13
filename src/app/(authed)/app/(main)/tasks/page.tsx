@@ -1,11 +1,12 @@
+import { AppPageHeader } from "@/components/dashboard/app-page-header";
 import { getDashboardView } from "@/lib/data/app-data";
 
 export default async function TasksPage() {
   const view = await getDashboardView();
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight">Tasks</h1>
+    <div className="space-y-5">
+      <AppPageHeader title="Tasks" />
       <section className="rounded-xl border border-border/70 bg-card">
         <header className="border-b border-border/60 px-4 py-3 text-sm font-medium text-foreground">
           {view.urgentTasks.length} urgent items

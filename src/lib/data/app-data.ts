@@ -8,6 +8,7 @@ import type {
   TeamMemberSummary,
   TeamTaskItem,
 } from "@/components/dashboard/team/team-types";
+import type { AllWeddingRow, AllWeddingsPageView, AllWeddingsStage } from "@/components/all-weddings/types";
 import type { TeamPageViewModel } from "@/components/wedding-workspace/team/team-types";
 import type { WeddingWorkspaceViewModel } from "@/components/wedding-workspace/types";
 import { buildTimeOfDayGreeting } from "@/lib/planner-display";
@@ -253,6 +254,132 @@ export const getWeddingSlugList = cache(async () => {
   const planner = await getPlannerContext();
   const weddings = await getAccessibleWeddings(planner.userId);
   return weddings.map((wedding) => wedding.slug);
+});
+
+export const getAllWeddingsPageView = cache(async (): Promise<AllWeddingsPageView> => {
+  const planner = await getPlannerContext();
+  const weddings = await getAccessibleWeddings(planner.userId);
+  const weddingIds = weddings.map((wedding) => wedding.id);
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (!weddingIds.length) {
+    return {
+      items: [],
+      counts: {
+        all: 0,
+        active: 0,
+        planning: 0,
+        completed: 0,
+      },
+      planCap: 5,
+      usedSlots: 0,
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const [{ data: tasksData }, { data: docsData }] = await Promise.all([
+    supabase
+      .from("tasks")
+      .select("wedding_id, status, due_date")
+      .in("wedding_id", weddingIds),
+    supabase
+      .from("documents")
+      .select("wedding_id")
+      .in("wedding_id", weddingIds),
+  ]);
+
+  const tasksByWedding = new Map<
+    string,
+    {
+      total: number;
+      done: number;
+      overdue: number;
+    }
+  >();
+
+  for (const task of tasksData ?? []) {
+    const current = tasksByWedding.get(task.wedding_id) ?? { total: 0, done: 0, overdue: 0 };
+    current.total += 1;
+    if (task.status === "done") {
+      current.done += 1;
+    } else if (task.due_date && task.due_date < today) {
+      current.overdue += 1;
+    }
+    tasksByWedding.set(task.wedding_id, current);
+  }
+
+  const docsByWedding = new Map<string, number>();
+  for (const row of docsData ?? []) {
+    docsByWedding.set(row.wedding_id, (docsByWedding.get(row.wedding_id) ?? 0) + 1);
+  }
+
+  const items = weddings.map((wedding) => {
+    const taskStats = tasksByWedding.get(wedding.id) ?? { total: 0, done: 0, overdue: 0 };
+    const docsCount = docsByWedding.get(wedding.id) ?? 0;
+    const daysAway = daysUntil(wedding.wedding_date);
+    const completionRatio = taskStats.total > 0 ? taskStats.done / taskStats.total : 0;
+
+    const stage: AllWeddingsStage =
+      wedding.status === "completed"
+        ? "completed"
+        : taskStats.overdue > 0 || daysAway <= 90
+          ? "active"
+          : "planning";
+    const stageLabel = stage === "completed" ? "Done" : stage === "active" ? "Active" : "Planning";
+    const taskSubtitle =
+      taskStats.overdue > 0
+        ? `${taskStats.overdue} overdue`
+        : taskStats.total === 0
+          ? "No tasks yet"
+          : "On track";
+    const proposalStatus: AllWeddingRow["proposalStatus"] =
+      stage === "completed" || completionRatio >= 0.6
+        ? "Signed"
+        : taskStats.total > 0
+          ? "Draft"
+          : "Pending";
+    const invoiceStatus: AllWeddingRow["invoiceStatus"] =
+      stage === "completed"
+        ? "Closed"
+        : taskStats.overdue > 0
+          ? "Pending"
+          : taskStats.done > 0
+            ? "Sent"
+            : "None";
+
+    return {
+      id: wedding.slug,
+      coupleName: wedding.couple_name,
+      city: wedding.city ?? "Not set",
+      venueName: wedding.venue_name ?? "Venue TBD",
+      dateLabel: formatDateLabel(wedding.wedding_date),
+      weddingDateRaw: wedding.wedding_date,
+      daysAway,
+      stage,
+      stageLabel,
+      overdueCount: taskStats.overdue,
+      tasksDone: taskStats.done,
+      tasksTotal: taskStats.total,
+      taskSubtitle,
+      cultures: wedding.cultures ?? [],
+      budgetLabel: toInrLakh(wedding.total_budget_paise),
+      proposalStatus,
+      invoiceStatus,
+      documentsCount: docsCount,
+    };
+  });
+
+  return {
+    items,
+    counts: {
+      all: items.length,
+      active: items.filter((item) => item.stage === "active").length,
+      planning: items.filter((item) => item.stage === "planning").length,
+      completed: items.filter((item) => item.stage === "completed").length,
+    },
+    planCap: 5,
+    usedSlots: items.length,
+  };
 });
 
 export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
