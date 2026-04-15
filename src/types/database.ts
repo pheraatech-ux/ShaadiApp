@@ -97,6 +97,7 @@ export type Database = {
           body: string
           created_at: string
           id: string
+          thread_id: string
           wedding_id: string
         }
         Insert: {
@@ -104,6 +105,7 @@ export type Database = {
           body: string
           created_at?: string
           id?: string
+          thread_id: string
           wedding_id: string
         }
         Update: {
@@ -111,6 +113,7 @@ export type Database = {
           body?: string
           created_at?: string
           id?: string
+          thread_id?: string
           wedding_id?: string
         }
         Relationships: [
@@ -122,7 +125,99 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "messages_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_thread_members: {
+        Row: {
+          added_by_user_id: string | null
+          created_at: string
+          thread_id: string
+          user_id: string
+        }
+        Insert: {
+          added_by_user_id?: string | null
+          created_at?: string
+          thread_id: string
+          user_id: string
+        }
+        Update: {
+          added_by_user_id?: string | null
+          created_at?: string
+          thread_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_thread_members_added_by_user_id_fkey"
+            columns: ["added_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_thread_members_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_thread_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_threads: {
+        Row: {
+          created_at: string
+          created_by_user_id: string | null
+          id: string
+          is_default: boolean
+          title: string
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id?: string | null
+          id?: string
+          is_default?: boolean
+          title: string
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string | null
+          id?: string
+          is_default?: boolean
+          title?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_threads_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
             referencedRelation: "weddings"

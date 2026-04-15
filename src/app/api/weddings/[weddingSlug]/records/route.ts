@@ -6,6 +6,7 @@ type Payload = {
   kind?: "task" | "vendor" | "message" | "document" | "budget" | "event";
   primary?: string;
   secondary?: string | null;
+  threadId?: string | null;
 };
 
 export async function POST(
@@ -56,8 +57,43 @@ export async function POST(
         }));
         break;
       case "message":
+        let targetThreadId = payload.threadId ?? null;
+        if (!targetThreadId) {
+          const { data: defaultThread } = await supabase
+            .from("message_threads")
+            .select("id")
+            .eq("wedding_id", wedding.id)
+            .eq("is_default", true)
+            .maybeSingle();
+          targetThreadId = defaultThread?.id ?? null;
+        }
+        if (!targetThreadId) {
+          return NextResponse.json({ error: "No message thread found for this wedding." }, { status: 400 });
+        }
+
+        const { data: thread, error: threadError } = await supabase
+          .from("message_threads")
+          .select("id")
+          .eq("id", targetThreadId)
+          .eq("wedding_id", wedding.id)
+          .maybeSingle();
+        if (threadError || !thread) {
+          return NextResponse.json({ error: "Thread not found for this wedding." }, { status: 400 });
+        }
+
+        const { data: membership } = await supabase
+          .from("message_thread_members")
+          .select("thread_id")
+          .eq("thread_id", targetThreadId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (!membership) {
+          return NextResponse.json({ error: "You are not a member of this thread." }, { status: 403 });
+        }
+
         ({ error: insertError } = await supabase.from("messages").insert({
           wedding_id: wedding.id,
+          thread_id: targetThreadId,
           body: payload.primary.trim(),
           author_user_id: user.id,
         }));

@@ -15,6 +15,7 @@ import type {
   WeddingTasksBoardTask,
   WeddingTasksBoardViewModel,
 } from "@/components/wedding-workspace/tasks/types";
+import type { WeddingMessagesWorkspaceViewModel } from "@/components/wedding-workspace/messages/types";
 import type { WeddingWorkspaceViewModel } from "@/components/wedding-workspace/types";
 import { buildTimeOfDayGreeting } from "@/lib/planner-display";
 import {
@@ -1149,6 +1150,222 @@ export const getWeddingTasksBoardViewBySlug = cache(
         flagged,
       },
       memberSummaries,
+    };
+  },
+);
+
+export const getWeddingMessagesWorkspaceViewBySlug = cache(
+  async (weddingSlug: string): Promise<WeddingMessagesWorkspaceViewModel | null> => {
+    const planner = await getPlannerContext();
+    const weddings = await getAccessibleWeddings(planner.userId);
+    const wedding = weddings.find((row) => row.slug === weddingSlug);
+    if (!wedding) return null;
+
+    const supabase = await createSupabaseServerClient();
+    const [{ data: messageRows }, { data: memberRows }, { data: threadRows }] = await Promise.all([
+      supabase
+        .from("messages")
+        .select("id, body, created_at, author_user_id, thread_id")
+        .eq("wedding_id", wedding.id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("wedding_members")
+        .select("user_id, display_name, invited_email, status")
+        .eq("wedding_id", wedding.id)
+        .neq("status", "removed"),
+      supabase
+        .from("message_threads")
+        .select("id, title, is_default, created_at")
+        .eq("wedding_id", wedding.id)
+        .order("created_at", { ascending: true }),
+    ]);
+    const rawThreads = (threadRows ?? []) as { id: string; title: string; is_default: boolean; created_at: string }[];
+    const { data: threadMemberRows } =
+      rawThreads.length > 0
+        ? await supabase
+            .from("message_thread_members")
+            .select("thread_id, user_id")
+            .in("thread_id", rawThreads.map((thread) => thread.id))
+        : { data: [] as { thread_id: string; user_id: string }[] };
+
+    const members = (memberRows ?? []) as {
+      user_id: string | null;
+      display_name: string | null;
+      invited_email: string | null;
+      status: "active" | "invited" | "removed";
+    }[];
+    const threadMembers = (threadMemberRows ?? []) as { thread_id: string; user_id: string }[];
+
+    const fallbackThreadIds = rawThreads.map((thread) => thread.id);
+    const userIds = [
+      ...new Set(
+        [
+          ...members.map((member) => member.user_id),
+          ...((messageRows ?? []).map((message) => message.author_user_id) as Array<string | null>),
+          ...threadMembers.map((member) => member.user_id),
+        ].filter(Boolean),
+      ),
+    ] as string[];
+
+    const { data: profileRows } =
+      userIds.length > 0
+        ? await supabase
+            .from("profiles")
+            .select("id, first_name, last_name")
+            .in("id", userIds)
+        : { data: [] as { id: string; first_name: string | null; last_name: string | null }[] };
+
+    const memberDisplayByUserId = new Map<string, string>();
+    for (const member of members) {
+      if (!member.user_id) continue;
+      memberDisplayByUserId.set(member.user_id, member.display_name || member.invited_email || "Team member");
+    }
+
+    const profileNameByUserId = new Map(
+      (profileRows ?? []).map((profile) => [
+        profile.id,
+        [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() || "Team member",
+      ]),
+    );
+
+    const displayNameByUserId = new Map<string, string>();
+    for (const userId of userIds) {
+      displayNameByUserId.set(
+        userId,
+        profileNameByUserId.get(userId) || memberDisplayByUserId.get(userId) || "Team member",
+      );
+    }
+
+    const messages = ((messageRows ?? []) as {
+      id: string;
+      body: string;
+      created_at: string;
+      author_user_id: string | null;
+      thread_id: string;
+    }[]).map((message) => {
+      const authorLabel = message.author_user_id
+        ? displayNameByUserId.get(message.author_user_id) || "Team member"
+        : "System";
+      return {
+        id: message.id,
+        threadId: message.thread_id,
+        body: message.body,
+        createdAt: message.created_at,
+        authorUserId: message.author_user_id,
+        authorLabel,
+        authorInitials: getInitials(authorLabel),
+        isCurrentUser: message.author_user_id === planner.userId,
+      };
+    });
+
+    const participantById = new Map<
+      string,
+      {
+        id: string;
+        label: string;
+        initials: string;
+        isCurrentUser: boolean;
+        status: "active" | "invited";
+        messageCount: number;
+        lastMessageAt: string | null;
+      }
+    >();
+
+    for (const member of members) {
+      if (!member.user_id) continue;
+      const label =
+        displayNameByUserId.get(member.user_id) || member.display_name || member.invited_email || "Team member";
+      participantById.set(member.user_id, {
+        id: member.user_id,
+        label,
+        initials: getInitials(label),
+        isCurrentUser: member.user_id === planner.userId,
+        status: member.status === "active" ? "active" : "invited",
+        messageCount: 0,
+        lastMessageAt: null,
+      });
+    }
+
+    for (const message of messages) {
+      if (!message.authorUserId) continue;
+      const current = participantById.get(message.authorUserId) ?? {
+        id: message.authorUserId,
+        label: message.authorLabel,
+        initials: message.authorInitials,
+        isCurrentUser: message.isCurrentUser,
+        status: "active" as const,
+        messageCount: 0,
+        lastMessageAt: null,
+      };
+      current.messageCount += 1;
+      current.lastMessageAt = message.createdAt;
+      participantById.set(message.authorUserId, current);
+    }
+
+    const participants = [...participantById.values()].sort((a, b) => {
+      const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+      const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    const participantByUserId = new Map(participants.map((participant) => [participant.id, participant]));
+    const threadParticipantIds = new Map<string, string[]>();
+    for (const member of threadMembers) {
+      const current = threadParticipantIds.get(member.thread_id) ?? [];
+      current.push(member.user_id);
+      threadParticipantIds.set(member.thread_id, current);
+    }
+
+    const threadMessageStats = new Map<string, { count: number; lastMessageAt: string | null }>();
+    for (const message of messages) {
+      const current = threadMessageStats.get(message.threadId) ?? { count: 0, lastMessageAt: null };
+      current.count += 1;
+      current.lastMessageAt = message.createdAt;
+      threadMessageStats.set(message.threadId, current);
+    }
+
+    const threads = rawThreads
+      .map((thread) => {
+        const participantIds = [...new Set(threadParticipantIds.get(thread.id) ?? [])];
+        const participantLabels = participantIds
+          .map((participantId) => participantByUserId.get(participantId)?.label ?? displayNameByUserId.get(participantId) ?? "Team member")
+          .sort((a, b) => a.localeCompare(b));
+        const stats = threadMessageStats.get(thread.id) ?? { count: 0, lastMessageAt: null };
+        return {
+          id: thread.id,
+          title: thread.title,
+          isDefault: thread.is_default,
+          participantIds,
+          participantLabels,
+          messageCount: stats.count,
+          lastMessageAt: stats.lastMessageAt,
+        };
+      })
+      .sort((a, b) => {
+        if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
+        const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+        const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+        return bTime - aTime;
+      });
+
+    const latestMessage = messages[messages.length - 1];
+    const defaultThreadId = threads.find((thread) => thread.isDefault)?.id ?? fallbackThreadIds[0] ?? null;
+
+    return {
+      weddingSlug: weddingSlug,
+      coupleName: wedding.couple_name,
+      currentUserId: planner.userId,
+      currentUserLabel: displayNameByUserId.get(planner.userId) || planner.displayName,
+      defaultThreadId,
+      messages,
+      threads,
+      participants,
+      summary: {
+        totalMessages: messages.length,
+        participantCount: participants.length,
+        threadCount: threads.length,
+        lastMessageAt: latestMessage?.createdAt ?? null,
+      },
     };
   },
 );
