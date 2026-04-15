@@ -17,6 +17,12 @@ import type {
 } from "@/components/wedding-workspace/tasks/types";
 import type { WeddingWorkspaceViewModel } from "@/components/wedding-workspace/types";
 import { buildTimeOfDayGreeting } from "@/lib/planner-display";
+import {
+  BUDGET_BUCKETS,
+  buildRecommendedBudgetSplit,
+  mapBudgetCategoryToBucket,
+  type BudgetBucketId,
+} from "@/lib/budget-recommendations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -44,6 +50,57 @@ export type CreateWeddingInput = {
   cultures: string[];
   events: { title: string; eventDate?: string; cultureLabel?: string }[];
   totalBudgetPaise: number;
+};
+
+export type WeddingBudgetWorkspaceViewModel = {
+  weddingSlug: string;
+  coupleName: string;
+  cultures: string[];
+  totalBudgetPaise: number;
+  spentBudgetPaise: number;
+  allocatedBudgetPaise: number;
+  recommendationProfile: string;
+  recommendationNotes: string[];
+  buckets: Array<{
+    id: BudgetBucketId;
+    label: string;
+    recommendedPercent: number;
+    recommendedPaise: number;
+    allocatedPaise: number;
+    spentPaise: number;
+  }>;
+  budgetItems: Array<{
+    id: string;
+    category: string;
+    allocatedPaise: number;
+    spentPaise: number;
+    bucketId: BudgetBucketId;
+    bucketLabel: string;
+  }>;
+};
+
+export type BudgetPortfolioViewModel = {
+  totalBudgetPaise: number;
+  totalAllocatedPaise: number;
+  totalSpentPaise: number;
+  weddingsAtRisk: number;
+  portfolioUtilizationPercent: number;
+  topBuckets: Array<{
+    id: BudgetBucketId;
+    label: string;
+    spentPaise: number;
+    allocatedPaise: number;
+  }>;
+  weddingRows: Array<{
+    id: string;
+    weddingSlug: string;
+    coupleName: string;
+    totalBudgetPaise: number;
+    allocatedPaise: number;
+    spentPaise: number;
+    status: "healthy" | "watch" | "overrun";
+    cultures: string[];
+  }>;
 };
 
 type WeddingRow = {
@@ -405,6 +462,7 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
   const overdueTasks = tasks.filter((task) => task.status !== "done" && task.due_date && task.due_date < today);
   const doneTaskIds = new Set(tasks.filter((task) => task.status === "done").map((task) => task.id));
   const budgetTotal = weddings.reduce((sum, wedding) => sum + wedding.total_budget_paise, 0);
+  const overBudgetCount = weddings.filter((wedding) => wedding.spent_budget_paise > wedding.total_budget_paise).length;
   const vendorPending = (vendorRows ?? []).filter((vendor) => vendor.status !== "confirmed").length;
 
   const tasksByWedding = new Map<string, { total: number; done: number }>();
@@ -480,8 +538,8 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
         progress: (vendorRows ?? []).length > 0 ? Math.round((vendorPending / (vendorRows ?? []).length) * 100) : 0,
       },
     ],
-    alerts:
-      overdueTasks.length > 0
+    alerts: [
+      ...(overdueTasks.length > 0
         ? [
             {
               id: "overdue",
@@ -489,7 +547,17 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
               ctaLabel: "Review now",
             },
           ]
-        : [],
+        : []),
+      ...(overBudgetCount > 0
+        ? [
+            {
+              id: "budget-overrun",
+              message: `${overBudgetCount} wedding budgets are trending over plan.`,
+              ctaLabel: "Open budget",
+            },
+          ]
+        : []),
+    ],
     weddings: weddingItems,
     urgentTasks,
     weeklyCompletion,
@@ -1164,3 +1232,169 @@ export async function getWeddingSectionSummaryBySlug(weddingSlug: string) {
     budgetItems: (budgetItems ?? []) as { id: string; category: string; allocated_paise: number; spent_paise: number }[],
   };
 }
+
+export const getWeddingBudgetWorkspaceViewBySlug = cache(
+  async (weddingSlug: string): Promise<WeddingBudgetWorkspaceViewModel | null> => {
+    const planner = await getPlannerContext();
+    const weddings = await getAccessibleWeddings(planner.userId);
+    const wedding = weddings.find((row) => row.slug === weddingSlug);
+    if (!wedding) return null;
+
+    const supabase = await createSupabaseServerClient();
+    const { data: budgetRows, error } = await supabase
+      .from("budget_items")
+      .select("id, category, allocated_paise, spent_paise")
+      .eq("wedding_id", wedding.id)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+
+    const recommendation = buildRecommendedBudgetSplit(wedding.cultures ?? []);
+    const bucketMeta = new Map(BUDGET_BUCKETS.map((bucket) => [bucket.id, bucket]));
+    const allocationByBucket = new Map<BudgetBucketId, { allocated: number; spent: number }>();
+
+    for (const bucket of BUDGET_BUCKETS) {
+      allocationByBucket.set(bucket.id, { allocated: 0, spent: 0 });
+    }
+
+    for (const item of budgetRows ?? []) {
+      const bucketId = mapBudgetCategoryToBucket(item.category);
+      const current = allocationByBucket.get(bucketId) ?? { allocated: 0, spent: 0 };
+      current.allocated += item.allocated_paise;
+      current.spent += item.spent_paise;
+      allocationByBucket.set(bucketId, current);
+    }
+
+    const buckets = BUDGET_BUCKETS.map((bucket) => {
+      const aggregate = allocationByBucket.get(bucket.id) ?? { allocated: 0, spent: 0 };
+      const recommendedPercent = recommendation.split[bucket.id];
+      return {
+        id: bucket.id,
+        label: bucket.label,
+        recommendedPercent,
+        recommendedPaise: Math.round((wedding.total_budget_paise * recommendedPercent) / 100),
+        allocatedPaise: aggregate.allocated,
+        spentPaise: aggregate.spent,
+      };
+    });
+
+    const budgetItems = (budgetRows ?? []).map((item) => {
+      const bucketId = mapBudgetCategoryToBucket(item.category);
+      return {
+        id: item.id,
+        category: item.category,
+        allocatedPaise: item.allocated_paise,
+        spentPaise: item.spent_paise,
+        bucketId,
+        bucketLabel: bucketMeta.get(bucketId)?.label ?? "Other",
+      };
+    });
+
+    const allocatedBudgetPaise = budgetItems.reduce((sum, item) => sum + item.allocatedPaise, 0);
+    const spentBudgetPaise = budgetItems.reduce((sum, item) => sum + item.spentPaise, 0);
+
+    return {
+      weddingSlug,
+      coupleName: wedding.couple_name,
+      cultures: wedding.cultures ?? [],
+      totalBudgetPaise: wedding.total_budget_paise,
+      spentBudgetPaise,
+      allocatedBudgetPaise,
+      recommendationProfile: recommendation.profileLabel,
+      recommendationNotes: recommendation.reasoning,
+      buckets,
+      budgetItems,
+    };
+  },
+);
+
+export const getBudgetPortfolioView = cache(async (): Promise<BudgetPortfolioViewModel> => {
+  const planner = await getPlannerContext();
+  const weddings = await getAccessibleWeddings(planner.userId);
+  const weddingIds = weddings.map((wedding) => wedding.id);
+  if (!weddingIds.length) {
+    return {
+      totalBudgetPaise: 0,
+      totalAllocatedPaise: 0,
+      totalSpentPaise: 0,
+      weddingsAtRisk: 0,
+      portfolioUtilizationPercent: 0,
+      topBuckets: BUDGET_BUCKETS.slice(0, 4).map((bucket) => ({
+        id: bucket.id,
+        label: bucket.label,
+        spentPaise: 0,
+        allocatedPaise: 0,
+      })),
+      weddingRows: [],
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: budgetRows } = await supabase
+    .from("budget_items")
+    .select("wedding_id, category, allocated_paise, spent_paise")
+    .in("wedding_id", weddingIds);
+
+  const totalsByWedding = new Map<string, { allocated: number; spent: number }>();
+  const bucketTotals = new Map<BudgetBucketId, { spent: number; allocated: number }>();
+
+  for (const bucket of BUDGET_BUCKETS) {
+    bucketTotals.set(bucket.id, { spent: 0, allocated: 0 });
+  }
+
+  for (const row of budgetRows ?? []) {
+    const weddingTotals = totalsByWedding.get(row.wedding_id) ?? { allocated: 0, spent: 0 };
+    weddingTotals.allocated += row.allocated_paise;
+    weddingTotals.spent += row.spent_paise;
+    totalsByWedding.set(row.wedding_id, weddingTotals);
+
+    const bucketId = mapBudgetCategoryToBucket(row.category);
+    const bucket = bucketTotals.get(bucketId) ?? { spent: 0, allocated: 0 };
+    bucket.spent += row.spent_paise;
+    bucket.allocated += row.allocated_paise;
+    bucketTotals.set(bucketId, bucket);
+  }
+
+  const weddingRows = weddings.map((wedding) => {
+    const totals = totalsByWedding.get(wedding.id) ?? { allocated: 0, spent: 0 };
+    const overrunByAllocated = totals.allocated > 0 ? totals.spent > totals.allocated : false;
+    const overrunByTotalBudget = wedding.total_budget_paise > 0 ? totals.spent > wedding.total_budget_paise : false;
+    const status: "healthy" | "watch" | "overrun" = overrunByTotalBudget
+      ? "overrun"
+      : overrunByAllocated
+        ? "watch"
+        : "healthy";
+
+    return {
+      id: wedding.id,
+      weddingSlug: wedding.slug,
+      coupleName: wedding.couple_name,
+      totalBudgetPaise: wedding.total_budget_paise,
+      allocatedPaise: totals.allocated,
+      spentPaise: totals.spent,
+      status,
+      cultures: wedding.cultures ?? [],
+    };
+  });
+
+  const totalBudgetPaise = weddingRows.reduce((sum, row) => sum + row.totalBudgetPaise, 0);
+  const totalAllocatedPaise = weddingRows.reduce((sum, row) => sum + row.allocatedPaise, 0);
+  const totalSpentPaise = weddingRows.reduce((sum, row) => sum + row.spentPaise, 0);
+  const weddingsAtRisk = weddingRows.filter((row) => row.status !== "healthy").length;
+
+  const topBuckets = BUDGET_BUCKETS.map((bucket) => {
+    const totals = bucketTotals.get(bucket.id) ?? { spent: 0, allocated: 0 };
+    return { id: bucket.id, label: bucket.label, spentPaise: totals.spent, allocatedPaise: totals.allocated };
+  })
+    .sort((a, b) => b.spentPaise - a.spentPaise)
+    .slice(0, 4);
+
+  return {
+    totalBudgetPaise,
+    totalAllocatedPaise,
+    totalSpentPaise,
+    weddingsAtRisk,
+    portfolioUtilizationPercent: totalBudgetPaise > 0 ? Math.round((totalSpentPaise / totalBudgetPaise) * 100) : 0,
+    topBuckets,
+    weddingRows: weddingRows.sort((a, b) => b.spentPaise - a.spentPaise),
+  };
+});
