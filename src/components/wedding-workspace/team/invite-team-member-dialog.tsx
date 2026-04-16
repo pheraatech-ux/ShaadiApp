@@ -46,13 +46,30 @@ const roles: {
 type InviteTeamMemberDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  title?: string;
+  description?: string;
+  roleSectionLabel?: string;
+  infoText?: string;
+  submitLabel?: string;
+  onSubmit?: (payload: { name: string; phone: string; email: string; role: TeamRole }) => Promise<void>;
 };
 
-export function InviteTeamMemberDialog({ open, onOpenChange }: InviteTeamMemberDialogProps) {
+export function InviteTeamMemberDialog({
+  open,
+  onOpenChange,
+  title = "Invite team member",
+  description = "They'll get a WhatsApp invite with a wedding-specific join link. Once joined they can only see this wedding.",
+  roleSectionLabel = "Role for this wedding",
+  infoText = "Invite sent via WhatsApp. The link expires in 48 hours. They join using their phone number — no separate login needed.",
+  submitLabel = "Send invite via WhatsApp",
+  onSubmit,
+}: InviteTeamMemberDialogProps) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<TeamRole>("assistant");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function handleOpenChange(next: boolean) {
     if (!next) {
@@ -60,8 +77,37 @@ export function InviteTeamMemberDialog({ open, onOpenChange }: InviteTeamMemberD
       setPhone("");
       setEmail("");
       setRole("assistant");
+      setBusy(false);
+      setError(null);
     }
     onOpenChange(next);
+  }
+
+  async function handleSubmit() {
+    if (!phone.trim()) {
+      setError("WhatsApp number is required.");
+      return;
+    }
+
+    if (!onSubmit) {
+      handleOpenChange(false);
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      await onSubmit({
+        name: name.trim(),
+        phone: phone.trim(),
+        email: email.trim(),
+        role,
+      });
+      handleOpenChange(false);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Unable to send invite.");
+      setBusy(false);
+    }
   }
 
   return (
@@ -75,11 +121,8 @@ export function InviteTeamMemberDialog({ open, onOpenChange }: InviteTeamMemberD
             <X className="size-4" />
             <span className="sr-only">Close</span>
           </DialogClose>
-          <DialogTitle className="pr-10">Invite team member</DialogTitle>
-          <DialogDescription>
-            They&apos;ll get a WhatsApp invite with a wedding-specific join link. Once joined they can only see this
-            wedding.
-          </DialogDescription>
+          <DialogTitle className="pr-10">{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 px-6 py-5">
@@ -120,7 +163,7 @@ export function InviteTeamMemberDialog({ open, onOpenChange }: InviteTeamMemberD
           </div>
 
           <div className="space-y-2">
-            <p className={labelClass}>Role for this wedding</p>
+            <p className={labelClass}>{roleSectionLabel}</p>
             <div className="grid gap-2 sm:grid-cols-3">
               {roles.map((r) => {
                 const selected = role === r.id;
@@ -148,22 +191,21 @@ export function InviteTeamMemberDialog({ open, onOpenChange }: InviteTeamMemberD
 
           <div className="flex gap-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
             <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-            <p>
-              Invite sent via WhatsApp. The link expires in 48 hours. They join using their phone number — no separate
-              login needed.
-            </p>
+            <p>{infoText}</p>
           </div>
+          {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
 
         <div className="flex flex-col gap-2 border-t bg-card px-6 py-4 sm:flex-row sm:gap-3">
           <Button
             type="button"
             className="flex-1 rounded-xl bg-emerald-600 text-white hover:bg-emerald-600/90"
-            onClick={() => handleOpenChange(false)}
+            onClick={handleSubmit}
+            disabled={busy}
           >
-            Send invite via WhatsApp
+            {busy ? "Sending..." : submitLabel}
           </Button>
-          <Button type="button" variant="outline" className="flex-1 rounded-xl" onClick={() => handleOpenChange(false)}>
+          <Button type="button" variant="outline" className="flex-1 rounded-xl" onClick={() => handleOpenChange(false)} disabled={busy}>
             Cancel
           </Button>
         </div>

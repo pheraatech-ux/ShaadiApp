@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { WeddingVendorRecord } from "@/components/wedding-workspace/vendors/types";
 import { VENDOR_CATEGORY_OPTIONS, normalizeInstagram } from "@/components/wedding-workspace/vendors/vendor-utils";
@@ -61,13 +61,6 @@ export function VendorFormDialog({ open, onOpenChange, mode, vendor, onSubmit }:
   function patchValue<K extends keyof VendorFormValues>(key: K, next: VendorFormValues[K]) {
     setValues((current) => ({ ...current, [key]: next }));
   }
-
-  useEffect(() => {
-    if (!open) return;
-    setValues(buildInitialValues(vendor));
-    setBusy(false);
-    setError(null);
-  }, [mode, open, vendor]);
 
   function handleOpenChange(nextOpen: boolean) {
     onOpenChange(nextOpen);

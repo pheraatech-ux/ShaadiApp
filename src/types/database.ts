@@ -49,6 +49,60 @@ export type Database = {
           },
         ]
       }
+      company_employees: {
+        Row: {
+          created_at: string
+          email: string | null
+          employment_status: Database["public"]["Enums"]["company_employee_status"]
+          id: string
+          invited_at: string | null
+          name: string
+          owner_user_id: string
+          phone: string
+          role: Database["public"]["Enums"]["company_employee_role"]
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          employment_status?: Database["public"]["Enums"]["company_employee_status"]
+          id?: string
+          invited_at?: string | null
+          name: string
+          owner_user_id: string
+          phone: string
+          role?: Database["public"]["Enums"]["company_employee_role"]
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          employment_status?: Database["public"]["Enums"]["company_employee_status"]
+          id?: string
+          invited_at?: string | null
+          name?: string
+          owner_user_id?: string
+          phone?: string
+          role?: Database["public"]["Enums"]["company_employee_role"]
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_employees_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_employees_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           created_at: string
@@ -620,6 +674,8 @@ export type Database = {
       }
     }
     Enums: {
+      company_employee_role: "coordinator" | "assistant" | "viewer"
+      company_employee_status: "invited" | "active" | "inactive"
       task_priority: "high" | "medium" | "low"
       task_status: "todo" | "in_progress" | "needs_review" | "done"
       task_visibility: "team_only" | "client_family" | "vendor"
@@ -754,6 +810,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      company_employee_role: ["coordinator", "assistant", "viewer"],
+      company_employee_status: ["invited", "active", "inactive"],
       task_priority: ["high", "medium", "low"],
       task_status: ["todo", "in_progress", "needs_review", "done"],
       task_visibility: ["team_only", "client_family", "vendor"],

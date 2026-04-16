@@ -26,6 +26,20 @@ export function normalizeInstagram(value: string) {
   return trimmed.startsWith("@") ? trimmed : `@${trimmed}`;
 }
 
+/** `tel:` href for clickable phone links (strips spaces for broader client support). */
+export function toTelHref(phone: string) {
+  const t = phone.trim();
+  if (!t) return "";
+  return `tel:${t.replace(/\s/g, "")}`;
+}
+
+/** `mailto:` href for clickable email links. */
+export function toMailtoHref(email: string) {
+  const e = email.trim();
+  if (!e) return "";
+  return `mailto:${e}`;
+}
+
 export function vendorStatusLabel(status: VendorStatus) {
   if (status === "confirmed") return "Confirmed";
   if (status === "declined") return "Declined";

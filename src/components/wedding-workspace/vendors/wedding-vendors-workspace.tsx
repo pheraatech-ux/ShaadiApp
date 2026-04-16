@@ -2,12 +2,17 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search } from "lucide-react";
+import { LayoutGrid, List, Plus, Search } from "lucide-react";
 
 import { VendorCard } from "@/components/wedding-workspace/vendors/vendor-card";
+import { VendorListView } from "@/components/wedding-workspace/vendors/vendor-list-view";
 import { VendorFormDialog } from "@/components/wedding-workspace/vendors/vendor-form-dialog";
 import { VendorInviteDialog } from "@/components/wedding-workspace/vendors/vendor-invite-dialog";
-import type { WeddingVendorRecord, WeddingVendorsWorkspaceViewModel } from "@/components/wedding-workspace/vendors/types";
+import type {
+  VendorsViewMode,
+  WeddingVendorRecord,
+  WeddingVendorsWorkspaceViewModel,
+} from "@/components/wedding-workspace/vendors/types";
 import { formatInrFromPaise } from "@/components/wedding-workspace/vendors/vendor-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +35,7 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
   const [selectedVendor, setSelectedVendor] = useState<WeddingVendorRecord | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<VendorsViewMode>("cards");
 
   const filteredVendors = useMemo(() => {
     const normalizedQuery = search.trim().toLowerCase();
@@ -213,27 +219,51 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
             ))}
           </div>
 
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search vendor, category, phone or Instagram..."
-              className="pl-9"
-            />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:max-w-md">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search vendor, category, phone or Instagram..."
+                className="pl-9"
+              />
+            </div>
+            <div className="flex items-center gap-1 self-end rounded-lg border border-border/70 p-1 sm:self-auto">
+              <Button
+                type="button"
+                variant={viewMode === "cards" ? "secondary" : "ghost"}
+                size="icon-sm"
+                className="rounded-md"
+                onClick={() => setViewMode("cards")}
+                aria-label="Cards view"
+              >
+                <LayoutGrid className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant={viewMode === "list" ? "secondary" : "ghost"}
+                size="icon-sm"
+                className="rounded-md"
+                onClick={() => setViewMode("list")}
+                aria-label="List view"
+              >
+                <List className="size-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        {filteredVendors.length === 0 ? (
-          <Card className="border-dashed md:col-span-2">
-            <CardContent className="py-12 text-center text-sm text-muted-foreground">
-              No vendors match your filters yet.
-            </CardContent>
-          </Card>
-        ) : (
-          filteredVendors.map((vendor) => (
+      {filteredVendors.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center text-sm text-muted-foreground">
+            No vendors match your filters yet.
+          </CardContent>
+        </Card>
+      ) : viewMode === "cards" ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          {filteredVendors.map((vendor) => (
             <VendorCard
               key={vendor.id}
               vendor={vendor}
@@ -247,11 +277,25 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
                 setInviteOpen(true);
               }}
             />
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <VendorListView
+          vendors={filteredVendors}
+          onEdit={(nextVendor) => {
+            setSelectedVendor(nextVendor);
+            setFormMode("edit");
+            setFormOpen(true);
+          }}
+          onInvite={(nextVendor) => {
+            setSelectedVendor(nextVendor);
+            setInviteOpen(true);
+          }}
+        />
+      )}
 
       <VendorFormDialog
+        key={`${formOpen}-${formMode}-${selectedVendor?.id ?? "new"}`}
         open={formOpen}
         onOpenChange={setFormOpen}
         mode={formMode}

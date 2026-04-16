@@ -130,6 +130,19 @@ type WeddingMemberRow = {
   status: "active" | "invited" | "removed";
 };
 
+type CompanyEmployeeRow = {
+  id: string;
+  owner_user_id: string;
+  user_id: string | null;
+  name: string;
+  phone: string;
+  email: string | null;
+  role: "coordinator" | "assistant" | "viewer";
+  employment_status: "invited" | "active" | "inactive";
+  invited_at: string | null;
+  created_at: string;
+};
+
 type TaskRow = {
   id: string;
   wedding_id: string;
@@ -766,6 +779,106 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
   }
 
   const supabase = await createSupabaseServerClient();
+  const { data: companyEmployeeRows, error: companyEmployeesError } = await supabase
+    .from("company_employees")
+    .select("id, owner_user_id, user_id, name, phone, email, role, employment_status, invited_at, created_at")
+    .eq("owner_user_id", planner.userId)
+    .order("created_at", { ascending: false });
+
+  if (companyEmployeesError && companyEmployeesError.code !== "42P01") {
+    throw companyEmployeesError;
+  }
+
+  const companyEmployees = (companyEmployeeRows ?? []) as CompanyEmployeeRow[];
+  if (companyEmployees.length > 0) {
+    const linkedUserIds = [...new Set(companyEmployees.map((row) => row.user_id).filter(Boolean))] as string[];
+    const [{ data: weddingMemberRows }, { data: taskRows }] =
+      linkedUserIds.length > 0
+        ? await Promise.all([
+            supabase
+              .from("wedding_members")
+              .select("wedding_id, user_id")
+              .in("wedding_id", weddingIds)
+              .in("user_id", linkedUserIds)
+              .eq("status", "active"),
+            supabase
+              .from("tasks")
+              .select("id, assignee_user_id, status, due_date")
+              .in("wedding_id", weddingIds)
+              .in("assignee_user_id", linkedUserIds),
+          ])
+        : [{ data: [] as { wedding_id: string; user_id: string | null }[] }, { data: [] as { id: string; assignee_user_id: string | null; status: "todo" | "in_progress" | "needs_review" | "done"; due_date: string | null }[] }];
+
+    const weddingNameById = new Map(weddings.map((wedding) => [wedding.id, wedding.couple_name]));
+    const weddingsByUserId = new Map<string, string[]>();
+    for (const row of weddingMemberRows ?? []) {
+      if (!row.user_id) continue;
+      const existing = weddingsByUserId.get(row.user_id) ?? [];
+      const weddingLabel = weddingNameById.get(row.wedding_id);
+      if (weddingLabel && !existing.includes(weddingLabel)) {
+        existing.push(weddingLabel);
+      }
+      weddingsByUserId.set(row.user_id, existing);
+    }
+
+    const tasks = (taskRows ?? []) as { id: string; assignee_user_id: string | null; status: "todo" | "in_progress" | "needs_review" | "done"; due_date: string | null }[];
+    const today = new Date().toISOString().slice(0, 10);
+
+    const teamMembers: TeamMemberSummary[] = companyEmployees.map((employee) => {
+      const linkedUserTasks = employee.user_id ? tasks.filter((task) => task.assignee_user_id === employee.user_id) : [];
+      const doneCount = linkedUserTasks.filter((task) => task.status === "done").length;
+      const overdueCount = linkedUserTasks.filter((task) => task.status !== "done" && task.due_date && task.due_date < today).length;
+      const activeWeddings = employee.user_id ? (weddingsByUserId.get(employee.user_id) ?? []) : [];
+      const roleLabel =
+        employee.role === "coordinator"
+          ? "Coordinator"
+          : employee.role === "assistant"
+            ? "Assistant"
+            : "Viewer";
+      const status =
+        employee.employment_status === "invited"
+          ? "offline"
+          : overdueCount > 0
+            ? "away"
+            : "online";
+
+      return {
+        id: employee.id,
+        linkedUserId: employee.user_id,
+        name: employee.name,
+        email: employee.email ?? "No email",
+        phone: employee.phone,
+        initials: getInitials(employee.name || "TM"),
+        roleLabel,
+        role: employee.role,
+        activeWeddings: activeWeddings.slice(0, 3),
+        tasksCompleted: doneCount,
+        tasksTotal: linkedUserTasks.length,
+        overdueTasks: overdueCount,
+        lastActive: employee.employment_status === "invited" ? "Invite sent" : "Recently active",
+        status,
+      };
+    });
+
+    const totalTasks = teamMembers.reduce((sum, member) => sum + member.tasksTotal, 0);
+    const totalDone = teamMembers.reduce((sum, member) => sum + member.tasksCompleted, 0);
+    const totalOverdue = teamMembers.reduce((sum, member) => sum + member.overdueTasks, 0);
+    const completionPercent = totalTasks > 0 ? Math.round((totalDone / totalTasks) * 100) : 0;
+
+    return {
+      workspaceLabel: "All staff across your business",
+      kpis: [
+        { id: "members", title: "Team members", value: String(teamMembers.length), helperText: "Company employees" },
+        { id: "overdue", title: "Overdue tasks (team)", value: String(totalOverdue), helperText: "Across assigned tasks" },
+        { id: "weddings", title: "Weddings covered", value: String(weddings.length), helperText: "Accessible to you" },
+        { id: "completion", title: "Avg task completion", value: `${completionPercent}%`, helperText: "Across all assigned tasks" },
+      ],
+      alertText:
+        totalOverdue > 0 ? `${totalOverdue} tasks are overdue. Send reminders from member profiles.` : "No overdue team tasks right now.",
+      members: teamMembers,
+    };
+  }
+
   const [{ data: memberRows }, { data: taskRows }] = await Promise.all([
     supabase
       .from("wedding_members")
@@ -826,12 +939,21 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
 
     return {
       id: userId,
+      linkedUserId: userId,
       name,
       email: userId === planner.userId ? planner.email : "Member email hidden",
       phone: profile?.phone ?? "No phone",
       initials: getInitials(name),
       roleLabel:
-        role === "owner-admin" ? "Owner / admin" : role === "lead" ? "Lead" : role === "coordinator" ? "Coordinator" : "Viewer",
+        role === "owner-admin"
+          ? "Owner / admin"
+          : role === "lead"
+            ? "Lead"
+            : role === "coordinator"
+              ? "Coordinator"
+              : role === "assistant"
+                ? "Assistant"
+                : "Viewer",
       role,
       activeWeddings: assignedWeddings.slice(0, 3),
       tasksCompleted: doneCount,
@@ -870,7 +992,8 @@ export const getTeamMemberProfileView = cache(
     const planner = await getPlannerContext();
     const weddings = await getAccessibleWeddings(planner.userId);
     const weddingIds = weddings.map((wedding) => wedding.id);
-    if (!weddingIds.length) {
+    const targetUserId = member.linkedUserId ?? null;
+    if (!weddingIds.length || !targetUserId) {
       return { member, completionPercent: 0, tasks: [] };
     }
 
@@ -878,7 +1001,7 @@ export const getTeamMemberProfileView = cache(
     const { data: taskRows } = await supabase
       .from("tasks")
       .select("id, title, status, due_date, wedding_id")
-      .eq("assignee_user_id", memberId)
+      .eq("assignee_user_id", targetUserId)
       .in("wedding_id", weddingIds)
       .order("created_at", { ascending: false });
 

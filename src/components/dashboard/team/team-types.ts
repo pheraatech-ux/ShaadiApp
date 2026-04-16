@@ -1,9 +1,10 @@
-export type EmployeeRole = "owner-admin" | "lead" | "coordinator" | "viewer";
+export type EmployeeRole = "owner-admin" | "lead" | "coordinator" | "assistant" | "viewer";
 
 export type EmployeeStatus = "online" | "offline" | "away";
 
 export type TeamMemberSummary = {
   id: string;
+  linkedUserId?: string | null;
   name: string;
   email: string;
   phone: string;

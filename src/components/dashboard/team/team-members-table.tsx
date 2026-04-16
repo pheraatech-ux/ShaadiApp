@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 import { TaskProgressBar } from "@/components/dashboard/team/task-progress-bar";
@@ -10,6 +12,7 @@ import { cn } from "@/lib/utils";
 
 type TeamMembersTableProps = {
   members: TeamMemberSummary[];
+  onInviteClick?: () => void;
 };
 
 const statusClassName: Record<TeamMemberSummary["status"], string> = {
@@ -18,12 +21,16 @@ const statusClassName: Record<TeamMemberSummary["status"], string> = {
   offline: "bg-muted text-muted-foreground",
 };
 
-export function TeamMembersTable({ members }: TeamMembersTableProps) {
+export function TeamMembersTable({ members, onInviteClick }: TeamMembersTableProps) {
   return (
     <Card className="rounded-2xl border-border/70">
       <CardHeader className="flex flex-row items-center justify-between border-b border-border/70 pb-3">
         <CardTitle className="text-base">All team members</CardTitle>
-        <Button size="sm" className="rounded-lg bg-emerald-600 text-white hover:bg-emerald-600/90">
+        <Button
+          size="sm"
+          className="rounded-lg bg-emerald-600 text-white hover:bg-emerald-600/90"
+          onClick={onInviteClick}
+        >
           + Invite
         </Button>
       </CardHeader>
@@ -68,17 +75,23 @@ export function TeamMembersTable({ members }: TeamMembersTableProps) {
 
               <div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Tasks this month</p>
-                <Link
-                  href={`/app/team/${member.id}`}
-                  className={cn(
-                    buttonVariants({
-                      variant: "ghost",
-                      className: "mt-1 h-auto w-full justify-start rounded-lg px-0 py-0 hover:bg-transparent",
-                    }),
-                  )}
-                >
-                  <TaskProgressBar completed={member.tasksCompleted} total={member.tasksTotal} />
-                </Link>
+                {member.linkedUserId ? (
+                  <Link
+                    href={`/app/team/${member.id}`}
+                    className={cn(
+                      buttonVariants({
+                        variant: "ghost",
+                        className: "mt-1 h-auto w-full justify-start rounded-lg px-0 py-0 hover:bg-transparent",
+                      }),
+                    )}
+                  >
+                    <TaskProgressBar completed={member.tasksCompleted} total={member.tasksTotal} />
+                  </Link>
+                ) : (
+                  <div className="mt-1">
+                    <TaskProgressBar completed={member.tasksCompleted} total={member.tasksTotal} />
+                  </div>
+                )}
                 {member.overdueTasks > 0 ? (
                   <p className="mt-1 text-xs font-medium text-red-600 dark:text-red-300">{member.overdueTasks} overdue tasks</p>
                 ) : null}

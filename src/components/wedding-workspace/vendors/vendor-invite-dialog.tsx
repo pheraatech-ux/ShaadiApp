@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import type { WeddingVendorRecord } from "@/components/wedding-workspace/vendors/types";
+import { toTelHref } from "@/components/wedding-workspace/vendors/vendor-utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -66,7 +67,14 @@ export function VendorInviteDialog({ open, onOpenChange, weddingLabel, weddingSl
             </div>
           </div>
 
-          {vendor?.phone ? <p className="text-sm text-muted-foreground">Recipient: {vendor.phone}</p> : null}
+          {vendor?.phone ? (
+            <p className="text-sm text-muted-foreground">
+              Recipient:{" "}
+              <a href={toTelHref(vendor.phone)} className="underline-offset-2 hover:text-primary hover:underline">
+                {vendor.phone}
+              </a>
+            </p>
+          ) : null}
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>
 

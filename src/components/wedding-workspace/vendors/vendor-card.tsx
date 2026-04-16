@@ -1,7 +1,13 @@
 import { Mail, Phone } from "lucide-react";
 
 import type { WeddingVendorRecord } from "@/components/wedding-workspace/vendors/types";
-import { formatInrFromPaise, inviteStatusLabel, vendorStatusLabel } from "@/components/wedding-workspace/vendors/vendor-utils";
+import {
+  formatInrFromPaise,
+  inviteStatusLabel,
+  toMailtoHref,
+  toTelHref,
+  vendorStatusLabel,
+} from "@/components/wedding-workspace/vendors/vendor-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,15 +45,25 @@ export function VendorCard({ vendor, onEdit, onInvite }: VendorCardProps) {
 
         <div className="grid gap-2 text-sm text-muted-foreground">
           {vendor.phone ? (
-            <p className="inline-flex items-center gap-2">
-              <Phone className="size-4" />
-              {vendor.phone}
+            <p className="inline-flex min-w-0 items-center gap-2">
+              <Phone className="size-4 shrink-0" />
+              <a
+                href={toTelHref(vendor.phone)}
+                className="min-w-0 truncate underline-offset-2 transition-colors hover:text-primary hover:underline"
+              >
+                {vendor.phone}
+              </a>
             </p>
           ) : null}
           {vendor.email ? (
-            <p className="inline-flex items-center gap-2">
-              <Mail className="size-4" />
-              {vendor.email}
+            <p className="inline-flex min-w-0 items-center gap-2">
+              <Mail className="size-4 shrink-0" />
+              <a
+                href={toMailtoHref(vendor.email)}
+                className="min-w-0 truncate underline-offset-2 transition-colors hover:text-primary hover:underline"
+              >
+                {vendor.email}
+              </a>
             </p>
           ) : null}
           {vendor.instagramHandle ? <p>📸 {vendor.instagramHandle}</p> : null}

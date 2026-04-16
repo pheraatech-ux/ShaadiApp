@@ -19,6 +19,8 @@ export type WeddingVendorRecord = {
   createdAt: string;
 };
 
+export type VendorsViewMode = "cards" | "list";
+
 export type WeddingVendorsWorkspaceViewModel = {
   weddingSlug: string;
   coupleName: string;
