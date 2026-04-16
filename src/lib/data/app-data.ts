@@ -951,9 +951,7 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
             ? "Lead"
             : role === "coordinator"
               ? "Coordinator"
-              : role === "assistant"
-                ? "Assistant"
-                : "Viewer",
+              : "Viewer",
       role,
       activeWeddings: assignedWeddings.slice(0, 3),
       tasksCompleted: doneCount,
