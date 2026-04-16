@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { PhoneOtpSignIn } from "@/components/auth/phone-otp/phone-otp-sign-in";
 import {
   Select,
   SelectContent,
@@ -27,6 +28,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type AuthMode = "login" | "signup";
 type AuthStep = "auth" | "profile";
+type AuthScreen = "credentials" | "phoneOtp";
 
 const features = [
   "Multi-wedding planner dashboard",
@@ -54,6 +56,7 @@ export function AuthForm() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [mode, setMode] = useState<AuthMode>("login");
   const [step, setStep] = useState<AuthStep>("auth");
+  const [authScreen, setAuthScreen] = useState<AuthScreen>("credentials");
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -110,6 +113,58 @@ export function AuthForm() {
 
     return () => clearTimeout(timeout);
   }, [businessProfilePulse]);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.includes("access_token") || !hash.includes("refresh_token")) {
+      return;
+    }
+
+    const params = new URLSearchParams(hash.replace(/^#/, ""));
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+
+    if (!accessToken || !refreshToken) {
+      return;
+    }
+
+    void (async () => {
+      const { error: setSessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+
+      if (setSessionError) {
+        setError("Sign-in completed but session could not be restored.");
+        return;
+      }
+
+      window.history.replaceState(null, "", window.location.pathname);
+      router.refresh();
+      router.replace("/app/dashboard");
+    })();
+  }, [router, supabase]);
+
+  useEffect(() => {
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        router.replace("/app/dashboard");
+      }
+    })();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        router.replace("/app/dashboard");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router, supabase]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -366,6 +421,8 @@ export function AuthForm() {
             <h2 className="text-4xl font-bold tracking-tight">
               {step === "profile"
                 ? "Set up your business profile"
+                : authScreen === "phoneOtp"
+                  ? "Sign in with OTP"
                 : mode === "login"
                   ? "Welcome Back"
                   : "Get Started"}
@@ -373,6 +430,8 @@ export function AuthForm() {
             <p className="text-base text-muted-foreground">
               {step === "profile"
                 ? `Let's make ${businessName.trim() || "your business"} scalable!`
+                : authScreen === "phoneOtp"
+                  ? "Enter your account phone number and the one-time code."
                 : mode === "login"
                   ? "Sign in to your planner account to continue."
                   : "Set up your planner profile in 30 seconds."}
@@ -380,11 +439,14 @@ export function AuthForm() {
           </div>
 
           {/* Mode Toggle */}
-          {step === "auth" && (
+          {step === "auth" && authScreen === "credentials" && (
             <div className="mb-8 flex rounded-xl bg-muted p-1.5">
               <button
                 type="button"
-                onClick={() => setMode("login")}
+                onClick={() => {
+                  setMode("login");
+                  setAuthScreen("credentials");
+                }}
                 className={`flex-1 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all ${
                   mode === "login"
                     ? "bg-background text-foreground shadow-sm"
@@ -395,7 +457,10 @@ export function AuthForm() {
               </button>
               <button
                 type="button"
-                onClick={() => setMode("signup")}
+                onClick={() => {
+                  setMode("signup");
+                  setAuthScreen("credentials");
+                }}
                 className={`flex-1 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all ${
                   mode === "signup"
                     ? "bg-background text-foreground shadow-sm"
@@ -408,6 +473,9 @@ export function AuthForm() {
           )}
 
           {step === "auth" ? (
+            authScreen === "phoneOtp" ? (
+              <PhoneOtpSignIn onBack={() => setAuthScreen("credentials")} />
+            ) : (
             <form className="space-y-5" onSubmit={handleSubmit}>
               {mode === "signup" && (
                 <>
@@ -550,6 +618,7 @@ export function AuthForm() {
                 </p>
               )}
             </form>
+            )
           ) : (
             <form className="space-y-6" onSubmit={handleCompleteProfile}>
               <div className="space-y-2">
@@ -705,7 +774,7 @@ export function AuthForm() {
             </form>
           )}
 
-          {step === "auth" && (
+          {step === "auth" && authScreen === "credentials" && (
             <>
               {/* Divider */}
               <div className="relative my-8 flex items-center">
@@ -747,6 +816,7 @@ export function AuthForm() {
                   type="button"
                   variant="outline"
                   className="h-12 gap-2.5 rounded-xl text-sm font-semibold"
+                  onClick={() => setAuthScreen("phoneOtp")}
                 >
                   <svg
                     className="size-4"
