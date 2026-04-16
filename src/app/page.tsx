@@ -1,6 +1,7 @@
 import { CalendarCheck2, IndianRupee, ListChecks, UsersRound } from "lucide-react";
 import Link from "next/link";
 
+import { HashSessionCapture } from "@/components/auth/hash-session-capture";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +33,7 @@ export default function Home() {
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-10 sm:px-8 md:py-14">
+      <HashSessionCapture />
       <section className="rounded-2xl border bg-card p-8 shadow-sm md:p-12">
         <Badge className="mb-4" variant="secondary">
           Wedding Operations Platform
