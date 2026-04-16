@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
 import { normalizePhoneNumber } from "@/lib/auth/phone-number"
+import { getAppBaseUrl } from "@/lib/env"
 import { getSupabaseAdminClient } from "@/lib/supabase/admin"
 import {
   checkSmsVerification,
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
           type: "magiclink",
           email: authUserData.user.email,
           options: {
-            redirectTo: `${request.nextUrl.origin}/auth/callback?next=/app/dashboard`,
+            redirectTo: `${getAppBaseUrl(request.nextUrl.origin)}/auth/callback?next=/app/dashboard`,
           },
         })
 
