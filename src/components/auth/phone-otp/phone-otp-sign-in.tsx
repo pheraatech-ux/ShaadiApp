@@ -104,8 +104,17 @@ export function PhoneOtpSignIn({ onBack }: PhoneOtpSignInProps) {
         }
 
         if (payload.actionLink) {
-          window.location.assign(payload.actionLink)
-          return
+          try {
+            const actionUrl = new URL(payload.actionLink)
+            const callbackUrl = new URL("/auth/callback", window.location.origin)
+            callbackUrl.searchParams.set("next", "/app/dashboard")
+            actionUrl.searchParams.set("redirect_to", callbackUrl.toString())
+            window.location.assign(actionUrl.toString())
+            return
+          } catch {
+            window.location.assign(payload.actionLink)
+            return
+          }
         }
 
         setStatusMessage(payload.message ?? "OTP verified successfully.")
