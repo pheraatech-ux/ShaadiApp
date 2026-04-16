@@ -16,6 +16,7 @@ import type {
   WeddingTasksBoardViewModel,
 } from "@/components/wedding-workspace/tasks/types";
 import type { WeddingMessagesWorkspaceViewModel } from "@/components/wedding-workspace/messages/types";
+import type { WeddingVendorsWorkspaceViewModel } from "@/components/wedding-workspace/vendors/types";
 import type { WeddingWorkspaceViewModel } from "@/components/wedding-workspace/types";
 import { buildTimeOfDayGreeting } from "@/lib/planner-display";
 import {
@@ -177,6 +178,11 @@ function toInrLakh(paise: number) {
   const rupees = paise / 100;
   const lakh = rupees / 100000;
   return `₹${lakh.toLocaleString("en-IN", { maximumFractionDigits: 1 })}L`;
+}
+
+function normalizeInviteStatus(value: string | null | undefined): "not_sent" | "sent" | "joined" {
+  if (value === "sent" || value === "joined") return value;
+  return "not_sent";
 }
 
 function safeSlugPart(value: string) {
@@ -1150,6 +1156,66 @@ export const getWeddingTasksBoardViewBySlug = cache(
         flagged,
       },
       memberSummaries,
+    };
+  },
+);
+
+export const getWeddingVendorsWorkspaceViewBySlug = cache(
+  async (weddingSlug: string): Promise<WeddingVendorsWorkspaceViewModel | null> => {
+    const planner = await getPlannerContext();
+    const weddings = await getAccessibleWeddings(planner.userId);
+    const wedding = weddings.find((row) => row.slug === weddingSlug);
+    if (!wedding) return null;
+
+    const supabase = await createSupabaseServerClient();
+    const { data: vendorRows, error } = await supabase
+      .from("vendors")
+      .select(
+        "id, name, category, phone, email, instagram_handle, quoted_price_paise, advance_paid_paise, status, notes, whatsapp_invite_status, whatsapp_invited_at, created_at",
+      )
+      .eq("wedding_id", wedding.id)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    const vendors = (vendorRows ?? []).map((vendor) => ({
+      id: vendor.id,
+      name: vendor.name,
+      category: vendor.category,
+      phone: vendor.phone,
+      email: vendor.email,
+      instagramHandle: vendor.instagram_handle,
+      quotedPricePaise: vendor.quoted_price_paise ?? 0,
+      advancePaidPaise: vendor.advance_paid_paise ?? 0,
+      status: vendor.status,
+      notes: vendor.notes,
+      inviteStatus: normalizeInviteStatus(vendor.whatsapp_invite_status),
+      inviteSentAt: vendor.whatsapp_invited_at,
+      createdAt: vendor.created_at,
+    }));
+
+    const summary = {
+      total: vendors.length,
+      confirmed: vendors.filter((vendor) => vendor.status === "confirmed").length,
+      shortlisted: vendors.filter((vendor) => vendor.status === "pending").length,
+      declined: vendors.filter((vendor) => vendor.status === "declined").length,
+      inviteSent: vendors.filter((vendor) => vendor.inviteStatus !== "not_sent").length,
+      pendingJoin: vendors.filter((vendor) => vendor.inviteStatus === "sent").length,
+      totalQuotedPaise: vendors.reduce((sum, vendor) => sum + vendor.quotedPricePaise, 0),
+      totalAdvancePaise: vendors.reduce((sum, vendor) => sum + vendor.advancePaidPaise, 0),
+    };
+
+    const categorySet = new Set<string>();
+    for (const vendor of vendors) {
+      if (vendor.category.trim()) categorySet.add(vendor.category.trim());
+    }
+
+    return {
+      weddingSlug,
+      coupleName: wedding.couple_name,
+      summary,
+      quickCategories: [...categorySet].sort((a, b) => a.localeCompare(b)).slice(0, 8),
+      vendors,
     };
   },
 );

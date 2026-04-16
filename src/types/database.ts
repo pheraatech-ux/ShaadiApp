@@ -386,30 +386,51 @@ export type Database = {
       }
       vendors: {
         Row: {
+          advance_paid_paise: number
           category: string
           created_at: string
+          email: string | null
           id: string
+          instagram_handle: string | null
           name: string
           notes: string | null
+          phone: string | null
+          quoted_price_paise: number
           status: Database["public"]["Enums"]["vendor_status"]
+          whatsapp_invite_status: string
+          whatsapp_invited_at: string | null
           wedding_id: string
         }
         Insert: {
+          advance_paid_paise?: number
           category?: string
           created_at?: string
+          email?: string | null
           id?: string
+          instagram_handle?: string | null
           name: string
           notes?: string | null
+          phone?: string | null
+          quoted_price_paise?: number
           status?: Database["public"]["Enums"]["vendor_status"]
+          whatsapp_invite_status?: string
+          whatsapp_invited_at?: string | null
           wedding_id: string
         }
         Update: {
+          advance_paid_paise?: number
           category?: string
           created_at?: string
+          email?: string | null
           id?: string
+          instagram_handle?: string | null
           name?: string
           notes?: string | null
+          phone?: string | null
+          quoted_price_paise?: number
           status?: Database["public"]["Enums"]["vendor_status"]
+          whatsapp_invite_status?: string
+          whatsapp_invited_at?: string | null
           wedding_id?: string
         }
         Relationships: [
