@@ -16,6 +16,25 @@ type CreateEmployeePayload = {
 const VALID_ROLES = new Set<CompanyEmployeeRole>(["coordinator", "assistant", "viewer"]);
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function duplicateEmployeeInviteMessage(insertError: { code?: string; message?: string } | null) {
+  if (!insertError) {
+    return null;
+  }
+  const isUniqueViolation =
+    insertError.code === "23505" || /duplicate key|unique constraint/i.test(insertError.message ?? "");
+  if (!isUniqueViolation) {
+    return null;
+  }
+  const msg = insertError.message ?? "";
+  if (msg.includes("idx_company_employees_owner_phone")) {
+    return "A team member with this phone number already exists. Use “copy link” on their row to send a new invite, or use a different number.";
+  }
+  if (msg.includes("idx_company_employees_owner_email")) {
+    return "A team member with this email already exists. Use “copy link” on their row to send a new invite, or use a different email.";
+  }
+  return "This phone or email is already used by a team member. Use “copy link” on their row to re-invite, or change the contact details.";
+}
+
 export async function POST(request: NextRequest) {
   try {
     const payload = (await request.json()) as CreateEmployeePayload;
@@ -46,67 +65,29 @@ export async function POST(request: NextRequest) {
     const normalizedName = name || "Team member";
     const normalizedEmail = email || null;
 
-    const { data: existingByPhone, error: existingByPhoneError } = await supabase
+    const { data: insertedEmployee, error: insertEmployeeError } = await supabase
       .from("company_employees")
+      .insert({
+        owner_user_id: user.id,
+        name: normalizedName,
+        phone,
+        email: normalizedEmail,
+        role,
+        employment_status: "invited",
+        invited_at: nowIso,
+      })
       .select("id")
-      .eq("owner_user_id", user.id)
-      .eq("phone", phone)
-      .maybeSingle();
-    if (existingByPhoneError) {
-      throw existingByPhoneError;
+      .single();
+
+    if (insertEmployeeError) {
+      const duplicateMessage = duplicateEmployeeInviteMessage(insertEmployeeError);
+      if (duplicateMessage) {
+        return NextResponse.json({ error: duplicateMessage }, { status: 409 });
+      }
+      throw insertEmployeeError;
     }
 
-    let existingEmployeeId = existingByPhone?.id ?? null;
-    if (!existingEmployeeId && normalizedEmail) {
-      const { data: existingByEmail, error: existingByEmailError } = await supabase
-        .from("company_employees")
-        .select("id")
-        .eq("owner_user_id", user.id)
-        .ilike("email", normalizedEmail)
-        .maybeSingle();
-      if (existingByEmailError) {
-        throw existingByEmailError;
-      }
-      existingEmployeeId = existingByEmail?.id ?? null;
-    }
-
-    let employeeId = existingEmployeeId;
-    if (existingEmployeeId) {
-      const { error: updateEmployeeError } = await supabase
-        .from("company_employees")
-        .update({
-          name: normalizedName,
-          phone,
-          email: normalizedEmail,
-          role,
-          employment_status: "invited",
-          invited_at: nowIso,
-        })
-        .eq("id", existingEmployeeId)
-        .eq("owner_user_id", user.id);
-      if (updateEmployeeError) {
-        throw updateEmployeeError;
-      }
-    } else {
-      const { data: insertedEmployee, error: insertEmployeeError } = await supabase
-        .from("company_employees")
-        .insert({
-          owner_user_id: user.id,
-          name: normalizedName,
-          phone,
-          email: normalizedEmail,
-          role,
-          employment_status: "invited",
-          invited_at: nowIso,
-        })
-        .select("id")
-        .single();
-      if (insertEmployeeError) {
-        throw insertEmployeeError;
-      }
-      employeeId = insertedEmployee.id;
-    }
-
+    const employeeId = insertedEmployee.id;
     if (!employeeId) {
       return NextResponse.json({ error: "Unable to issue invite." }, { status: 500 });
     }
@@ -126,9 +107,9 @@ export async function POST(request: NextRequest) {
         employeeId,
         inviteUrl,
         expiresAt,
-        status: existingEmployeeId ? "reinvited" : "invited",
+        status: "invited",
       },
-      { status: existingEmployeeId ? 200 : 201 },
+      { status: 201 },
     );
   } catch {
     return NextResponse.json({ error: "Unable to invite employee." }, { status: 500 });
