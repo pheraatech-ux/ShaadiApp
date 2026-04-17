@@ -103,6 +103,70 @@ export type Database = {
           },
         ]
       }
+      company_employee_invites: {
+        Row: {
+          claimed_at: string | null
+          claimed_by_user_id: string | null
+          created_at: string
+          delivery_channel: string
+          employee_id: string
+          expires_at: string
+          id: string
+          last_sent_at: string
+          owner_user_id: string
+          revoked_at: string | null
+          token_hash: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_by_user_id?: string | null
+          created_at?: string
+          delivery_channel?: string
+          employee_id: string
+          expires_at: string
+          id?: string
+          last_sent_at?: string
+          owner_user_id: string
+          revoked_at?: string | null
+          token_hash: string
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_by_user_id?: string | null
+          created_at?: string
+          delivery_channel?: string
+          employee_id?: string
+          expires_at?: string
+          id?: string
+          last_sent_at?: string
+          owner_user_id?: string
+          revoked_at?: string | null
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_employee_invites_claimed_by_user_id_fkey"
+            columns: ["claimed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_employee_invites_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "company_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_employee_invites_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           created_at: string
@@ -647,6 +711,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_company_employee_invite: {
+        Args: {
+          p_token_hash: string
+          p_user_email: string
+          p_user_id: string
+          p_user_phone?: string
+        }
+        Returns: {
+          employee_id: string
+          owner_user_id: string
+          result: string
+        }[]
+      }
       create_wedding_with_events: {
         Args: {
           p_bride_name: string

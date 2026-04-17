@@ -10,7 +10,7 @@ import {
   Upload,
   Building2,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,8 +52,13 @@ const businessTypes = [
 
 export function AuthForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isProfileNavPending, startProfileNav] = useTransition();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const postAuthDestination = useMemo(() => {
+    const next = searchParams.get("next");
+    return next && next.startsWith("/") ? next : "/app/dashboard";
+  }, [searchParams]);
   const [mode, setMode] = useState<AuthMode>("login");
   const [step, setStep] = useState<AuthStep>("auth");
   const [authScreen, setAuthScreen] = useState<AuthScreen>("credentials");
@@ -74,7 +79,7 @@ export function AuthForm() {
   const [businessType, setBusinessType] = useState<string | null>(null);
   const [teamSize, setTeamSize] = useState("1-3");
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const logoPreview = useMemo(() => (logoFile ? URL.createObjectURL(logoFile) : null), [logoFile]);
   const [accountCreatedPulse, setAccountCreatedPulse] = useState(false);
   const [businessProfileCompleted, setBusinessProfileCompleted] =
     useState(false);
@@ -82,17 +87,12 @@ export function AuthForm() {
   const [dashboardStepPulse, setDashboardStepPulse] = useState(false);
 
   useEffect(() => {
-    if (!logoFile) {
-      setLogoPreview(null);
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(logoFile);
-    setLogoPreview(objectUrl);
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      if (logoPreview) {
+        URL.revokeObjectURL(logoPreview);
+      }
     };
-  }, [logoFile]);
+  }, [logoPreview]);
 
   useEffect(() => {
     if (!accountCreatedPulse) return;
@@ -141,15 +141,15 @@ export function AuthForm() {
 
       window.history.replaceState(null, "", window.location.pathname);
       router.refresh();
-      router.replace("/app/dashboard");
+      router.replace(postAuthDestination);
     })();
-  }, [router, supabase]);
+  }, [postAuthDestination, router, supabase]);
 
   useEffect(() => {
     void (async () => {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        router.replace("/app/dashboard");
+        router.replace(postAuthDestination);
       }
     })();
 
@@ -157,14 +157,14 @@ export function AuthForm() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        router.replace("/app/dashboard");
+        router.replace(postAuthDestination);
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [router, supabase]);
+  }, [postAuthDestination, router, supabase]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -186,7 +186,7 @@ export function AuthForm() {
           setTimeout(resolve, 1500);
         });
         router.refresh();
-        router.replace("/app/dashboard");
+        router.replace(postAuthDestination);
       }
       return;
     }
@@ -277,7 +277,11 @@ export function AuthForm() {
       setTimeout(resolve, 950);
     });
     startProfileNav(() => {
-      router.replace("/app/welcome");
+      router.replace(
+        postAuthDestination === "/app/dashboard"
+          ? "/app/welcome"
+          : postAuthDestination
+      );
     });
   }
 
@@ -765,7 +769,7 @@ export function AuthForm() {
                 disabled={profileLoading || isProfileNavPending}
                 onClick={() => {
                   router.refresh();
-                  router.replace("/app/dashboard");
+                  router.replace(postAuthDestination);
                 }}
                 className="w-full text-center text-sm font-medium text-muted-foreground transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
               >

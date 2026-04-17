@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { rotateCompanyEmployeeInvite } from "@/lib/company-employee-invites";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
 import type { Database } from "@/types/database";
 
@@ -41,24 +42,93 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
-    const { error } = await supabase.from("company_employees").insert({
-      owner_user_id: user.id,
-      name: name || "Team member",
-      phone,
-      email: email || null,
-      role,
-      employment_status: "invited",
-      invited_at: new Date().toISOString(),
-    });
+    const nowIso = new Date().toISOString();
+    const normalizedName = name || "Team member";
+    const normalizedEmail = email || null;
 
-    if (error) {
-      if (error.code === "42P01") {
-        return NextResponse.json({ error: "Company employees table is missing. Run latest migrations." }, { status: 500 });
-      }
-      return NextResponse.json({ error: error.message || "Unable to invite employee." }, { status: 400 });
+    const { data: existingByPhone, error: existingByPhoneError } = await supabase
+      .from("company_employees")
+      .select("id")
+      .eq("owner_user_id", user.id)
+      .eq("phone", phone)
+      .maybeSingle();
+    if (existingByPhoneError) {
+      throw existingByPhoneError;
     }
 
-    return NextResponse.json({ ok: true }, { status: 201 });
+    let existingEmployeeId = existingByPhone?.id ?? null;
+    if (!existingEmployeeId && normalizedEmail) {
+      const { data: existingByEmail, error: existingByEmailError } = await supabase
+        .from("company_employees")
+        .select("id")
+        .eq("owner_user_id", user.id)
+        .ilike("email", normalizedEmail)
+        .maybeSingle();
+      if (existingByEmailError) {
+        throw existingByEmailError;
+      }
+      existingEmployeeId = existingByEmail?.id ?? null;
+    }
+
+    let employeeId = existingEmployeeId;
+    if (existingEmployeeId) {
+      const { error: updateEmployeeError } = await supabase
+        .from("company_employees")
+        .update({
+          name: normalizedName,
+          phone,
+          email: normalizedEmail,
+          role,
+          employment_status: "invited",
+          invited_at: nowIso,
+        })
+        .eq("id", existingEmployeeId)
+        .eq("owner_user_id", user.id);
+      if (updateEmployeeError) {
+        throw updateEmployeeError;
+      }
+    } else {
+      const { data: insertedEmployee, error: insertEmployeeError } = await supabase
+        .from("company_employees")
+        .insert({
+          owner_user_id: user.id,
+          name: normalizedName,
+          phone,
+          email: normalizedEmail,
+          role,
+          employment_status: "invited",
+          invited_at: nowIso,
+        })
+        .select("id")
+        .single();
+      if (insertEmployeeError) {
+        throw insertEmployeeError;
+      }
+      employeeId = insertedEmployee.id;
+    }
+
+    if (!employeeId) {
+      return NextResponse.json({ error: "Unable to issue invite." }, { status: 500 });
+    }
+
+    const { inviteUrl, expiresAt } = await rotateCompanyEmployeeInvite({
+      supabase,
+      employeeId,
+      ownerUserId: user.id,
+      deliveryChannel: "whatsapp",
+      fallbackOrigin: request.nextUrl.origin,
+    });
+
+    return NextResponse.json(
+      {
+        ok: true,
+        employeeId,
+        inviteUrl,
+        expiresAt,
+        status: existingEmployeeId ? "reinvited" : "invited",
+      },
+      { status: existingEmployeeId ? 200 : 201 },
+    );
   } catch {
     return NextResponse.json({ error: "Unable to invite employee." }, { status: 500 });
   }

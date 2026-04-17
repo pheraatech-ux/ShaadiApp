@@ -17,6 +17,8 @@ export type TeamMemberSummary = {
   overdueTasks: number;
   lastActive: string;
   status: EmployeeStatus;
+  employmentStatus: "invited" | "active" | "inactive";
+  inviteExpiresAt?: string | null;
 };
 
 export type TeamKpiCard = {

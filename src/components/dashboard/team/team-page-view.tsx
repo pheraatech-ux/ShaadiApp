@@ -18,6 +18,41 @@ type TeamPageViewProps = {
 export function TeamPageView({ view }: TeamPageViewProps) {
   const router = useRouter();
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteFeedback, setInviteFeedback] = useState<{ tone: "success" | "error"; message: string } | null>(null);
+
+  async function copyTextToClipboard(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function rotateInviteLink(memberId: string, intent: "copy" | "resend") {
+    const response = await fetch(`/api/team/employees/${memberId}/invite-link`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+    });
+    const payload = (await response.json().catch(() => ({}))) as { error?: string; inviteUrl?: string };
+    if (!response.ok || !payload.inviteUrl) {
+      throw new Error(payload.error ?? "Unable to refresh invite link.");
+    }
+    const copied = await copyTextToClipboard(payload.inviteUrl);
+    setInviteFeedback({
+      tone: "success",
+      message:
+        intent === "copy"
+          ? copied
+            ? "Fresh invite link copied."
+            : "Fresh invite link generated."
+          : copied
+            ? "Invite re-sent and link copied."
+            : "Invite re-sent with a fresh link.",
+    });
+    router.refresh();
+  }
 
   return (
     <div className="space-y-5">
@@ -32,7 +67,41 @@ export function TeamPageView({ view }: TeamPageViewProps) {
       />
       <TeamSummaryCards cards={view.kpis} />
       <TeamAlertBanner message={view.alertText} />
-      <TeamMembersTable members={view.members} onInviteClick={() => setInviteOpen(true)} />
+      {inviteFeedback ? (
+        <p
+          className={
+            inviteFeedback.tone === "success"
+              ? "rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300"
+              : "rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          }
+        >
+          {inviteFeedback.message}
+        </p>
+      ) : null}
+      <TeamMembersTable
+        members={view.members}
+        onInviteClick={() => setInviteOpen(true)}
+        onCopyInviteLink={async (memberId) => {
+          try {
+            await rotateInviteLink(memberId, "copy");
+          } catch (error) {
+            setInviteFeedback({
+              tone: "error",
+              message: error instanceof Error ? error.message : "Unable to copy invite link.",
+            });
+          }
+        }}
+        onResendInvite={async (memberId) => {
+          try {
+            await rotateInviteLink(memberId, "resend");
+          } catch (error) {
+            setInviteFeedback({
+              tone: "error",
+              message: error instanceof Error ? error.message : "Unable to resend invite.",
+            });
+          }
+        }}
+      />
       <InviteTeamMemberDialog
         open={inviteOpen}
         onOpenChange={setInviteOpen}
@@ -40,15 +109,23 @@ export function TeamPageView({ view }: TeamPageViewProps) {
         roleSectionLabel="Role in this business"
         infoText="Invite sent via WhatsApp. Employees are added to your company team and can be assigned to weddings later."
         onSubmit={async ({ name, phone, email, role }) => {
+          setInviteFeedback(null);
           const response = await fetch("/api/team/employees", {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name, phone, email, role }),
           });
-          const payload = (await response.json().catch(() => ({}))) as { error?: string };
+          const payload = (await response.json().catch(() => ({}))) as { error?: string; inviteUrl?: string };
           if (!response.ok) {
             throw new Error(payload.error ?? "Unable to invite team member.");
+          }
+          if (payload.inviteUrl) {
+            const copied = await copyTextToClipboard(payload.inviteUrl);
+            setInviteFeedback({
+              tone: "success",
+              message: copied ? "Invite created. Unique link copied to clipboard." : "Invite created. Unique link generated.",
+            });
           }
           router.refresh();
         }}

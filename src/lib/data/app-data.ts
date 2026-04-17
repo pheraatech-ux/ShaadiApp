@@ -143,6 +143,15 @@ type CompanyEmployeeRow = {
   created_at: string;
 };
 
+type CompanyEmployeeInviteRow = {
+  id: string;
+  employee_id: string;
+  expires_at: string;
+  created_at: string;
+  claimed_at: string | null;
+  revoked_at: string | null;
+};
+
 type TaskRow = {
   id: string;
   wedding_id: string;
@@ -792,7 +801,8 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
   const companyEmployees = (companyEmployeeRows ?? []) as CompanyEmployeeRow[];
   if (companyEmployees.length > 0) {
     const linkedUserIds = [...new Set(companyEmployees.map((row) => row.user_id).filter(Boolean))] as string[];
-    const [{ data: weddingMemberRows }, { data: taskRows }] =
+    const employeeIds = companyEmployees.map((row) => row.id);
+    const [{ data: weddingMemberRows }, { data: taskRows }, { data: inviteRows }] =
       linkedUserIds.length > 0
         ? await Promise.all([
             supabase
@@ -806,8 +816,32 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
               .select("id, assignee_user_id, status, due_date")
               .in("wedding_id", weddingIds)
               .in("assignee_user_id", linkedUserIds),
+            supabase
+              .from("company_employee_invites")
+              .select("id, employee_id, expires_at, created_at, claimed_at, revoked_at")
+              .in("employee_id", employeeIds)
+              .is("claimed_at", null)
+              .is("revoked_at", null)
+              .order("created_at", { ascending: false }),
           ])
-        : [{ data: [] as { wedding_id: string; user_id: string | null }[] }, { data: [] as { id: string; assignee_user_id: string | null; status: "todo" | "in_progress" | "needs_review" | "done"; due_date: string | null }[] }];
+        : await Promise.all([
+            Promise.resolve({ data: [] as { wedding_id: string; user_id: string | null }[] }),
+            Promise.resolve({
+              data: [] as {
+                id: string;
+                assignee_user_id: string | null;
+                status: "todo" | "in_progress" | "needs_review" | "done";
+                due_date: string | null;
+              }[],
+            }),
+            supabase
+              .from("company_employee_invites")
+              .select("id, employee_id, expires_at, created_at, claimed_at, revoked_at")
+              .in("employee_id", employeeIds)
+              .is("claimed_at", null)
+              .is("revoked_at", null)
+              .order("created_at", { ascending: false }),
+          ]);
 
     const weddingNameById = new Map(weddings.map((wedding) => [wedding.id, wedding.couple_name]));
     const weddingsByUserId = new Map<string, string[]>();
@@ -822,9 +856,18 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
     }
 
     const tasks = (taskRows ?? []) as { id: string; assignee_user_id: string | null; status: "todo" | "in_progress" | "needs_review" | "done"; due_date: string | null }[];
+    const invites = (inviteRows ?? []) as CompanyEmployeeInviteRow[];
     const today = new Date().toISOString().slice(0, 10);
+    const nowTimestamp = Date.now();
+    const latestInviteByEmployeeId = new Map<string, CompanyEmployeeInviteRow>();
+    for (const invite of invites) {
+      if (!latestInviteByEmployeeId.has(invite.employee_id)) {
+        latestInviteByEmployeeId.set(invite.employee_id, invite);
+      }
+    }
 
     const teamMembers: TeamMemberSummary[] = companyEmployees.map((employee) => {
+      const latestInvite = latestInviteByEmployeeId.get(employee.id) ?? null;
       const linkedUserTasks = employee.user_id ? tasks.filter((task) => task.assignee_user_id === employee.user_id) : [];
       const doneCount = linkedUserTasks.filter((task) => task.status === "done").length;
       const overdueCount = linkedUserTasks.filter((task) => task.status !== "done" && task.due_date && task.due_date < today).length;
@@ -835,12 +878,21 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
           : employee.role === "assistant"
             ? "Assistant"
             : "Viewer";
+      const inviteExpired = latestInvite ? new Date(latestInvite.expires_at).getTime() <= nowTimestamp : false;
       const status =
-        employee.employment_status === "invited"
-          ? "offline"
-          : overdueCount > 0
+        employee.employment_status === "active"
+          ? overdueCount > 0
             ? "away"
-            : "online";
+            : "online"
+          : "offline";
+      const lastActive =
+        employee.employment_status === "invited"
+          ? inviteExpired
+            ? "Invite expired"
+            : "Invite pending"
+          : employee.employment_status === "inactive"
+            ? "Inactive"
+            : "Recently active";
 
       return {
         id: employee.id,
@@ -855,8 +907,10 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
         tasksCompleted: doneCount,
         tasksTotal: linkedUserTasks.length,
         overdueTasks: overdueCount,
-        lastActive: employee.employment_status === "invited" ? "Invite sent" : "Recently active",
+        lastActive,
         status,
+        employmentStatus: employee.employment_status,
+        inviteExpiresAt: latestInvite?.expires_at ?? null,
       };
     });
 
@@ -959,6 +1013,8 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
       overdueTasks: overdueCount,
       lastActive: "Recently active",
       status: overdueCount > 0 ? "away" : "online",
+      employmentStatus: "active",
+      inviteExpiresAt: null,
     };
   });
 

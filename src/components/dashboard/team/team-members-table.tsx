@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 import { TaskProgressBar } from "@/components/dashboard/team/task-progress-bar";
 import { TeamMemberSummary } from "@/components/dashboard/team/team-types";
@@ -13,6 +14,8 @@ import { cn } from "@/lib/utils";
 type TeamMembersTableProps = {
   members: TeamMemberSummary[];
   onInviteClick?: () => void;
+  onCopyInviteLink?: (memberId: string) => Promise<void>;
+  onResendInvite?: (memberId: string) => Promise<void>;
 };
 
 const statusClassName: Record<TeamMemberSummary["status"], string> = {
@@ -21,7 +24,12 @@ const statusClassName: Record<TeamMemberSummary["status"], string> = {
   offline: "bg-muted text-muted-foreground",
 };
 
-export function TeamMembersTable({ members, onInviteClick }: TeamMembersTableProps) {
+export function TeamMembersTable({ members, onInviteClick, onCopyInviteLink, onResendInvite }: TeamMembersTableProps) {
+  const [busyAction, setBusyAction] = useState<{ memberId: string; action: "copy" | "resend" } | null>(null);
+
+  const canRunAction = (memberId: string, action: "copy" | "resend") =>
+    busyAction?.memberId === memberId && busyAction.action === action;
+
   return (
     <Card className="rounded-2xl border-border/70">
       <CardHeader className="flex flex-row items-center justify-between border-b border-border/70 pb-3">
@@ -60,6 +68,9 @@ export function TeamMembersTable({ members, onInviteClick }: TeamMembersTablePro
               <div className="min-w-0">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Business role</p>
                 <p className="mt-1 text-sm font-medium">{member.roleLabel}</p>
+                <span className="mt-2 inline-flex rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {member.employmentStatus}
+                </span>
               </div>
 
               <div className="min-w-0">
@@ -101,9 +112,53 @@ export function TeamMembersTable({ members, onInviteClick }: TeamMembersTablePro
                 <span className={cn("rounded-full px-2 py-1 text-[10px] font-semibold", statusClassName[member.status])}>
                   {member.lastActive}
                 </span>
-                <Button size="sm" variant="outline" className="h-7 rounded-md px-2 text-xs">
-                  Remind
-                </Button>
+                {member.employmentStatus === "invited" ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 rounded-md px-2 text-xs"
+                      disabled={canRunAction(member.id, "copy")}
+                      onClick={async () => {
+                        if (!onCopyInviteLink) return;
+                        setBusyAction({ memberId: member.id, action: "copy" });
+                        try {
+                          await onCopyInviteLink(member.id);
+                        } finally {
+                          setBusyAction(null);
+                        }
+                      }}
+                    >
+                      {canRunAction(member.id, "copy") ? "Copying..." : "Copy link"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 rounded-md px-2 text-xs"
+                      disabled={canRunAction(member.id, "resend")}
+                      onClick={async () => {
+                        if (!onResendInvite) return;
+                        setBusyAction({ memberId: member.id, action: "resend" });
+                        try {
+                          await onResendInvite(member.id);
+                        } finally {
+                          setBusyAction(null);
+                        }
+                      }}
+                    >
+                      {canRunAction(member.id, "resend") ? "Resending..." : "Resend"}
+                    </Button>
+                  </div>
+                ) : (
+                  <Button size="sm" variant="outline" className="h-7 rounded-md px-2 text-xs">
+                    Remind
+                  </Button>
+                )}
+                {member.employmentStatus === "invited" && member.inviteExpiresAt ? (
+                  <p className="text-[10px] text-muted-foreground">
+                    Expires {new Date(member.inviteExpiresAt).toLocaleDateString("en-GB")}
+                  </p>
+                ) : null}
               </div>
             </article>
           ))
