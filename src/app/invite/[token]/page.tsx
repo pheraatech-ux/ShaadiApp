@@ -104,22 +104,30 @@ export default async function CompanyEmployeeInvitePage({ params }: InvitePagePr
     redirect(`/invite/${encodeURIComponent(safeToken)}/signup`);
   }
 
-  const [{ data: profile }, admin] = await Promise.all([
+  const admin = getSupabaseAdminClient();
+  const tokenHash = hashCompanyEmployeeInviteToken(safeToken);
+  const [{ data: profile }, { data: inviteRow }] = await Promise.all([
     supabase.from("profiles").select("phone").eq("id", user.id).maybeSingle(),
-    Promise.resolve(getSupabaseAdminClient()),
+    admin
+      .from("company_employee_invites")
+      .select("claimed_at, claimed_by_user_id")
+      .eq("token_hash", tokenHash)
+      .maybeSingle(),
   ]);
 
-  const tokenHash = hashCompanyEmployeeInviteToken(safeToken);
-  const { data: claimRows, error: claimError } = await admin.rpc("claim_company_employee_invite", {
-    p_token_hash: tokenHash,
-    p_user_id: user.id,
-    p_user_email: user.email ?? "",
-    p_user_phone: profile?.phone ?? undefined,
-  });
+  let claimState: InviteClaimResult;
+  if (inviteRow?.claimed_at) {
+    claimState = inviteRow.claimed_by_user_id === user.id ? "accepted" : "claimed";
+  } else {
+    const { data: claimRows, error: claimError } = await admin.rpc("claim_company_employee_invite", {
+      p_token_hash: tokenHash,
+      p_user_id: user.id,
+      p_user_email: user.email ?? "",
+      p_user_phone: profile?.phone ?? undefined,
+    });
 
-  const claimState: InviteClaimResult = claimError
-    ? "error"
-    : ((claimRows?.[0]?.result as InviteClaimResult | undefined) ?? "invalid");
+    claimState = claimError ? "error" : ((claimRows?.[0]?.result as InviteClaimResult | undefined) ?? "invalid");
+  }
   const copy = getInviteStateCopy(claimState);
 
   return (
