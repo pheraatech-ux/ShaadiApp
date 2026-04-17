@@ -16,11 +16,11 @@ export function getSupabaseEnv() {
 }
 
 export function getAppBaseUrl(fallbackOrigin?: string) {
-  if (process.env.NODE_ENV !== "production") {
-    if (fallbackOrigin) {
-      return fallbackOrigin.replace(/\/+$/, "");
-    }
+  if (fallbackOrigin) {
+    return fallbackOrigin.replace(/\/+$/, "");
+  }
 
+  if (process.env.NODE_ENV !== "production") {
     return "http://localhost:3000";
   }
 
@@ -30,10 +30,6 @@ export function getAppBaseUrl(fallbackOrigin?: string) {
 
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`.replace(/\/+$/, "");
-  }
-
-  if (fallbackOrigin) {
-    return fallbackOrigin.replace(/\/+$/, "");
   }
 
   throw new Error(
