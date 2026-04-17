@@ -15,7 +15,7 @@ type TeamMembersTableProps = {
   members: TeamMemberSummary[];
   onInviteClick?: () => void;
   onCopyInviteLink?: (memberId: string) => Promise<void>;
-  onResendInvite?: (memberId: string) => Promise<void>;
+  onGenerateNewInviteLink?: (memberId: string) => Promise<void>;
 };
 
 const statusClassName: Record<TeamMemberSummary["status"], string> = {
@@ -24,10 +24,10 @@ const statusClassName: Record<TeamMemberSummary["status"], string> = {
   offline: "bg-muted text-muted-foreground",
 };
 
-export function TeamMembersTable({ members, onInviteClick, onCopyInviteLink, onResendInvite }: TeamMembersTableProps) {
-  const [busyAction, setBusyAction] = useState<{ memberId: string; action: "copy" | "resend" } | null>(null);
+export function TeamMembersTable({ members, onInviteClick, onCopyInviteLink, onGenerateNewInviteLink }: TeamMembersTableProps) {
+  const [busyAction, setBusyAction] = useState<{ memberId: string; action: "copy" | "new-link" } | null>(null);
 
-  const canRunAction = (memberId: string, action: "copy" | "resend") =>
+  const canRunAction = (memberId: string, action: "copy" | "new-link") =>
     busyAction?.memberId === memberId && busyAction.action === action;
 
   return (
@@ -135,18 +135,18 @@ export function TeamMembersTable({ members, onInviteClick, onCopyInviteLink, onR
                       size="sm"
                       variant="outline"
                       className="h-7 rounded-md px-2 text-xs"
-                      disabled={canRunAction(member.id, "resend")}
+                      disabled={canRunAction(member.id, "new-link")}
                       onClick={async () => {
-                        if (!onResendInvite) return;
-                        setBusyAction({ memberId: member.id, action: "resend" });
+                        if (!onGenerateNewInviteLink) return;
+                        setBusyAction({ memberId: member.id, action: "new-link" });
                         try {
-                          await onResendInvite(member.id);
+                          await onGenerateNewInviteLink(member.id);
                         } finally {
                           setBusyAction(null);
                         }
                       }}
                     >
-                      {canRunAction(member.id, "resend") ? "Resending..." : "Resend"}
+                      {canRunAction(member.id, "new-link") ? "Generating..." : "New link"}
                     </Button>
                   </div>
                 ) : (

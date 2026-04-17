@@ -11,6 +11,9 @@ type RouteContext = {
 
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
+    const body = (await request.json().catch(() => ({}))) as { regenerate?: boolean };
+    const regenerate = body.regenerate === true;
+
     const { employeeId } = await context.params;
     if (!employeeId) {
       return NextResponse.json({ error: "Employee id is required." }, { status: 400 });
@@ -47,12 +50,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: markInvitedError.message || "Unable to refresh invite." }, { status: 400 });
     }
 
-    const { inviteUrl, expiresAt } = await rotateCompanyEmployeeInvite({
+    const { inviteUrl, expiresAt, isReused } = await rotateCompanyEmployeeInvite({
       supabase,
       employeeId,
       ownerUserId: user.id,
-      deliveryChannel: "whatsapp",
+      deliveryChannel: "link",
       fallbackOrigin: request.nextUrl.origin,
+      forceRotate: regenerate,
     });
 
     return NextResponse.json(
@@ -61,6 +65,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         employeeId,
         inviteUrl,
         expiresAt,
+        mode: regenerate ? "regenerated" : isReused ? "reused" : "created",
       },
       { status: 200 },
     );

@@ -29,11 +29,12 @@ export function TeamPageView({ view }: TeamPageViewProps) {
     }
   }
 
-  async function rotateInviteLink(memberId: string, intent: "copy" | "resend") {
+  async function handleInviteLink(memberId: string, intent: "copy" | "new-link") {
     const response = await fetch(`/api/team/employees/${memberId}/invite-link`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ regenerate: intent === "new-link" }),
     });
     const payload = (await response.json().catch(() => ({}))) as { error?: string; inviteUrl?: string };
     if (!response.ok || !payload.inviteUrl) {
@@ -45,11 +46,11 @@ export function TeamPageView({ view }: TeamPageViewProps) {
       message:
         intent === "copy"
           ? copied
-            ? "Fresh invite link copied."
-            : "Fresh invite link generated."
+            ? "Invite link copied."
+            : "Invite link ready."
           : copied
-            ? "Invite re-sent and link copied."
-            : "Invite re-sent with a fresh link.",
+            ? "New invite link generated, old links are now invalid."
+            : "New invite link generated.",
     });
     router.refresh();
   }
@@ -83,7 +84,7 @@ export function TeamPageView({ view }: TeamPageViewProps) {
         onInviteClick={() => setInviteOpen(true)}
         onCopyInviteLink={async (memberId) => {
           try {
-            await rotateInviteLink(memberId, "copy");
+            await handleInviteLink(memberId, "copy");
           } catch (error) {
             setInviteFeedback({
               tone: "error",
@@ -91,13 +92,13 @@ export function TeamPageView({ view }: TeamPageViewProps) {
             });
           }
         }}
-        onResendInvite={async (memberId) => {
+        onGenerateNewInviteLink={async (memberId) => {
           try {
-            await rotateInviteLink(memberId, "resend");
+            await handleInviteLink(memberId, "new-link");
           } catch (error) {
             setInviteFeedback({
               tone: "error",
-              message: error instanceof Error ? error.message : "Unable to resend invite.",
+              message: error instanceof Error ? error.message : "Unable to generate new link.",
             });
           }
         }}
@@ -105,9 +106,10 @@ export function TeamPageView({ view }: TeamPageViewProps) {
       <InviteTeamMemberDialog
         open={inviteOpen}
         onOpenChange={setInviteOpen}
-        description="They'll get a WhatsApp invite to join your company workspace. This adds them as an employee, not to a specific wedding."
+        description="Create a secure invite link to add this person to your company workspace. This adds them as an employee, not to a specific wedding."
         roleSectionLabel="Role in this business"
-        infoText="Invite sent via WhatsApp. Employees are added to your company team and can be assigned to weddings later."
+        infoText="A secure invite link is generated and copied. Employees are added to your company team and can be assigned to weddings later."
+        submitLabel="Create invite link"
         onSubmit={async ({ name, phone, email, role }) => {
           setInviteFeedback(null);
           const response = await fetch("/api/team/employees", {

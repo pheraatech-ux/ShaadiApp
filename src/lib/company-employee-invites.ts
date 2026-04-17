@@ -12,6 +12,7 @@ type RotateCompanyEmployeeInviteArgs = {
   ownerUserId: string;
   deliveryChannel?: "link" | "whatsapp" | "email";
   fallbackOrigin?: string;
+  forceRotate?: boolean;
 };
 
 function toBase64Url(input: Buffer) {
@@ -45,27 +46,61 @@ export async function rotateCompanyEmployeeInvite({
   ownerUserId,
   deliveryChannel = "link",
   fallbackOrigin,
+  forceRotate = true,
 }: RotateCompanyEmployeeInviteArgs) {
   const now = new Date();
   const nowIso = now.toISOString();
   const expiresAtIso = getCompanyEmployeeInviteExpiry(now).toISOString();
-  const rawToken = createCompanyEmployeeInviteToken();
-  const tokenHash = hashCompanyEmployeeInviteToken(rawToken);
-
-  const { error: revokeError } = await supabase
+  const { data: existingInvites, error: existingInvitesError } = await supabase
     .from("company_employee_invites")
-    .update({ revoked_at: nowIso })
+    .select("id, token, expires_at")
     .eq("employee_id", employeeId)
     .eq("owner_user_id", ownerUserId)
     .is("claimed_at", null)
-    .is("revoked_at", null);
-  if (revokeError) {
-    throw revokeError;
+    .is("revoked_at", null)
+    .gt("expires_at", nowIso)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (existingInvitesError) {
+    throw existingInvitesError;
   }
+
+  const activeInvite = existingInvites?.[0];
+  if (!forceRotate && activeInvite?.token) {
+    const { error: updateSentAtError } = await supabase
+      .from("company_employee_invites")
+      .update({ last_sent_at: nowIso })
+      .eq("id", activeInvite.id);
+    if (updateSentAtError) {
+      throw updateSentAtError;
+    }
+    return {
+      inviteUrl: buildCompanyEmployeeInviteUrl(activeInvite.token, fallbackOrigin),
+      expiresAt: activeInvite.expires_at,
+      isReused: true,
+    };
+  }
+
+  if (forceRotate) {
+    const { error: revokeError } = await supabase
+      .from("company_employee_invites")
+      .update({ revoked_at: nowIso })
+      .eq("employee_id", employeeId)
+      .eq("owner_user_id", ownerUserId)
+      .is("claimed_at", null)
+      .is("revoked_at", null);
+    if (revokeError) {
+      throw revokeError;
+    }
+  }
+
+  const rawToken = createCompanyEmployeeInviteToken();
+  const tokenHash = hashCompanyEmployeeInviteToken(rawToken);
 
   const { error: inviteInsertError } = await supabase.from("company_employee_invites").insert({
     employee_id: employeeId,
     owner_user_id: ownerUserId,
+    token: rawToken,
     token_hash: tokenHash,
     expires_at: expiresAtIso,
     delivery_channel: deliveryChannel,
@@ -78,5 +113,6 @@ export async function rotateCompanyEmployeeInvite({
   return {
     inviteUrl: buildCompanyEmployeeInviteUrl(rawToken, fallbackOrigin),
     expiresAt: expiresAtIso,
+    isReused: false,
   };
 }

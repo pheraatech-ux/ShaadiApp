@@ -58,10 +58,10 @@ export function InviteTeamMemberDialog({
   open,
   onOpenChange,
   title = "Invite team member",
-  description = "They'll get a WhatsApp invite with a wedding-specific join link. Once joined they can only see this wedding.",
+  description = "They'll get a secure invite link for this wedding. Once joined they can only see this wedding.",
   roleSectionLabel = "Role for this wedding",
-  infoText = "Invite sent via WhatsApp. The link expires in 48 hours. They join using their phone number — no separate login needed.",
-  submitLabel = "Send invite via WhatsApp",
+  infoText = "Invite link expires in 48 hours. They join using their own account.",
+  submitLabel = "Create invite link",
   onSubmit,
 }: InviteTeamMemberDialogProps) {
   const [name, setName] = useState("");
@@ -85,7 +85,7 @@ export function InviteTeamMemberDialog({
 
   async function handleSubmit() {
     if (!phone.trim()) {
-      setError("WhatsApp number is required.");
+      setError("Phone number is required.");
       return;
     }
 
@@ -142,7 +142,7 @@ export function InviteTeamMemberDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <label className={labelClass} htmlFor="invite-wa">
-                WhatsApp number <span className="text-destructive">*</span>
+                Phone number <span className="text-destructive">*</span>
               </label>
               <PhoneInput value={phone} onChangeNumber={setPhone} />
             </div>

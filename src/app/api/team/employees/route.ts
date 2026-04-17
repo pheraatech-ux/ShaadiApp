@@ -115,8 +115,9 @@ export async function POST(request: NextRequest) {
       supabase,
       employeeId,
       ownerUserId: user.id,
-      deliveryChannel: "whatsapp",
+      deliveryChannel: "link",
       fallbackOrigin: request.nextUrl.origin,
+      forceRotate: true,
     });
 
     return NextResponse.json(

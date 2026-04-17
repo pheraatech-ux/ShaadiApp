@@ -115,6 +115,7 @@ export type Database = {
           last_sent_at: string
           owner_user_id: string
           revoked_at: string | null
+          token: string | null
           token_hash: string
         }
         Insert: {
@@ -128,6 +129,7 @@ export type Database = {
           last_sent_at?: string
           owner_user_id: string
           revoked_at?: string | null
+          token?: string | null
           token_hash: string
         }
         Update: {
@@ -141,6 +143,7 @@ export type Database = {
           last_sent_at?: string
           owner_user_id?: string
           revoked_at?: string | null
+          token?: string | null
           token_hash?: string
         }
         Relationships: [
