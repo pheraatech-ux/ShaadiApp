@@ -97,7 +97,7 @@ export function InviteSignupForm({ token, inviterName, workspaceName }: InviteSi
         <span className="inline-flex rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
           Team invite
         </span>
-        <h1 className="mt-3 text-2xl font-semibold">Create your account to continue</h1>
+        <h1 className="mt-3 text-2xl font-semibold">Let's get you set up!</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           You&apos;ve been invited to <strong className="text-foreground">{workspaceName}</strong> workspace by{" "}
           <strong className="text-foreground">{inviterName}</strong>.

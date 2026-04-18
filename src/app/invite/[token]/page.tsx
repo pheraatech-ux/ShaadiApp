@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-
+import { TeamInviteSplash } from "@/components/invite/team-invite-splash";
 import { hashCompanyEmployeeInviteToken } from "@/lib/company-employee-invites";
+import { getTeamInviteSplashContext } from "@/lib/team-invite-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { buttonVariants } from "@/components/ui/button";
@@ -101,7 +101,33 @@ export default async function CompanyEmployeeInvitePage({ params }: InvitePagePr
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect(`/invite/${encodeURIComponent(safeToken)}/signup`);
+    const splash = await getTeamInviteSplashContext(safeToken);
+    if (!splash) {
+      const copy = getInviteStateCopy("invalid");
+      return (
+        <main className="mx-auto flex min-h-screen w-full max-w-2xl items-center px-6 py-10">
+          <section className="w-full rounded-2xl border border-border/70 bg-card p-6 sm:p-8">
+            <h1 className="text-2xl font-semibold">{copy.title}</h1>
+            <p className="mt-3 text-sm text-muted-foreground">{copy.description}</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href={copy.ctaHref} className={buttonVariants({ className: "rounded-xl" })}>
+                {copy.ctaLabel}
+              </Link>
+            </div>
+          </section>
+        </main>
+      );
+    }
+    return (
+      <TeamInviteSplash
+        token={safeToken}
+        businessName={splash.businessName}
+        inviterName={splash.inviterName}
+        inviterInitials={splash.inviterInitials}
+        roleLabel={splash.roleLabel}
+        expiresAtIso={splash.expiresAtIso}
+      />
+    );
   }
 
   const admin = getSupabaseAdminClient();

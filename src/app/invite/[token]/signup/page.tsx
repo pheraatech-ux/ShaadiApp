@@ -2,19 +2,13 @@ import Link from "next/link";
 
 import { InviteSignupForm } from "@/components/auth/invite-signup-form";
 import { buttonVariants } from "@/components/ui/button";
-import { hashCompanyEmployeeInviteToken } from "@/lib/company-employee-invites";
-import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getTeamInviteSplashContext } from "@/lib/team-invite-context";
 
 type InviteSignupPageProps = {
   params: Promise<{
     token: string;
   }>;
 };
-
-function getDisplayName(firstName?: string | null, lastName?: string | null) {
-  const fullName = [firstName?.trim(), lastName?.trim()].filter(Boolean).join(" ");
-  return fullName || "your team admin";
-}
 
 export default async function InviteSignupPage({ params }: InviteSignupPageProps) {
   const { token } = await params;
@@ -37,20 +31,9 @@ export default async function InviteSignupPage({ params }: InviteSignupPageProps
     );
   }
 
-  const admin = getSupabaseAdminClient();
-  const tokenHash = hashCompanyEmployeeInviteToken(safeToken);
-  const { data: inviteRow } = await admin
-    .from("company_employee_invites")
-    .select("owner_user_id, expires_at, claimed_at, revoked_at")
-    .eq("token_hash", tokenHash)
-    .maybeSingle();
+  const splash = await getTeamInviteSplashContext(safeToken);
 
-  const inviteInvalid =
-    !inviteRow ||
-    Boolean(inviteRow.claimed_at) ||
-    Boolean(inviteRow.revoked_at);
-
-  if (inviteInvalid) {
+  if (!splash) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-2xl items-center px-6 py-10">
         <section className="w-full rounded-2xl border border-border/70 bg-card p-6 sm:p-8">
@@ -68,17 +51,11 @@ export default async function InviteSignupPage({ params }: InviteSignupPageProps
     );
   }
 
-  const { data: ownerProfile } = await admin
-    .from("profiles")
-    .select("first_name, last_name, business_name")
-    .eq("id", inviteRow.owner_user_id)
-    .maybeSingle();
-
   return (
     <InviteSignupForm
       token={safeToken}
-      inviterName={getDisplayName(ownerProfile?.first_name, ownerProfile?.last_name)}
-      workspaceName={ownerProfile?.business_name?.trim() || "planner workspace"}
+      inviterName={splash.inviterName}
+      workspaceName={splash.businessName}
     />
   );
 }
