@@ -10,8 +10,8 @@ export function TaskProgressBar({ completed, total, className }: TaskProgressBar
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
-    <div className={cn("space-y-1.5", className)}>
-      <div className="h-2.5 overflow-hidden rounded-full bg-muted/70">
+    <div className={cn("w-full space-y-1.5", className)}>
+      <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted/70">
         <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${percent}%` }} />
       </div>
       <p className="text-xs text-muted-foreground">

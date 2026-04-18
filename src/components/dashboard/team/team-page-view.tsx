@@ -102,6 +102,29 @@ export function TeamPageView({ view }: TeamPageViewProps) {
             });
           }
         }}
+        onDeleteMember={async (memberId) => {
+          setInviteFeedback(null);
+          try {
+            const response = await fetch(`/api/team/employees/${memberId}`, {
+              method: "DELETE",
+              credentials: "include",
+            });
+            const payload = (await response.json().catch(() => ({}))) as { error?: string };
+            if (!response.ok) {
+              throw new Error(payload.error ?? "Unable to remove team member.");
+            }
+            setInviteFeedback({
+              tone: "success",
+              message: "Team member removed.",
+            });
+            router.refresh();
+          } catch (error) {
+            setInviteFeedback({
+              tone: "error",
+              message: error instanceof Error ? error.message : "Unable to remove team member.",
+            });
+          }
+        }}
       />
       <InviteTeamMemberDialog
         open={inviteOpen}

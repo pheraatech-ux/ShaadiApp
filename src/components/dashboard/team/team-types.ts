@@ -19,6 +19,8 @@ export type TeamMemberSummary = {
   status: EmployeeStatus;
   employmentStatus: "invited" | "active" | "inactive";
   inviteExpiresAt?: string | null;
+  /** Company employees only; false for workspace owner and wedding-only members. */
+  deletable: boolean;
 };
 
 export type TeamKpiCard = {

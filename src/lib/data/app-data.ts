@@ -802,46 +802,31 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
   if (companyEmployees.length > 0) {
     const linkedUserIds = [...new Set(companyEmployees.map((row) => row.user_id).filter(Boolean))] as string[];
     const employeeIds = companyEmployees.map((row) => row.id);
-    const [{ data: weddingMemberRows }, { data: taskRows }, { data: inviteRows }] =
-      linkedUserIds.length > 0
-        ? await Promise.all([
-            supabase
-              .from("wedding_members")
-              .select("wedding_id, user_id")
-              .in("wedding_id", weddingIds)
-              .in("user_id", linkedUserIds)
-              .eq("status", "active"),
-            supabase
-              .from("tasks")
-              .select("id, assignee_user_id, status, due_date")
-              .in("wedding_id", weddingIds)
-              .in("assignee_user_id", linkedUserIds),
-            supabase
-              .from("company_employee_invites")
-              .select("id, employee_id, expires_at, created_at, claimed_at, revoked_at")
-              .in("employee_id", employeeIds)
-              .is("claimed_at", null)
-              .is("revoked_at", null)
-              .order("created_at", { ascending: false }),
-          ])
-        : await Promise.all([
-            Promise.resolve({ data: [] as { wedding_id: string; user_id: string | null }[] }),
-            Promise.resolve({
-              data: [] as {
-                id: string;
-                assignee_user_id: string | null;
-                status: "todo" | "in_progress" | "needs_review" | "done";
-                due_date: string | null;
-              }[],
-            }),
-            supabase
-              .from("company_employee_invites")
-              .select("id, employee_id, expires_at, created_at, claimed_at, revoked_at")
-              .in("employee_id", employeeIds)
-              .is("claimed_at", null)
-              .is("revoked_at", null)
-              .order("created_at", { ascending: false }),
-          ]);
+    /** Include the workspace owner so their weddings/tasks load even when every invite is still pending (no linked user ids). */
+    const weddingAndTaskUserIds = [...new Set([...linkedUserIds, planner.userId])];
+
+    const [{ data: weddingMemberRows }, { data: taskRows }, { data: inviteRows }, { data: ownerProfileRow }] =
+      await Promise.all([
+        supabase
+          .from("wedding_members")
+          .select("wedding_id, user_id")
+          .in("wedding_id", weddingIds)
+          .in("user_id", weddingAndTaskUserIds)
+          .eq("status", "active"),
+        supabase
+          .from("tasks")
+          .select("id, assignee_user_id, status, due_date")
+          .in("wedding_id", weddingIds)
+          .in("assignee_user_id", weddingAndTaskUserIds),
+        supabase
+          .from("company_employee_invites")
+          .select("id, employee_id, expires_at, created_at, claimed_at, revoked_at")
+          .in("employee_id", employeeIds)
+          .is("claimed_at", null)
+          .is("revoked_at", null)
+          .order("created_at", { ascending: false }),
+        supabase.from("profiles").select("phone").eq("id", planner.userId).maybeSingle(),
+      ]);
 
     const weddingNameById = new Map(weddings.map((wedding) => [wedding.id, wedding.couple_name]));
     const weddingsByUserId = new Map<string, string[]>();
@@ -866,7 +851,7 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
       }
     }
 
-    const teamMembers: TeamMemberSummary[] = companyEmployees.map((employee) => {
+    const employeeMemberRows: TeamMemberSummary[] = companyEmployees.map((employee) => {
       const latestInvite = latestInviteByEmployeeId.get(employee.id) ?? null;
       const linkedUserTasks = employee.user_id ? tasks.filter((task) => task.assignee_user_id === employee.user_id) : [];
       const doneCount = linkedUserTasks.filter((task) => task.status === "done").length;
@@ -911,8 +896,47 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
         status,
         employmentStatus: employee.employment_status,
         inviteExpiresAt: latestInvite?.expires_at ?? null,
+        deletable: employee.user_id !== planner.userId,
       };
     });
+
+    const ownerHasCompanyRow = companyEmployees.some((row) => row.user_id === planner.userId);
+    const ownerPhone =
+      ownerProfileRow && typeof ownerProfileRow.phone === "string" && ownerProfileRow.phone.trim()
+        ? ownerProfileRow.phone.trim()
+        : "No phone";
+
+    const teamMembers: TeamMemberSummary[] = (() => {
+      if (ownerHasCompanyRow) {
+        return employeeMemberRows;
+      }
+      const ownerTasks = tasks.filter((task) => task.assignee_user_id === planner.userId);
+      const ownerDone = ownerTasks.filter((task) => task.status === "done").length;
+      const ownerOverdue = ownerTasks.filter(
+        (task) => task.status !== "done" && task.due_date && task.due_date < today,
+      ).length;
+      const ownerWeddings = weddingsByUserId.get(planner.userId) ?? [];
+      const ownerRow: TeamMemberSummary = {
+        id: planner.userId,
+        linkedUserId: planner.userId,
+        name: planner.displayName,
+        email: planner.email || "No email",
+        phone: ownerPhone,
+        initials: getInitials(planner.displayName || "YO"),
+        roleLabel: "Owner / admin",
+        role: "owner-admin",
+        activeWeddings: ownerWeddings.slice(0, 3),
+        tasksCompleted: ownerDone,
+        tasksTotal: ownerTasks.length,
+        overdueTasks: ownerOverdue,
+        lastActive: "Recently active",
+        status: ownerOverdue > 0 ? "away" : "online",
+        employmentStatus: "active",
+        inviteExpiresAt: null,
+        deletable: false,
+      };
+      return [ownerRow, ...employeeMemberRows];
+    })();
 
     const totalTasks = teamMembers.reduce((sum, member) => sum + member.tasksTotal, 0);
     const totalDone = teamMembers.reduce((sum, member) => sum + member.tasksCompleted, 0);
@@ -1015,6 +1039,7 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
       status: overdueCount > 0 ? "away" : "online",
       employmentStatus: "active",
       inviteExpiresAt: null,
+      deletable: false,
     };
   });
 
