@@ -6,11 +6,35 @@ import { useState } from "react";
 
 import { TaskProgressBar } from "@/components/dashboard/team/task-progress-bar";
 import { TeamMemberSummary } from "@/components/dashboard/team/team-types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+
+function RemoveMemberDescription({ member }: { member: TeamMemberSummary }) {
+  const name = <strong className="font-semibold text-foreground">{member.name}</strong>;
+  return member.employmentStatus === "invited" ? (
+    <>
+      Remove {name} from your team? Their invite and record will be deleted. <br></br>This cannot be undone.
+    </>
+  ) : (
+    <>
+      Remove {name} from your team? This cannot be undone.
+    </>
+  );
+}
 
 type TeamMembersTableProps = {
   members: TeamMemberSummary[];
@@ -36,6 +60,7 @@ export function TeamMembersTable({
   const router = useRouter();
   const [busyAction, setBusyAction] = useState<{ memberId: string; action: "copy" | "new-link" } | null>(null);
   const [busyDeleteId, setBusyDeleteId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TeamMemberSummary | null>(null);
 
   const canRunAction = (memberId: string, action: "copy" | "new-link") =>
     busyAction?.memberId === memberId && busyAction.action === action;
@@ -210,22 +235,10 @@ export function TeamMembersTable({
                                 className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
                                 disabled={busyDeleteId === member.id}
                                 aria-label={`Remove ${member.name}`}
-                                onClick={async (event) => {
+                                onClick={(event) => {
                                   event.stopPropagation();
                                   if (!onDeleteMember) return;
-                                  if (
-                                    !confirm(
-                                      `Remove ${member.name} from your team? Their invite and record will be deleted. This cannot be undone.`,
-                                    )
-                                  ) {
-                                    return;
-                                  }
-                                  setBusyDeleteId(member.id);
-                                  try {
-                                    await onDeleteMember(member.id);
-                                  } finally {
-                                    setBusyDeleteId(null);
-                                  }
+                                  setDeleteTarget(member);
                                 }}
                               >
                                 <Trash2 className="size-3.5" aria-hidden />
@@ -245,22 +258,10 @@ export function TeamMembersTable({
                                 className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
                                 disabled={busyDeleteId === member.id}
                                 aria-label={`Remove ${member.name}`}
-                                onClick={async (event) => {
+                                onClick={(event) => {
                                   event.stopPropagation();
                                   if (!onDeleteMember) return;
-                                  if (
-                                    !confirm(
-                                      `Remove ${member.name} from your team? This cannot be undone.`,
-                                    )
-                                  ) {
-                                    return;
-                                  }
-                                  setBusyDeleteId(member.id);
-                                  try {
-                                    await onDeleteMember(member.id);
-                                  } finally {
-                                    setBusyDeleteId(null);
-                                  }
+                                  setDeleteTarget(member);
                                 }}
                               >
                                 <Trash2 className="size-3.5" aria-hidden />
@@ -282,6 +283,45 @@ export function TeamMembersTable({
           </div>
         )}
       </CardContent>
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia>
+              <Trash2 className="text-destructive" aria-hidden />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Remove team member?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget ? <RemoveMemberDescription member={deleteTarget} /> : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busyDeleteId !== null}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={busyDeleteId !== null || !deleteTarget}
+              onClick={async (event) => {
+                event.preventDefault();
+                if (!deleteTarget || !onDeleteMember) return;
+                setBusyDeleteId(deleteTarget.id);
+                try {
+                  await onDeleteMember(deleteTarget.id);
+                  setDeleteTarget(null);
+                } finally {
+                  setBusyDeleteId(null);
+                }
+              }}
+            >
+              {busyDeleteId && deleteTarget && busyDeleteId === deleteTarget.id ? "Removing..." : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

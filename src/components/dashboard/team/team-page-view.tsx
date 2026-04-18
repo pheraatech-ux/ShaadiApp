@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { AppPageHeader } from "@/components/dashboard/app-page-header";
 import { TeamAlertBanner } from "@/components/dashboard/team/team-alert-banner";
@@ -18,7 +19,6 @@ type TeamPageViewProps = {
 export function TeamPageView({ view }: TeamPageViewProps) {
   const router = useRouter();
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteFeedback, setInviteFeedback] = useState<{ tone: "success" | "error"; message: string } | null>(null);
 
   async function copyTextToClipboard(text: string) {
     try {
@@ -41,17 +41,14 @@ export function TeamPageView({ view }: TeamPageViewProps) {
       throw new Error(payload.error ?? "Unable to refresh invite link.");
     }
     const copied = await copyTextToClipboard(payload.inviteUrl);
-    setInviteFeedback({
-      tone: "success",
-      message:
-        intent === "copy"
-          ? copied
-            ? "Invite link copied."
-            : "Invite link ready."
-          : copied
-            ? "New invite link generated, old links are now invalid."
-            : "New invite link generated.",
-    });
+    if (intent === "copy") {
+      toast(copied ? "Invite link copied" : "Invite link ready");
+      router.refresh();
+      return;
+    }
+    toast(
+      copied ? "New invite link generated, old links are now invalid." : "New invite link generated.",
+    );
     router.refresh();
   }
 
@@ -68,17 +65,6 @@ export function TeamPageView({ view }: TeamPageViewProps) {
       />
       <TeamSummaryCards cards={view.kpis} />
       <TeamAlertBanner message={view.alertText} />
-      {inviteFeedback ? (
-        <p
-          className={
-            inviteFeedback.tone === "success"
-              ? "rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300"
-              : "rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-          }
-        >
-          {inviteFeedback.message}
-        </p>
-      ) : null}
       <TeamMembersTable
         members={view.members}
         onInviteClick={() => setInviteOpen(true)}
@@ -86,24 +72,17 @@ export function TeamPageView({ view }: TeamPageViewProps) {
           try {
             await handleInviteLink(memberId, "copy");
           } catch (error) {
-            setInviteFeedback({
-              tone: "error",
-              message: error instanceof Error ? error.message : "Unable to copy invite link.",
-            });
+            toast.error(error instanceof Error ? error.message : "Unable to copy invite link.");
           }
         }}
         onGenerateNewInviteLink={async (memberId) => {
           try {
             await handleInviteLink(memberId, "new-link");
           } catch (error) {
-            setInviteFeedback({
-              tone: "error",
-              message: error instanceof Error ? error.message : "Unable to generate new link.",
-            });
+            toast.error(error instanceof Error ? error.message : "Unable to generate new link.");
           }
         }}
         onDeleteMember={async (memberId) => {
-          setInviteFeedback(null);
           try {
             const response = await fetch(`/api/team/employees/${memberId}`, {
               method: "DELETE",
@@ -113,16 +92,10 @@ export function TeamPageView({ view }: TeamPageViewProps) {
             if (!response.ok) {
               throw new Error(payload.error ?? "Unable to remove team member.");
             }
-            setInviteFeedback({
-              tone: "success",
-              message: "Team member removed.",
-            });
+            toast("Team member removed.");
             router.refresh();
           } catch (error) {
-            setInviteFeedback({
-              tone: "error",
-              message: error instanceof Error ? error.message : "Unable to remove team member.",
-            });
+            toast.error(error instanceof Error ? error.message : "Unable to remove team member.");
           }
         }}
       />
@@ -134,7 +107,6 @@ export function TeamPageView({ view }: TeamPageViewProps) {
         infoText="A secure invite link is generated and copied. Employees are added to your company team and can be assigned to weddings later."
         submitLabel="Create invite link"
         onSubmit={async ({ name, phone, email, role }) => {
-          setInviteFeedback(null);
           const response = await fetch("/api/team/employees", {
             method: "POST",
             credentials: "include",
@@ -147,10 +119,9 @@ export function TeamPageView({ view }: TeamPageViewProps) {
           }
           if (payload.inviteUrl) {
             const copied = await copyTextToClipboard(payload.inviteUrl);
-            setInviteFeedback({
-              tone: "success",
-              message: copied ? "Invite created. Unique link copied to clipboard." : "Invite created. Unique link generated.",
-            });
+            toast(
+              copied ? "Invite created. Unique link copied to clipboard." : "Invite created. Unique link generated.",
+            );
           }
           router.refresh();
         }}

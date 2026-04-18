@@ -134,6 +134,16 @@
   width: 100%;
 }
 
+@layer components {
+  /*
+    Dashboard sets --toast-x-shift on <html> (half sidebar width) so top-center toasts
+    line up with the main column instead of the full viewport.
+  */
+  [data-sonner-toaster][data-x-position="center"] {
+    left: calc(50% + var(--toast-x-shift, 0px)) !important;
+  }
+}
+
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;
