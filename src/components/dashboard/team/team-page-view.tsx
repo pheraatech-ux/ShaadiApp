@@ -67,6 +67,7 @@ export function TeamPageView({ view }: TeamPageViewProps) {
       <TeamAlertBanner message={view.alertText} />
       <TeamMembersTable
         members={view.members}
+        currentUserId={view.currentUserId}
         onInviteClick={() => setInviteOpen(true)}
         onCopyInviteLink={async (memberId) => {
           try {

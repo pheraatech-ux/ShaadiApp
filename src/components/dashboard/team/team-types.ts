@@ -35,6 +35,8 @@ export type TeamListPageViewModel = {
   kpis: TeamKpiCard[];
   alertText: string;
   members: TeamMemberSummary[];
+  /** Logged-in user id — used to label your own row as “(You)”. */
+  currentUserId: string;
 };
 
 export type TeamTaskStatus = "done" | "in-progress" | "overdue";

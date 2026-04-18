@@ -784,6 +784,7 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
       ],
       alertText: "No overdue team tasks right now.",
       members: [],
+      currentUserId: planner.userId,
     };
   }
 
@@ -954,6 +955,7 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
       alertText:
         totalOverdue > 0 ? `${totalOverdue} tasks are overdue. Send reminders from member profiles.` : "No overdue team tasks right now.",
       members: teamMembers,
+      currentUserId: planner.userId,
     };
   }
 
@@ -1059,6 +1061,7 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
     alertText:
       totalOverdue > 0 ? `${totalOverdue} tasks are overdue. Send reminders from member profiles.` : "No overdue team tasks right now.",
     members: teamMembers,
+    currentUserId: planner.userId,
   };
 });
 

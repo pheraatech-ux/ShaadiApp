@@ -38,6 +38,7 @@ function RemoveMemberDescription({ member }: { member: TeamMemberSummary }) {
 
 type TeamMembersTableProps = {
   members: TeamMemberSummary[];
+  currentUserId: string;
   onInviteClick?: () => void;
   onCopyInviteLink?: (memberId: string) => Promise<void>;
   onGenerateNewInviteLink?: (memberId: string) => Promise<void>;
@@ -50,8 +51,13 @@ const statusClassName: Record<TeamMemberSummary["status"], string> = {
   offline: "bg-muted text-muted-foreground",
 };
 
+function memberIsCurrentUser(member: TeamMemberSummary, currentUserId: string) {
+  return member.id === currentUserId || member.linkedUserId === currentUserId;
+}
+
 export function TeamMembersTable({
   members,
+  currentUserId,
   onInviteClick,
   onCopyInviteLink,
   onGenerateNewInviteLink,
@@ -108,13 +114,16 @@ export function TeamMembersTable({
                 </tr>
               </thead>
               <tbody>
-                {members.map((member) => (
+                {members.map((member) => {
+                  const isYou = memberIsCurrentUser(member, currentUserId);
+                  const nameLabel = isYou ? `${member.name} (You)` : member.name;
+                  return (
                   <tr
                     key={member.id}
                     className="cursor-pointer border-b border-border/60 transition-colors last:border-none hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none"
                     tabIndex={0}
                     role="link"
-                    aria-label={`Open ${member.name} profile`}
+                    aria-label={`Open ${nameLabel} profile`}
                     onClick={() => router.push(`/app/team/${member.id}`)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
@@ -129,7 +138,12 @@ export function TeamMembersTable({
                           <AvatarFallback className="text-xs font-semibold">{member.initials}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 max-w-[14rem] flex flex-col items-start gap-0.5 text-left">
-                          <p className="break-words text-sm font-semibold leading-snug">{member.name}</p>
+                          <p className="break-words text-sm font-semibold leading-snug">
+                            {member.name}
+                            {isYou ? (
+                              <span className="font-medium text-muted-foreground"> (You)</span>
+                            ) : null}
+                          </p>
                           <a
                             href={`mailto:${member.email}`}
                             className="break-all text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
@@ -277,7 +291,8 @@ export function TeamMembersTable({
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
