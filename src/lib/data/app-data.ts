@@ -773,20 +773,6 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
   const planner = await getPlannerContext();
   const weddings = await getAccessibleWeddings(planner.userId);
   const weddingIds = weddings.map((wedding) => wedding.id);
-  if (!weddingIds.length) {
-    return {
-      workspaceLabel: "All staff across your business",
-      kpis: [
-        { id: "members", title: "Team members", value: "0", helperText: "No members added yet" },
-        { id: "overdue", title: "Overdue tasks (team)", value: "0", helperText: "No overdue tasks" },
-        { id: "weddings", title: "Weddings covered", value: "0", helperText: "Create your first wedding" },
-        { id: "completion", title: "Avg task completion", value: "0%", helperText: "No task history yet" },
-      ],
-      alertText: "No overdue team tasks right now.",
-      members: [],
-      currentUserId: planner.userId,
-    };
-  }
 
   const supabase = await createSupabaseServerClient();
   const { data: companyEmployeeRows, error: companyEmployeesError } = await supabase
@@ -806,19 +792,31 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
     /** Include the workspace owner so their weddings/tasks load even when every invite is still pending (no linked user ids). */
     const weddingAndTaskUserIds = [...new Set([...linkedUserIds, planner.userId])];
 
+    const hasWeddings = weddingIds.length > 0;
     const [{ data: weddingMemberRows }, { data: taskRows }, { data: inviteRows }, { data: ownerProfileRow }] =
       await Promise.all([
-        supabase
-          .from("wedding_members")
-          .select("wedding_id, user_id")
-          .in("wedding_id", weddingIds)
-          .in("user_id", weddingAndTaskUserIds)
-          .eq("status", "active"),
-        supabase
-          .from("tasks")
-          .select("id, assignee_user_id, status, due_date")
-          .in("wedding_id", weddingIds)
-          .in("assignee_user_id", weddingAndTaskUserIds),
+        hasWeddings
+          ? supabase
+              .from("wedding_members")
+              .select("wedding_id, user_id")
+              .in("wedding_id", weddingIds)
+              .in("user_id", weddingAndTaskUserIds)
+              .eq("status", "active")
+          : Promise.resolve({ data: [] as { wedding_id: string; user_id: string | null }[] | null }),
+        hasWeddings
+          ? supabase
+              .from("tasks")
+              .select("id, assignee_user_id, status, due_date")
+              .in("wedding_id", weddingIds)
+              .in("assignee_user_id", weddingAndTaskUserIds)
+          : Promise.resolve({
+              data: [] as {
+                id: string;
+                assignee_user_id: string | null;
+                status: "todo" | "in_progress" | "needs_review" | "done";
+                due_date: string | null;
+              }[] | null,
+            }),
         supabase
           .from("company_employee_invites")
           .select("id, employee_id, expires_at, created_at, claimed_at, revoked_at")
@@ -955,6 +953,21 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
       alertText:
         totalOverdue > 0 ? `${totalOverdue} tasks are overdue. Send reminders from member profiles.` : "No overdue team tasks right now.",
       members: teamMembers,
+      currentUserId: planner.userId,
+    };
+  }
+
+  if (!weddingIds.length) {
+    return {
+      workspaceLabel: "All staff across your business",
+      kpis: [
+        { id: "members", title: "Team members", value: "0", helperText: "No members added yet" },
+        { id: "overdue", title: "Overdue tasks (team)", value: "0", helperText: "No overdue tasks" },
+        { id: "weddings", title: "Weddings covered", value: "0", helperText: "Create your first wedding" },
+        { id: "completion", title: "Avg task completion", value: "0%", helperText: "No task history yet" },
+      ],
+      alertText: "No overdue team tasks right now.",
+      members: [],
       currentUserId: planner.userId,
     };
   }

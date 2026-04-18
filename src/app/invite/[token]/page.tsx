@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { TeamInviteSplash } from "@/components/invite/team-invite-splash";
+import { TeamInviteWelcome } from "@/components/invite/team-invite-welcome";
 import { hashCompanyEmployeeInviteToken } from "@/lib/company-employee-invites";
-import { getTeamInviteSplashContext } from "@/lib/team-invite-context";
+import { getTeamInviteSplashContext, getTeamInviteWelcomeContext } from "@/lib/team-invite-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { buttonVariants } from "@/components/ui/button";
@@ -121,6 +122,7 @@ export default async function CompanyEmployeeInvitePage({ params }: InvitePagePr
     return (
       <TeamInviteSplash
         token={safeToken}
+        inviteeFirstName={splash.inviteeFirstName}
         businessName={splash.businessName}
         inviterName={splash.inviterName}
         inviterInitials={splash.inviterInitials}
@@ -154,6 +156,20 @@ export default async function CompanyEmployeeInvitePage({ params }: InvitePagePr
 
     claimState = claimError ? "error" : ((claimRows?.[0]?.result as InviteClaimResult | undefined) ?? "invalid");
   }
+
+  if (claimState === "accepted") {
+    const welcome = await getTeamInviteWelcomeContext(safeToken, user.id, user.email ?? null);
+    if (welcome) {
+      return (
+        <TeamInviteWelcome
+          firstName={welcome.firstName}
+          businessName={welcome.businessName}
+          roleLabel={welcome.roleLabel}
+        />
+      );
+    }
+  }
+
   const copy = getInviteStateCopy(claimState);
 
   return (

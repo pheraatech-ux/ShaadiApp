@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 
 type TeamInviteSplashProps = {
   token: string;
+  inviteeFirstName: string | null;
   businessName: string;
   inviterName: string;
   inviterInitials: string;
@@ -36,6 +37,7 @@ function expiryFooterLine(iso: string) {
 
 export function TeamInviteSplash({
   token,
+  inviteeFirstName,
   businessName,
   inviterName,
   inviterInitials,
@@ -63,7 +65,16 @@ export function TeamInviteSplash({
             You&apos;ve been invited
           </p>
           <h2 className="text-balance text-3xl font-bold leading-tight tracking-tight text-white sm:text-[2rem]">
-            Join your team on <span className="font-bold italic text-sky-400">ShaadiOS</span>
+            {inviteeFirstName ? (
+              <>
+                <span className="text-white">{inviteeFirstName}</span>, join your team on{" "}
+                <span className="font-bold italic text-sky-400">ShaadiOS</span>
+              </>
+            ) : (
+              <>
+                Join your team on <span className="font-bold italic text-sky-400">ShaadiOS</span>
+              </>
+            )}
           </h2>
           <p className="mx-auto max-w-sm text-pretty text-sm leading-relaxed text-neutral-400">
             <span className="text-neutral-300">{inviterName}</span> has invited you to collaborate at{" "}
