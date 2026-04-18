@@ -46,9 +46,11 @@ export default function Home() {
           includes architecture for auth, vendor coordination, budgeting, and event timeline execution.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Button size="lg" asChild>
-            <Link href="/auth">Create Wedding Workspace</Link>
-          </Button>
+          <Button
+            size="lg"
+            nativeButton={false}
+            render={<Link href="/auth">Create Wedding Workspace</Link>}
+          />
           <Button size="lg" variant="outline">
             Explore Product Roadmap
           </Button>
