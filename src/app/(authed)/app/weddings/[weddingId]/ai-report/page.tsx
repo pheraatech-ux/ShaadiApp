@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { WorkspaceSectionDataView } from "@/components/wedding-workspace/workspace-section-data-view";
+import { WorkspaceSectionDataView } from "@/components/wedding-workspace/overview/workspace-section-data-view";
 import { getWeddingSectionSummaryBySlug } from "@/lib/data/app-data";
 
 type WeddingWorkspaceAiReportPageProps = {

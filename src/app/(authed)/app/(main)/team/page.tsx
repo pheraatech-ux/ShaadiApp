@@ -1,4 +1,4 @@
-import { TeamPageView } from "@/components/dashboard/team/team-page-view";
+import { TeamPageView } from "@/components/app-dashboard/team/team-page-view";
 import { getTeamListView } from "@/lib/data/app-data";
 
 export default async function TeamPage() {

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { MemberProfileView } from "@/components/dashboard/team/member-profile-view";
+import { MemberProfileView } from "@/components/app-dashboard/team/member-profile-view";
 import { getTeamMemberProfileView } from "@/lib/data/app-data";
 
 type TeamMemberProfilePageProps = {

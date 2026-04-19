@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { WeddingWorkspaceOverview } from "@/components/wedding-workspace/wedding-workspace-overview";
+import { WeddingWorkspaceOverview } from "@/components/wedding-workspace/overview/wedding-workspace-overview";
 import { getWeddingWorkspaceBySlug } from "@/lib/data/app-data";
 
 type WeddingWorkspacePageProps = {

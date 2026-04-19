@@ -7,8 +7,8 @@ import { UserPlus } from "lucide-react";
 
 import { InviteTeamMemberDialog } from "@/components/wedding-workspace/team/invite-team-member-dialog";
 import type { TeamPageViewModel } from "@/components/wedding-workspace/team/team-types";
-import { TaskProgressBar } from "@/components/dashboard/team/task-progress-bar";
-import { WorkspaceCoupleHeader } from "@/components/wedding-workspace/workspace-couple-header";
+import { TaskProgressBar } from "@/components/app-dashboard/team/task-progress-bar";
+import { WorkspaceCoupleHeader } from "@/components/wedding-workspace/overview/workspace-couple-header";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

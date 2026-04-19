@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
-import { WorkspaceQuickAddForm } from "@/components/wedding-workspace/workspace-quick-add-form";
-import { WorkspaceSectionDataView } from "@/components/wedding-workspace/workspace-section-data-view";
+import { WorkspaceQuickAddForm } from "@/components/wedding-workspace/overview/workspace-quick-add-form";
+import { WorkspaceSectionDataView } from "@/components/wedding-workspace/overview/workspace-section-data-view";
 import { getWeddingSectionSummaryBySlug } from "@/lib/data/app-data";
 
 type WeddingWorkspaceDocumentsPageProps = {

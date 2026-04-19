@@ -1,14 +1,14 @@
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { DashboardViewModel, WeddingItem } from "@/components/dashboard/types";
+import type { DashboardViewModel, WeddingItem } from "@/components/app-dashboard/dashboard/types";
 import type {
   TeamListPageViewModel,
   TeamMemberProfileViewModel,
   TeamMemberSummary,
   TeamTaskItem,
-} from "@/components/dashboard/team/team-types";
-import type { AllWeddingRow, AllWeddingsPageView, AllWeddingsStage } from "@/components/all-weddings/types";
+} from "@/components/app-dashboard/team/team-types";
+import type { AllWeddingRow, AllWeddingsPageView, AllWeddingsStage } from "@/components/app-dashboard/all-weddings/types";
 import type { TeamPageViewModel } from "@/components/wedding-workspace/team/team-types";
 import type {
   WeddingTasksBoardMemberOption,
@@ -17,7 +17,7 @@ import type {
 } from "@/components/wedding-workspace/tasks/types";
 import type { WeddingMessagesWorkspaceViewModel } from "@/components/wedding-workspace/messages/types";
 import type { WeddingVendorsWorkspaceViewModel } from "@/components/wedding-workspace/vendors/types";
-import type { WeddingWorkspaceViewModel } from "@/components/wedding-workspace/types";
+import type { WeddingWorkspaceViewModel } from "@/components/wedding-workspace/overview/types";
 import { buildTimeOfDayGreeting } from "@/lib/planner-display";
 import {
   BUDGET_BUCKETS,

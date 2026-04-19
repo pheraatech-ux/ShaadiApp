@@ -1,12 +1,12 @@
 import { Suspense, type ReactNode } from "react";
 
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { DashboardShell } from "@/components/app-dashboard/dashboard/dashboard-shell";
 import {
   DashboardTopbarSkeleton,
   SidebarChromeSkeleton,
-} from "@/components/dashboard/dashboard-skeletons";
-import { DashboardTopbarLive } from "@/components/dashboard/dashboard-topbar-live";
-import { SidebarLive } from "@/components/dashboard/sidebar-live";
+} from "@/components/app-dashboard/dashboard/dashboard-skeletons";
+import { DashboardTopbarLive } from "@/components/app-dashboard/dashboard/dashboard-topbar-live";
+import { SidebarLive } from "@/components/app-dashboard/dashboard/sidebar-live";
 
 export default function MainAppShellLayout({ children }: { children: ReactNode }) {
   return (
