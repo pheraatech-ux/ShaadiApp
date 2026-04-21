@@ -19,6 +19,8 @@ type WeddingListWidgetProps = {
   items: WeddingItem[];
   onCreateWedding?: () => void;
   onViewAll?: () => void;
+  basePath?: string;
+  canCreateWedding?: boolean;
 };
 
 type FilterTab = "all" | WeddingStatus;
@@ -38,11 +40,11 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-function WeddingCard({ item }: { item: WeddingItem }) {
+function WeddingCard({ item, basePath }: { item: WeddingItem; basePath: string }) {
   const percent = item.tasksTotal > 0 ? Math.round((item.tasksDone / item.tasksTotal) * 100) : 0;
 
   return (
-    <Link href={`/app/weddings/${item.id}`} className="block">
+    <Link href={`${basePath}/weddings/${item.id}`} className="block">
       <article className="flex flex-col rounded-2xl border border-border/70 bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
         <div className="flex items-start gap-3 p-5">
           <Avatar size="lg">
@@ -97,6 +99,8 @@ export function WeddingListWidget({
   items,
   onCreateWedding,
   onViewAll,
+  basePath = "/app",
+  canCreateWedding = true,
 }: WeddingListWidgetProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -105,21 +109,23 @@ export function WeddingListWidget({
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
 
   useEffect(() => {
+    if (!canCreateWedding) return;
     if (!openFromQuery) return;
-    router.replace("/app/dashboard");
-  }, [openFromQuery, router]);
+    router.replace(`${basePath}/dashboard`);
+  }, [basePath, canCreateWedding, openFromQuery, router]);
 
   const filtered =
     activeTab === "all" ? items : items.filter((w) => w.status === activeTab);
 
   function handleCreateWedding() {
+    if (!canCreateWedding) return;
     onCreateWedding?.();
     setOpenCreateDialog(true);
   }
 
   function handleViewAll() {
     onViewAll?.();
-    router.push("/app/weddings");
+    router.push(`${basePath}/weddings`);
   }
 
   const filterBar = (
@@ -147,27 +153,33 @@ export function WeddingListWidget({
       title="My weddings"
       middle={filterBar}
       action={
+        canCreateWedding ? (
         <WeddingHeaderActions
           onCreateWedding={handleCreateWedding}
           onViewAll={handleViewAll}
         />
+        ) : undefined
       }
       contentClassName="px-3 pt-0 pb-3 sm:px-4 sm:pb-3"
     >
       <div className="scrollbar-hide flex gap-3 overflow-x-auto pb-1">
         {filtered.map((item) => (
           <div key={item.id} className="w-[320px] shrink-0">
-            <WeddingCard item={item} />
+            <WeddingCard item={item} basePath={basePath} />
           </div>
         ))}
-        <div className="w-[320px] shrink-0">
-          <NewWeddingPlaceholderCard onCreateWedding={handleCreateWedding} />
-        </div>
+        {canCreateWedding ? (
+          <div className="w-[320px] shrink-0">
+            <NewWeddingPlaceholderCard onCreateWedding={handleCreateWedding} />
+          </div>
+        ) : null}
       </div>
-      <AddWeddingFlowDialog
-        open={openCreateDialog || openFromQuery}
-        onOpenChange={setOpenCreateDialog}
-      />
+      {canCreateWedding ? (
+        <AddWeddingFlowDialog
+          open={openCreateDialog || openFromQuery}
+          onOpenChange={setOpenCreateDialog}
+        />
+      ) : null}
     </SectionCard>
   );
 }

@@ -1,11 +1,26 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { resolvePersona } from "@/lib/employee/persona";
 import { createWedding } from "@/lib/data/app-data";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
 
 export async function POST(request: NextRequest) {
   const supabase = createSupabaseRouteHandlerClient(request);
   try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
+    const persona = await resolvePersona(supabase, user.id);
+    if (persona === "employee") {
+      return NextResponse.json(
+        { error: "Employees cannot create weddings." },
+        { status: 403 },
+      );
+    }
+
     const payload = (await request.json()) as {
       brideName?: string;
       groomName?: string;

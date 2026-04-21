@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 type AllWeddingsCardViewProps = {
   items: AllWeddingRow[];
+  basePath?: string;
 };
 
 function getInitials(label: string) {
@@ -26,7 +27,7 @@ function stageToneClassName(stage: AllWeddingRow["stage"]) {
   return "bg-violet-500/20 text-violet-700 dark:text-violet-300";
 }
 
-export function AllWeddingsCardView({ items }: AllWeddingsCardViewProps) {
+export function AllWeddingsCardView({ items, basePath = "/app" }: AllWeddingsCardViewProps) {
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {items.map((item) => {
@@ -38,7 +39,7 @@ export function AllWeddingsCardView({ items }: AllWeddingsCardViewProps) {
         return (
           <Link
             key={item.id}
-            href={`/app/weddings/${item.id}`}
+            href={`${basePath}/weddings/${item.id}`}
             className="group rounded-2xl border border-border/70 bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-border hover:shadow-md"
           >
             <article className="space-y-3">

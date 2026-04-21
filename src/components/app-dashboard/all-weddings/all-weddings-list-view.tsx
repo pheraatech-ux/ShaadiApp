@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 
 type AllWeddingsListViewProps = {
   items: AllWeddingRow[];
+  basePath?: string;
 };
 
 function getInitials(label: string) {
@@ -28,7 +29,7 @@ function stageToneClassName(stage: AllWeddingRow["stage"]) {
   return "bg-violet-500/20 text-violet-700 dark:text-violet-300";
 }
 
-export function AllWeddingsListView({ items }: AllWeddingsListViewProps) {
+export function AllWeddingsListView({ items, basePath = "/app" }: AllWeddingsListViewProps) {
   return (
     <section className="overflow-hidden rounded-2xl border border-border/70 bg-card">
       <header className="hidden grid-cols-[2fr_0.9fr_1fr_0.9fr_1fr_1fr_auto] items-center gap-3 border-b border-border/60 px-4 py-2 text-[11px] font-medium tracking-wide text-muted-foreground uppercase md:grid">
@@ -44,7 +45,7 @@ export function AllWeddingsListView({ items }: AllWeddingsListViewProps) {
       <div className="divide-y divide-border/60">
         {items.map((item) => (
           <article key={item.id} className="grid gap-3 px-4 py-3 md:grid-cols-[2fr_0.9fr_1fr_0.9fr_1fr_1fr_auto] md:items-center">
-            <Link href={`/app/weddings/${item.id}`} className="group min-w-0">
+            <Link href={`${basePath}/weddings/${item.id}`} className="group min-w-0">
               <div className="flex min-w-0 items-center gap-3">
                 <Avatar className="size-10 border border-border/70">
                   <AvatarFallback className="text-xs font-semibold">{getInitials(item.coupleName)}</AvatarFallback>

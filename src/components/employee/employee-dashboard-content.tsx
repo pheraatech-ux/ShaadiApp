@@ -34,7 +34,7 @@ export async function EmployeeDashboardContent() {
       <Suspense
         fallback={<div className="h-56 animate-pulse rounded-2xl bg-muted/60" />}
       >
-        <WeddingListWidget items={data.weddings} />
+        <WeddingListWidget items={data.weddings} basePath="/app/employee" canCreateWedding={false} />
       </Suspense>
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
         <UrgentTasksWidget items={data.urgentTasks} />

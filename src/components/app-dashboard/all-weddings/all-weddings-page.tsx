@@ -20,6 +20,8 @@ import { cn } from "@/lib/utils";
 
 type AllWeddingsPageProps = {
   initialData: AllWeddingsPageView;
+  basePath?: string;
+  canCreateWedding?: boolean;
 };
 
 const filterTabs: { label: string; value: AllWeddingsFilter; key: keyof AllWeddingsPageView["counts"] }[] = [
@@ -29,7 +31,11 @@ const filterTabs: { label: string; value: AllWeddingsFilter; key: keyof AllWeddi
   { label: "Completed", value: "completed", key: "completed" },
 ];
 
-export function AllWeddingsPage({ initialData }: AllWeddingsPageProps) {
+export function AllWeddingsPage({
+  initialData,
+  basePath = "/app",
+  canCreateWedding = true,
+}: AllWeddingsPageProps) {
   const [filter, setFilter] = useState<AllWeddingsFilter>("all");
   const [sortBy, setSortBy] = useState<AllWeddingsSort>("date-latest");
   const [viewMode, setViewMode] = useState<AllWeddingsViewMode>("cards");
@@ -79,6 +85,7 @@ export function AllWeddingsPage({ initialData }: AllWeddingsPageProps) {
           </>
         }
         actions={
+          canCreateWedding ? (
           <>
             <Button variant="outline" size="sm" className="rounded-xl">
               <SlidersHorizontal />
@@ -89,6 +96,7 @@ export function AllWeddingsPage({ initialData }: AllWeddingsPageProps) {
               New wedding
             </Button>
           </>
+          ) : undefined
         }
       />
 
@@ -160,12 +168,14 @@ export function AllWeddingsPage({ initialData }: AllWeddingsPageProps) {
           <p className="mt-1 text-xs text-muted-foreground">Try a different filter or create a new wedding workspace.</p>
         </section>
       ) : viewMode === "cards" ? (
-        <AllWeddingsCardView items={visibleItems} />
+        <AllWeddingsCardView items={visibleItems} basePath={basePath} />
       ) : (
-        <AllWeddingsListView items={visibleItems} />
+        <AllWeddingsListView items={visibleItems} basePath={basePath} />
       )}
 
-      <AddWeddingFlowDialog open={openCreateDialog} onOpenChange={setOpenCreateDialog} />
+      {canCreateWedding ? (
+        <AddWeddingFlowDialog open={openCreateDialog} onOpenChange={setOpenCreateDialog} />
+      ) : null}
     </div>
   );
 }
