@@ -39,6 +39,7 @@ type WorkspaceSidebarProps = {
   badgeCounts: WorkspaceSidebarBadgeCounts;
   /** `/app` or `/app/employee` — drives dashboard / all-weddings links and wedding base path. */
   appRoot?: "/app" | "/app/employee";
+  hideBudgetTab?: boolean;
 };
 
 type NavItem = {
@@ -63,6 +64,7 @@ export function WorkspaceSidebar({
   userEmail,
   badgeCounts,
   appRoot = "/app",
+  hideBudgetTab = false,
 }: WorkspaceSidebarProps) {
   const pathname = usePathname();
   const base = `${appRoot}/weddings/${weddingId}`;
@@ -97,7 +99,7 @@ export function WorkspaceSidebar({
       icon: Mail,
       badge: { text: String(badgeCounts.messageCount), tone: "red" },
     },
-    { id: "budget", label: "Budget", hrefSuffix: "/budget", icon: FileText },
+    ...(!hideBudgetTab ? [{ id: "budget", label: "Budget", hrefSuffix: "/budget", icon: FileText } as NavItem] : []),
     { id: "documents", label: "Documents", hrefSuffix: "/documents", icon: File },
   ];
 

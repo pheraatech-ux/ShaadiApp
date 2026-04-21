@@ -19,6 +19,7 @@ export async function WorkspaceSidebarLive({ weddingId, appRoot = "/app" }: Work
       userEmail={planner.userEmail}
       badgeCounts={counts}
       appRoot={appRoot}
+      hideBudgetTab={appRoot === "/app/employee"}
     />
   );
 }
