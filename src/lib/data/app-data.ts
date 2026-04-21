@@ -593,6 +593,108 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
   };
 });
 
+export const getEmployeeDashboardView = cache(async (): Promise<DashboardViewModel> => {
+  const planner = await getPlannerContext();
+  const weddings = await getAccessibleWeddings(planner.userId);
+  const weddingIds = weddings.map((w) => w.id);
+  const tasks = await getTasksForWeddingIds(weddingIds);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const overdueTasks = tasks.filter((task) => task.status !== "done" && task.due_date && task.due_date < today);
+  const pendingTasks = tasks.filter((task) => task.status === "todo");
+  const inProgressTasks = tasks.filter((task) => task.status === "in_progress");
+  const doneTaskIds = new Set(tasks.filter((task) => task.status === "done").map((task) => task.id));
+
+  const tasksByWedding = new Map<string, { total: number; done: number }>();
+  for (const task of tasks) {
+    const current = tasksByWedding.get(task.wedding_id) ?? { total: 0, done: 0 };
+    current.total += 1;
+    if (doneTaskIds.has(task.id)) current.done += 1;
+    tasksByWedding.set(task.wedding_id, current);
+  }
+
+  const weddingItems: WeddingItem[] = weddings.map((wedding) => {
+    const counts = tasksByWedding.get(wedding.id) ?? { total: 0, done: 0 };
+    return {
+      id: wedding.slug,
+      name: wedding.couple_name,
+      city: wedding.city ?? "Not set",
+      firstEventDate: formatDateLabel(wedding.wedding_date),
+      daysLeft: daysUntil(wedding.wedding_date),
+      tasksDone: counts.done,
+      tasksTotal: counts.total,
+      status: buildStatusFromWedding(wedding),
+    };
+  });
+
+  const urgentTasks = overdueTasks.slice(0, 5).map((task) => ({
+    id: task.id,
+    title: task.title,
+    owner: "Team",
+    overdueLabel: task.due_date ? `${Math.max(1, Math.ceil((Date.now() - new Date(`${task.due_date}T00:00:00`).getTime()) / 86400000))}d overdue` : undefined,
+  }));
+
+  const weekdayIds = [
+    { id: "monday", label: "M" },
+    { id: "tuesday", label: "T" },
+    { id: "wednesday", label: "W" },
+    { id: "thursday", label: "T" },
+    { id: "friday", label: "F" },
+  ];
+  const weeklyCompletion = weekdayIds.map((day) => ({ ...day, value: 0 }));
+
+  return {
+    greeting: buildTimeOfDayGreeting(planner.displayName),
+    workspaceName: planner.workspaceName,
+    userName: planner.displayName,
+    userEmail: planner.email,
+    stats: [
+      {
+        id: "tasks-pending",
+        title: "Pending Tasks",
+        value: String(pendingTasks.length),
+        helperText: "Todo tasks",
+        progress: tasks.length > 0 ? Math.round((pendingTasks.length / tasks.length) * 100) : 0,
+      },
+      {
+        id: "tasks-in-progress",
+        title: "In Progress Tasks",
+        value: String(inProgressTasks.length),
+        helperText: "Work currently underway",
+        progress: tasks.length > 0 ? Math.round((inProgressTasks.length / tasks.length) * 100) : 0,
+      },
+      {
+        id: "active-weddings",
+        title: "Active Weddings",
+        value: String(weddings.filter((w) => w.status !== "completed").length),
+        helperText: `${weddings.length} total`,
+        progress: weddings.length > 0 ? 100 : 0,
+      },
+      {
+        id: "tasks-overdue",
+        title: "Overdue Tasks",
+        value: String(overdueTasks.length),
+        helperText: "Across all accessible weddings",
+        progress: tasks.length > 0 ? Math.round((overdueTasks.length / tasks.length) * 100) : 0,
+      },
+    ],
+    alerts: [
+      ...(overdueTasks.length > 0
+        ? [
+            {
+              id: "overdue",
+              message: `${overdueTasks.length} tasks are overdue and need attention.`,
+              ctaLabel: "Review now",
+            },
+          ]
+        : []),
+    ],
+    weddings: weddingItems,
+    urgentTasks,
+    weeklyCompletion,
+  };
+});
+
 export const getWeddingWorkspaceBySlug = cache(
   async (weddingSlug: string): Promise<WeddingWorkspaceViewModel | null> => {
     const planner = await getPlannerContext();
