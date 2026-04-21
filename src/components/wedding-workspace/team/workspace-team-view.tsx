@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { UserPlus } from "lucide-react";
 
-import { InviteTeamMemberDialog } from "@/components/wedding-workspace/team/invite-team-member-dialog";
+import { AddCompanyMemberDialog } from "@/components/wedding-workspace/team/add-company-member-dialog";
 import type { TeamPageViewModel } from "@/components/wedding-workspace/team/team-types";
 import { TaskProgressBar } from "@/components/app-dashboard/team/task-progress-bar";
 import { WorkspaceCoupleHeader } from "@/components/wedding-workspace/overview/workspace-couple-header";
@@ -175,7 +175,14 @@ export function WorkspaceTeamView({ view, defaultInviteOpen = false }: Workspace
         </CardContent>
       </Card>
 
-      <InviteTeamMemberDialog open={inviteOpen} onOpenChange={setInviteOpen} />
+      <AddCompanyMemberDialog
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        weddingSlug={view.weddingId}
+        onAssigned={async () => {
+          router.refresh();
+        }}
+      />
     </div>
   );
 }

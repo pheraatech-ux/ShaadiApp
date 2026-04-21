@@ -37,6 +37,8 @@ type WorkspaceSidebarProps = {
   userName: string;
   userEmail: string;
   badgeCounts: WorkspaceSidebarBadgeCounts;
+  /** `/app` or `/app/employee` — drives dashboard / all-weddings links and wedding base path. */
+  appRoot?: "/app" | "/app/employee";
 };
 
 type NavItem = {
@@ -60,9 +62,10 @@ export function WorkspaceSidebar({
   userName,
   userEmail,
   badgeCounts,
+  appRoot = "/app",
 }: WorkspaceSidebarProps) {
   const pathname = usePathname();
-  const base = `/app/weddings/${weddingId}`;
+  const base = `${appRoot}/weddings/${weddingId}`;
 
   const items: NavItem[] = [
     { id: "overview", label: "Overview", hrefSuffix: "", icon: Square },
@@ -123,8 +126,10 @@ export function WorkspaceSidebar({
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  render={<Link href="/app/dashboard" />}
-                  isActive={pathname === "/app/dashboard" || pathname.startsWith("/app/dashboard/")}
+                  render={<Link href={`${appRoot}/dashboard`} />}
+                  isActive={
+                    pathname === `${appRoot}/dashboard` || pathname.startsWith(`${appRoot}/dashboard/`)
+                  }
                   size="lg"
                   tooltip="Dashboard"
                 >
@@ -134,8 +139,8 @@ export function WorkspaceSidebar({
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  render={<Link href="/app/weddings" />}
-                  isActive={pathname === "/app/weddings"}
+                  render={<Link href={`${appRoot}/weddings`} />}
+                  isActive={pathname === `${appRoot}/weddings` || pathname.startsWith(`${appRoot}/weddings/`)}
                   size="lg"
                   tooltip="All weddings"
                 >

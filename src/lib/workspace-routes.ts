@@ -21,15 +21,20 @@ export type WorkspaceSection = {
   isOverview: boolean;
 };
 
-export function getWorkspaceBasePath(weddingId: string) {
-  return `/app/weddings/${weddingId}`;
+/** App root segment: `/app` (planner) or `/app/employee` (staff portal). */
+export function getWorkspaceBasePath(weddingId: string, appRoot: "/app" | "/app/employee" = "/app") {
+  return `${appRoot}/weddings/${weddingId}`;
 }
 
 /**
  * Resolves which workspace section the user is in from the pathname.
  */
-export function getWorkspaceSection(pathname: string, weddingId: string): WorkspaceSection {
-  const base = getWorkspaceBasePath(weddingId);
+export function getWorkspaceSection(
+  pathname: string,
+  weddingId: string,
+  appRoot: "/app" | "/app/employee" = "/app",
+): WorkspaceSection {
+  const base = getWorkspaceBasePath(weddingId, appRoot);
   const normalized = pathname.endsWith("/") && pathname.length > 1 ? pathname.slice(0, -1) : pathname;
 
   if (normalized === base) {

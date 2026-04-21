@@ -14,11 +14,12 @@ import { cn } from "@/lib/utils";
  * Primary control shows the current section (Overview, Team, …) from the URL.
  */
 export function WorkspaceTopbar() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const params = useParams();
   const weddingId = params.weddingId as string;
-  const base = getWorkspaceBasePath(weddingId);
-  const section = getWorkspaceSection(pathname, weddingId);
+  const appRoot: "/app" | "/app/employee" = pathname.startsWith("/app/employee") ? "/app/employee" : "/app";
+  const base = getWorkspaceBasePath(weddingId, appRoot);
+  const section = getWorkspaceSection(pathname, weddingId, appRoot);
 
   const onTeam = pathname.startsWith(`${base}/team`);
   const onVendors = pathname.startsWith(`${base}/vendors`);

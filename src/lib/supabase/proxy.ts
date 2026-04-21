@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { plannerPathToEmployeePath, resolvePersona } from "@/lib/employee/persona";
 import { getSupabaseEnv } from "@/lib/env";
 import { Database } from "@/types/database";
 
@@ -47,11 +48,36 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (user && isAuthRoute) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = `${AUThed_ROUTE_PREFIX}/dashboard`;
-    redirectUrl.search = "";
-    return NextResponse.redirect(redirectUrl);
+  if (user) {
+    const persona = await resolvePersona(supabase, user.id);
+
+    if (persona === "employee") {
+      const onPlannerAppSurface =
+        pathname === "/app" ||
+        (pathname.startsWith("/app/") &&
+          !pathname.startsWith("/app/employee") &&
+          !pathname.startsWith("/app/welcome"));
+      if (onPlannerAppSurface) {
+        const dest = plannerPathToEmployeePath(pathname);
+        if (dest !== pathname) {
+          const redirectUrl = request.nextUrl.clone();
+          redirectUrl.pathname = dest;
+          return NextResponse.redirect(redirectUrl);
+        }
+      }
+    } else if (pathname.startsWith("/app/employee")) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/app/dashboard";
+      redirectUrl.search = "";
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    if (isAuthRoute) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = persona === "employee" ? "/app/employee/dashboard" : "/app/dashboard";
+      redirectUrl.search = "";
+      return NextResponse.redirect(redirectUrl);
+    }
   }
 
   return response;

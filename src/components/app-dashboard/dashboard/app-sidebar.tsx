@@ -33,17 +33,19 @@ type AppSidebarProps = {
   userName: string;
   userEmail: string;
   counts: AppSidebarCounts;
+  /** Planner `/app` or staff `/app/employee`. */
+  basePath?: string;
 };
 
-export function AppSidebar({ userName, userEmail, counts }: AppSidebarProps) {
-  const pathname = usePathname() ?? "/app/dashboard";
+export function AppSidebar({ userName, userEmail, counts, basePath = "/app" }: AppSidebarProps) {
+  const pathname = usePathname() ?? `${basePath}/dashboard`;
   const sidebarItems: SidebarItem[] = [
-    { label: "Dashboard", href: "/app/dashboard", icon: LayoutGrid },
-    { label: "All Weddings", href: "/app/weddings", icon: BookHeart, badgeCount: counts.weddings },
-    { label: "Teams", href: "/app/team", icon: Users, badgeCount: counts.team },
-    { label: "Tasks", href: "/app/tasks", icon: ClipboardList, badgeCount: counts.tasksOverdue },
-    { label: "Budget", href: "/app/budget", icon: Wallet },
-    { label: "Messages", href: "/app/messages", icon: MessageSquare, badgeCount: counts.messages },
+    { label: "Dashboard", href: `${basePath}/dashboard`, icon: LayoutGrid },
+    { label: "All Weddings", href: `${basePath}/weddings`, icon: BookHeart, badgeCount: counts.weddings },
+    { label: "Teams", href: `${basePath}/team`, icon: Users, badgeCount: counts.team },
+    { label: "Tasks", href: `${basePath}/tasks`, icon: ClipboardList, badgeCount: counts.tasksOverdue },
+    { label: "Budget", href: `${basePath}/budget`, icon: Wallet },
+    { label: "Messages", href: `${basePath}/messages`, icon: MessageSquare, badgeCount: counts.messages },
   ];
 
   function isPathActive(href: string) {

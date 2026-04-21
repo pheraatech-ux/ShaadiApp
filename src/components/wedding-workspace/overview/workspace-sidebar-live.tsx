@@ -3,9 +3,10 @@ import { getWorkspaceShellInfo, getWorkspaceSidebarCounts } from "@/lib/data/app
 
 type WorkspaceSidebarLiveProps = {
   weddingId: string;
+  appRoot?: "/app" | "/app/employee";
 };
 
-export async function WorkspaceSidebarLive({ weddingId }: WorkspaceSidebarLiveProps) {
+export async function WorkspaceSidebarLive({ weddingId, appRoot = "/app" }: WorkspaceSidebarLiveProps) {
   const [planner, counts] = await Promise.all([
     getWorkspaceShellInfo(),
     getWorkspaceSidebarCounts(weddingId),
@@ -17,6 +18,7 @@ export async function WorkspaceSidebarLive({ weddingId }: WorkspaceSidebarLivePr
       userName={planner.userName}
       userEmail={planner.userEmail}
       badgeCounts={counts}
+      appRoot={appRoot}
     />
   );
 }
