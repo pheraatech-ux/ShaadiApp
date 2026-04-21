@@ -8,7 +8,6 @@ import { NewTaskDialog } from "@/components/wedding-workspace/tasks/new-task-dia
 import { TaskDetailDialog } from "@/components/wedding-workspace/tasks/task-detail-dialog";
 import { TaskKanbanColumn, type TaskLaneId } from "@/components/wedding-workspace/tasks/task-kanban-column";
 import { TaskKpiCards } from "@/components/wedding-workspace/tasks/task-kpi-cards";
-import { TaskMemberStrip } from "@/components/wedding-workspace/tasks/task-member-strip";
 import type { WeddingTasksBoardStatus, WeddingTasksBoardTask, WeddingTasksBoardViewModel } from "@/components/wedding-workspace/tasks/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -232,20 +231,6 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
         overdue={summary.overdue}
         dueThisWeek={summary.dueThisWeek}
         flagged={summary.flagged}
-      />
-
-      <TaskMemberStrip
-        members={view.memberSummaries.map((member) => ({
-          ...member,
-          assignedCount: tasks.filter((task) => task.assigneeId === member.id).length,
-          doneCount: tasks.filter((task) => task.assigneeId === member.id && task.status === "done").length,
-          overdueCount: tasks.filter((task) => task.assigneeId === member.id && task.isOverdue).length,
-          progressPercent: (() => {
-            const assigned = tasks.filter((task) => task.assigneeId === member.id).length;
-            const done = tasks.filter((task) => task.assigneeId === member.id && task.status === "done").length;
-            return assigned > 0 ? Math.round((done / assigned) * 100) : 0;
-          })(),
-        }))}
       />
 
       <section className="space-y-3 rounded-xl border border-border/70 bg-card p-3">

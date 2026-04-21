@@ -1397,6 +1397,7 @@ export const getWeddingTeamViewBySlug = cache(
         rightLabel: member.status === "active" ? "Active" : "Invited",
         rightClassName:
           member.status === "active" ? "text-emerald-600 dark:text-emerald-300" : "text-violet-600 dark:text-violet-300",
+        email: member.invited_email ?? null,
       } as TeamPageViewModel["members"][number];
     });
 

@@ -16,6 +16,7 @@ export type TeamMemberRow = {
   overdueTaskCount: number;
   rightLabel?: string;
   rightClassName?: string;
+  email: string | null;
 };
 
 export type WeddingTeamKpi = {
