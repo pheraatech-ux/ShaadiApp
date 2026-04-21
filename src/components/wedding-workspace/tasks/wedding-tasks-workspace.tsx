@@ -64,10 +64,12 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
     return { total, completed, overdue, dueThisWeek, flagged, myTasks };
   }, [tasks, view.currentUserId]);
 
+  const scopedBoard = Boolean(view.scopedToEmployeeTasks);
+
   const filteredTasks = useMemo(() => {
     let current = tasks;
 
-    if (viewMode === "team-member") {
+    if (!scopedBoard && viewMode === "team-member") {
       current = current.filter((task) => task.assigneeId === view.currentUserId);
     }
 
@@ -95,7 +97,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
     }
 
     return current;
-  }, [activeFilter, assigneeFilter, search, statusFilter, tasks, view.currentUserId, viewMode]);
+  }, [activeFilter, assigneeFilter, scopedBoard, search, statusFilter, tasks, view.currentUserId, viewMode]);
 
   const columns = useMemo(() => {
     return {
@@ -204,13 +206,15 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              className="h-9 rounded-xl"
-              onClick={() => setViewMode((current) => (current === "super-admin" ? "team-member" : "super-admin"))}
-            >
-              {viewMode === "super-admin" ? "Team member view" : "Super admin view"}
-            </Button>
+            {scopedBoard ? null : (
+              <Button
+                variant="outline"
+                className="h-9 rounded-xl"
+                onClick={() => setViewMode((current) => (current === "super-admin" ? "team-member" : "super-admin"))}
+              >
+                {viewMode === "super-admin" ? "Team member view" : "Super admin view"}
+              </Button>
+            )}
             <Button variant="outline" className="h-9 rounded-xl">
               <Sparkles className="size-4" />
               AI task suggestions

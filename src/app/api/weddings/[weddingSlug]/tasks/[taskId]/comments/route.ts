@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { resolvePersona } from "@/lib/employee/persona";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
+import { taskTouchesWorkspaceUser } from "@/lib/wedding-task-scope";
 
 type CommentPayload = {
   body?: string;
@@ -24,11 +26,16 @@ async function resolveContext(
 
   const { data: task } = await supabase
     .from("tasks")
-    .select("id")
+    .select("id, assignee_user_id, raised_by_user_id")
     .eq("id", taskId)
     .eq("wedding_id", wedding.id)
     .maybeSingle();
   if (!task) return { errorResponse: NextResponse.json({ error: "Task not found." }, { status: 404 }) };
+
+  const persona = await resolvePersona(supabase, user.id);
+  if (persona === "employee" && !taskTouchesWorkspaceUser(task, user.id)) {
+    return { errorResponse: NextResponse.json({ error: "Forbidden." }, { status: 403 }) };
+  }
 
   return { supabase, userId: user.id, weddingId: wedding.id };
 }

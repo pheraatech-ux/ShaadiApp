@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { resolvePersona } from "@/lib/employee/persona";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
+import { taskTouchesWorkspaceUser } from "@/lib/wedding-task-scope";
 import type { Database } from "@/types/database";
 
 type TaskStatus = Database["public"]["Enums"]["task_status"];
@@ -163,7 +165,7 @@ export async function PATCH(
 
     const lookup = await getWeddingIdBySlug(request, weddingSlug);
     if ("errorResponse" in lookup) return lookup.errorResponse;
-    const { supabase, weddingId } = lookup;
+    const { supabase, weddingId, userId } = lookup;
 
     const updates: Database["public"]["Tables"]["tasks"]["Update"] = {};
     if (typeof payload.title === "string") updates.title = payload.title.trim();
@@ -184,13 +186,18 @@ export async function PATCH(
 
     const { data: task, error: taskError } = await supabase
       .from("tasks")
-      .select("id")
+      .select("id, assignee_user_id, raised_by_user_id")
       .eq("id", payload.taskId)
       .eq("wedding_id", weddingId)
       .maybeSingle();
 
     if (taskError || !task) {
       return NextResponse.json({ error: "Task not found." }, { status: 404 });
+    }
+
+    const persona = await resolvePersona(supabase, userId);
+    if (persona === "employee" && !taskTouchesWorkspaceUser(task, userId)) {
+      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
     }
 
     if (payload.assigneeUserId !== undefined) {
@@ -231,16 +238,21 @@ export async function DELETE(
 
     const lookup = await getWeddingIdBySlug(request, weddingSlug);
     if ("errorResponse" in lookup) return lookup.errorResponse;
-    const { supabase, weddingId } = lookup;
+    const { supabase, weddingId, userId } = lookup;
 
     const { data: task, error: taskError } = await supabase
       .from("tasks")
-      .select("id")
+      .select("id, assignee_user_id, raised_by_user_id")
       .eq("id", payload.taskId)
       .eq("wedding_id", weddingId)
       .maybeSingle();
     if (taskError || !task) {
       return NextResponse.json({ error: "Task not found." }, { status: 404 });
+    }
+
+    const persona = await resolvePersona(supabase, userId);
+    if (persona === "employee" && !taskTouchesWorkspaceUser(task, userId)) {
+      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
     }
 
     const { error } = await supabase.from("tasks").delete().eq("id", payload.taskId);

@@ -45,6 +45,8 @@ export type WeddingTasksBoardViewModel = {
   weddingSlug: string;
   coupleName: string;
   cultureTags: string[];
+  /** Server only returned tasks tied to this user (assignee or raiser); UI skips extra “team member” narrowing. */
+  scopedToEmployeeTasks?: boolean;
   currentUserId: string;
   currentUserLabel: string;
   members: WeddingTasksBoardMemberOption[];

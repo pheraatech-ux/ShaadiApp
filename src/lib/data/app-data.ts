@@ -25,7 +25,9 @@ import {
   mapBudgetCategoryToBucket,
   type BudgetBucketId,
 } from "@/lib/budget-recommendations";
+import { resolvePersona } from "@/lib/employee/persona";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { taskTouchesWorkspaceUser } from "@/lib/wedding-task-scope";
 import type { Database } from "@/types/database";
 
 export type WorkspaceSidebarBadgeCounts = {
@@ -157,6 +159,7 @@ type TaskRow = {
   wedding_id: string;
   title: string;
   assignee_user_id: string | null;
+  raised_by_user_id: string | null;
   linked_event_id: string | null;
   status: "todo" | "in_progress" | "needs_review" | "done";
   due_date: string | null;
@@ -286,7 +289,7 @@ async function getTasksForWeddingIds(weddingIds: string[]) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("tasks")
-    .select("id, wedding_id, title, assignee_user_id, linked_event_id, status, due_date, completed_at")
+    .select("id, wedding_id, title, assignee_user_id, raised_by_user_id, linked_event_id, status, due_date, completed_at")
     .in("wedding_id", weddingIds)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -440,16 +443,28 @@ export const getAllWeddingsPageView = cache(async (): Promise<AllWeddingsPageVie
   }
 
   const supabase = await createSupabaseServerClient();
+  const persona = await resolvePersona(supabase, planner.userId);
   const [{ data: tasksData }, { data: docsData }] = await Promise.all([
     supabase
       .from("tasks")
-      .select("wedding_id, status, due_date")
+      .select("wedding_id, status, due_date, assignee_user_id, raised_by_user_id")
       .in("wedding_id", weddingIds),
     supabase
       .from("documents")
       .select("wedding_id")
       .in("wedding_id", weddingIds),
   ]);
+
+  type TaskAggRow = {
+    wedding_id: string;
+    status: string;
+    due_date: string | null;
+    assignee_user_id: string | null;
+    raised_by_user_id: string | null;
+  };
+  const rawTasks = (tasksData ?? []) as TaskAggRow[];
+  const tasksForStats =
+    persona === "employee" ? rawTasks.filter((t) => taskTouchesWorkspaceUser(t, planner.userId)) : rawTasks;
 
   const tasksByWedding = new Map<
     string,
@@ -460,7 +475,7 @@ export const getAllWeddingsPageView = cache(async (): Promise<AllWeddingsPageVie
     }
   >();
 
-  for (const task of tasksData ?? []) {
+  for (const task of tasksForStats) {
     const current = tasksByWedding.get(task.wedding_id) ?? { total: 0, done: 0, overdue: 0 };
     current.total += 1;
     if (task.status === "done") {
@@ -666,15 +681,16 @@ export const getEmployeeDashboardView = cache(async (): Promise<DashboardViewMod
   const weddings = await getAccessibleWeddings(planner.userId);
   const weddingIds = weddings.map((w) => w.id);
   const tasks = await getTasksForWeddingIds(weddingIds);
+  const scopedTasks = tasks.filter((task) => taskTouchesWorkspaceUser(task, planner.userId));
 
   const today = new Date().toISOString().slice(0, 10);
-  const overdueTasks = tasks.filter((task) => task.status !== "done" && task.due_date && task.due_date < today);
-  const pendingTasks = tasks.filter((task) => task.status === "todo");
-  const inProgressTasks = tasks.filter((task) => task.status === "in_progress");
-  const doneTaskIds = new Set(tasks.filter((task) => task.status === "done").map((task) => task.id));
+  const overdueTasks = scopedTasks.filter((task) => task.status !== "done" && task.due_date && task.due_date < today);
+  const pendingTasks = scopedTasks.filter((task) => task.status === "todo");
+  const inProgressTasks = scopedTasks.filter((task) => task.status === "in_progress");
+  const doneTaskIds = new Set(scopedTasks.filter((task) => task.status === "done").map((task) => task.id));
 
   const tasksByWedding = new Map<string, { total: number; done: number }>();
-  for (const task of tasks) {
+  for (const task of scopedTasks) {
     const current = tasksByWedding.get(task.wedding_id) ?? { total: 0, done: 0 };
     current.total += 1;
     if (doneTaskIds.has(task.id)) current.done += 1;
@@ -717,14 +733,14 @@ export const getEmployeeDashboardView = cache(async (): Promise<DashboardViewMod
         title: "Pending Tasks",
         value: String(pendingTasks.length),
         helperText: "Todo tasks",
-        progress: tasks.length > 0 ? Math.round((pendingTasks.length / tasks.length) * 100) : 0,
+        progress: scopedTasks.length > 0 ? Math.round((pendingTasks.length / scopedTasks.length) * 100) : 0,
       },
       {
         id: "tasks-in-progress",
         title: "In Progress Tasks",
         value: String(inProgressTasks.length),
         helperText: "Work currently underway",
-        progress: tasks.length > 0 ? Math.round((inProgressTasks.length / tasks.length) * 100) : 0,
+        progress: scopedTasks.length > 0 ? Math.round((inProgressTasks.length / scopedTasks.length) * 100) : 0,
       },
       {
         id: "active-weddings",
@@ -738,7 +754,7 @@ export const getEmployeeDashboardView = cache(async (): Promise<DashboardViewMod
         title: "Overdue Tasks",
         value: String(overdueTasks.length),
         helperText: "Across all accessible weddings",
-        progress: tasks.length > 0 ? Math.round((overdueTasks.length / tasks.length) * 100) : 0,
+        progress: scopedTasks.length > 0 ? Math.round((overdueTasks.length / scopedTasks.length) * 100) : 0,
       },
     ],
     alerts: [
@@ -746,7 +762,7 @@ export const getEmployeeDashboardView = cache(async (): Promise<DashboardViewMod
         ? [
             {
               id: "overdue",
-              message: `${overdueTasks.length} tasks are overdue and need attention.`,
+              message: `${overdueTasks.length} of your tasks are overdue and need attention.`,
               ctaLabel: "Review now",
             },
           ]
@@ -766,11 +782,12 @@ export const getWeddingWorkspaceBySlug = cache(
     if (!wedding) return null;
 
     const supabase = await createSupabaseServerClient();
+    const persona = await resolvePersona(supabase, planner.userId);
     const [{ data: tasksData }, { data: eventsData }, { data: vendorsData }, { data: membersData }] =
       await Promise.all([
         supabase
           .from("tasks")
-          .select("id, title, status, due_date")
+          .select("id, title, status, due_date, assignee_user_id, raised_by_user_id")
           .eq("wedding_id", wedding.id),
         supabase
           .from("wedding_events")
@@ -788,16 +805,37 @@ export const getWeddingWorkspaceBySlug = cache(
           .eq("wedding_id", wedding.id),
       ]);
 
-    const tasks = (tasksData ?? []) as { id: string; title: string; status: "todo" | "in_progress" | "needs_review" | "done"; due_date: string | null }[];
+    const tasks = (tasksData ?? []) as {
+      id: string;
+      title: string;
+      status: "todo" | "in_progress" | "needs_review" | "done";
+      due_date: string | null;
+      assignee_user_id: string | null;
+      raised_by_user_id: string | null;
+    }[];
     const events = (eventsData ?? []) as { id: string; title: string; event_date: string | null; culture_label: string | null }[];
     const vendors = (vendorsData ?? []) as { id: string; name: string; category: string; notes: string | null; status: "pending" | "confirmed" | "declined" }[];
     const members = (membersData ?? []) as WeddingMemberRow[];
 
+    const scopedTasks =
+      persona === "employee" ? tasks.filter((task) => taskTouchesWorkspaceUser(task, planner.userId)) : tasks;
+
     const activeMembers = members.filter((member) => member.status === "active");
     const currentMembership = activeMembers.find((member) => member.user_id === planner.userId);
-    const taskDoneCount = tasks.filter((task) => task.status === "done").length;
-    const dueSoonCount = tasks.filter((task) => task.status !== "done" && task.due_date && daysUntil(task.due_date) <= 7).length;
+    const taskDoneCount = scopedTasks.filter((task) => task.status === "done").length;
+    const dueSoonCount = scopedTasks.filter(
+      (task) => task.status !== "done" && task.due_date && daysUntil(task.due_date) <= 7,
+    ).length;
     const pendingVendors = vendors.filter((vendor) => vendor.status !== "confirmed");
+    const daysAway = daysUntil(wedding.wedding_date);
+    const countdownBadgeLabel = !wedding.wedding_date
+      ? "DATE NOT SET"
+      : daysAway === 0
+        ? "WEDDING DAY"
+        : `${daysAway} DAY${daysAway === 1 ? "" : "S"} AWAY`;
+    const cultureSummary = (wedding.cultures ?? [])[0] ?? "—";
+    const stripTotal = scopedTasks.length;
+    const stripProgress = stripTotal > 0 ? Math.round((taskDoneCount / stripTotal) * 100) : 0;
 
     return {
       id: wedding.slug,
@@ -806,7 +844,16 @@ export const getWeddingWorkspaceBySlug = cache(
       avatarLabel: getInitials(wedding.couple_name),
       locationLabel: wedding.city ?? "Not set",
       dateLabel: formatDateLabel(wedding.wedding_date),
-      daysLeftLabel: `${daysUntil(wedding.wedding_date)} days`,
+      daysLeftLabel: `${daysAway} days`,
+      daysAway,
+      countdownBadgeLabel,
+      cultureSummary,
+      weddingDetailsStrip: {
+        tasksDone: taskDoneCount,
+        tasksTotal: stripTotal,
+        teamMembers: activeMembers.length,
+        progressPercent: stripProgress,
+      },
       cultureTags: wedding.cultures ?? [],
       eventCountLabel: `${events.length} events`,
       navItems: [
@@ -836,7 +883,12 @@ export const getWeddingWorkspaceBySlug = cache(
           ? "You receive ownership-level access and reminders for this wedding."
           : "Assign a lead from the team page to activate lead-level reminders.",
       kpis: [
-        { id: "tasks", label: "Tasks", value: String(tasks.length), helperText: `${taskDoneCount} done, ${dueSoonCount} due soon` },
+        {
+          id: "tasks",
+          label: "Tasks",
+          value: String(scopedTasks.length),
+          helperText: `${taskDoneCount} done, ${dueSoonCount} due soon`,
+        },
         { id: "events", label: "Events", value: String(events.length), helperText: "Timeline driven by your DB records" },
         { id: "vendors", label: "Vendors", value: String(vendors.length), helperText: `${pendingVendors.length} pending confirmation` },
         {
@@ -899,6 +951,7 @@ export const getWorkspaceSidebarCounts = cache(
     }
 
     const supabase = await createSupabaseServerClient();
+    const persona = await resolvePersona(supabase, planner.userId);
     const [{ count: teamCount }, { count: vendorPendingCount }, { data: tasks }, { count: messageCount }] =
       await Promise.all([
         supabase
@@ -913,7 +966,7 @@ export const getWorkspaceSidebarCounts = cache(
           .neq("status", "confirmed"),
         supabase
           .from("tasks")
-          .select("status, due_date")
+          .select("status, due_date, assignee_user_id, raised_by_user_id")
           .eq("wedding_id", wedding.id),
         supabase
           .from("messages")
@@ -921,8 +974,21 @@ export const getWorkspaceSidebarCounts = cache(
           .eq("wedding_id", wedding.id),
       ]);
 
+    const taskRows = (tasks ?? []) as {
+      status: string;
+      due_date: string | null;
+      assignee_user_id: string | null;
+      raised_by_user_id: string | null;
+    }[];
+    const scopedForOverdue =
+      persona === "employee"
+        ? taskRows.filter((task) => taskTouchesWorkspaceUser(task, planner.userId))
+        : taskRows;
+
     const today = new Date().toISOString().slice(0, 10);
-    const taskOverdueCount = (tasks ?? []).filter((task) => task.status !== "done" && task.due_date && task.due_date < today).length;
+    const taskOverdueCount = scopedForOverdue.filter(
+      (task) => task.status !== "done" && task.due_date && task.due_date < today,
+    ).length;
 
     return {
       teamCount: teamCount ?? 0,
@@ -1373,6 +1439,7 @@ export const getWeddingTasksBoardViewBySlug = cache(
     if (!wedding) return null;
 
     const supabase = await createSupabaseServerClient();
+    const persona = await resolvePersona(supabase, planner.userId);
     const [{ data: taskRows }, { data: memberRows }, { data: eventRows }, { data: commentRows }] = await Promise.all([
       supabase
         .from("tasks")
@@ -1396,7 +1463,26 @@ export const getWeddingTasksBoardViewBySlug = cache(
     ]);
 
     const activeMembers = (memberRows ?? []) as WeddingMemberRow[];
-    const taskAssigneeIds = [...new Set((taskRows ?? []).map((task) => task.assignee_user_id).filter(Boolean))] as string[];
+    type BoardTaskRow = {
+      id: string;
+      title: string;
+      description: string | null;
+      status: "todo" | "in_progress" | "needs_review" | "done";
+      priority: "high" | "medium" | "low";
+      due_date: string | null;
+      linked_event_id: string | null;
+      assignee_user_id: string | null;
+      raised_by_user_id: string | null;
+      visibility: ("team_only" | "client_family" | "vendor")[] | null;
+      created_at: string;
+    };
+    const rawTaskRows = (taskRows ?? []) as BoardTaskRow[];
+    const taskRowsForBoard =
+      persona === "employee"
+        ? rawTaskRows.filter((task) => taskTouchesWorkspaceUser(task, planner.userId))
+        : rawTaskRows;
+
+    const taskAssigneeIds = [...new Set(taskRowsForBoard.map((task) => task.assignee_user_id).filter(Boolean))] as string[];
     const memberUserIds = [...new Set([...activeMembers.map((member) => member.user_id).filter(Boolean), ...taskAssigneeIds])] as string[];
     const { data: profileRows } =
       memberUserIds.length > 0
@@ -1453,19 +1539,7 @@ export const getWeddingTasksBoardViewBySlug = cache(
       commentCountByTaskId.set(row.task_id, (commentCountByTaskId.get(row.task_id) ?? 0) + 1);
     }
 
-    const tasks: WeddingTasksBoardTask[] = ((taskRows ?? []) as {
-      id: string;
-      title: string;
-      description: string | null;
-      status: "todo" | "in_progress" | "needs_review" | "done";
-      priority: "high" | "medium" | "low";
-      due_date: string | null;
-      linked_event_id: string | null;
-      assignee_user_id: string | null;
-      raised_by_user_id: string | null;
-      visibility: ("team_only" | "client_family" | "vendor")[] | null;
-      created_at: string;
-    }[]).map((task) => {
+    const tasks: WeddingTasksBoardTask[] = taskRowsForBoard.map((task) => {
       const assignee = memberOptions.find((member) => member.id === task.assignee_user_id) ?? null;
       const raisedBy = memberOptions.find((member) => member.id === task.raised_by_user_id) ?? null;
       const linkedEvent = task.linked_event_id ? eventById.get(task.linked_event_id) : null;
@@ -1521,6 +1595,7 @@ export const getWeddingTasksBoardViewBySlug = cache(
       weddingSlug,
       coupleName: wedding.couple_name,
       cultureTags: wedding.cultures ?? [],
+      scopedToEmployeeTasks: persona === "employee",
       currentUserId: planner.userId,
       currentUserLabel: memberOptions.find((member) => member.id === planner.userId)?.label ?? planner.displayName,
       members: memberOptions,

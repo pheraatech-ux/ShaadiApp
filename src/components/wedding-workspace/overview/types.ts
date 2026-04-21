@@ -57,6 +57,13 @@ export type WorkspaceTeamInviteSlot = {
   label: string;
 };
 
+export type WorkspaceWeddingDetailsStrip = {
+  tasksDone: number;
+  tasksTotal: number;
+  teamMembers: number;
+  progressPercent: number;
+};
+
 export type WeddingWorkspaceViewModel = {
   id: string;
   coupleName: string;
@@ -65,6 +72,13 @@ export type WeddingWorkspaceViewModel = {
   locationLabel: string;
   dateLabel: string;
   daysLeftLabel: string;
+  /** Calendar days until wedding date (0 if past / unset). */
+  daysAway: number;
+  /** Uppercase badge, e.g. "10 DAYS AWAY". */
+  countdownBadgeLabel: string;
+  /** Primary culture line in the details row (first tag or fallback). */
+  cultureSummary: string;
+  weddingDetailsStrip: WorkspaceWeddingDetailsStrip;
   cultureTags: string[];
   eventCountLabel: string;
   navItems: WorkspaceNavItem[];
