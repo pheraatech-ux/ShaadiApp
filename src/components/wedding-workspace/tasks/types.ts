@@ -46,6 +46,7 @@ export type WeddingTaskComment = {
 };
 
 export type WeddingTasksBoardViewModel = {
+  weddingId: string;
   weddingSlug: string;
   coupleName: string;
   cultureTags: string[];

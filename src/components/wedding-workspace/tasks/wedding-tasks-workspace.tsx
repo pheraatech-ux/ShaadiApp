@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Search, Sparkles } from "lucide-react";
 
 import { NewTaskDialog } from "@/components/wedding-workspace/tasks/new-task-dialog";
@@ -52,6 +54,23 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"super-admin" | "team-member">("super-admin");
+
+  useEffect(() => {
+    setTasks(view.tasks);
+  }, [view.tasks]);
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    const channel = supabase
+      .channel(`tasks:${view.weddingId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tasks", filter: `wedding_id=eq.${view.weddingId}` },
+        () => { router.refresh(); },
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [view.weddingId, router]);
 
   const summary = useMemo(() => {
     const total = tasks.length;

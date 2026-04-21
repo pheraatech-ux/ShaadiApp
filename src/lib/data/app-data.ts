@@ -1649,6 +1649,7 @@ export const getWeddingTasksBoardViewBySlug = cache(
         flagged,
       },
       memberSummaries,
+      weddingId: wedding.id,
     };
   },
 );
