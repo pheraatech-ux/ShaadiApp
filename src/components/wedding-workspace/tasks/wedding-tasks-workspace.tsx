@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useInvalidateTasks, useTasksQuery } from "@/components/wedding-workspace/tasks/use-tasks-query";
 import { Search, Sparkles } from "lucide-react";
 
 import { NewTaskDialog } from "@/components/wedding-workspace/tasks/new-task-dialog";
 import { TaskDetailDialog } from "@/components/wedding-workspace/tasks/task-detail-dialog";
 import { TaskKanbanColumn, type TaskLaneId } from "@/components/wedding-workspace/tasks/task-kanban-column";
 import { TaskKpiCards } from "@/components/wedding-workspace/tasks/task-kpi-cards";
-import type { WeddingTasksBoardStatus, WeddingTasksBoardTask, WeddingTasksBoardViewModel } from "@/components/wedding-workspace/tasks/types";
+import type { WeddingTasksBoardStatus, WeddingTasksBoardViewModel } from "@/components/wedding-workspace/tasks/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -28,21 +28,11 @@ type WeddingTasksWorkspaceProps = {
 type TopFilter = "all" | "my" | "overdue" | "unassigned" | "flagged";
 type StatusFilter = "all" | WeddingTasksBoardStatus;
 
-function enrichTask(task: WeddingTasksBoardTask) {
-  const today = new Date().toISOString().slice(0, 10);
-  const oneWeekFromNow = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-  const isOverdue = Boolean(task.status !== "done" && task.dueDate && task.dueDate < today);
-  const isDueThisWeek = Boolean(task.status !== "done" && task.dueDate && task.dueDate >= today && task.dueDate <= oneWeekFromNow);
-  return {
-    ...task,
-    isOverdue,
-    isDueThisWeek,
-  };
-}
 
 export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
-  const router = useRouter();
-  const [tasks, setTasks] = useState(view.tasks);
+  const { data: tasks } = useTasksQuery(view.weddingSlug, view.tasks);
+  const invalidateTasks = useInvalidateTasks(view.weddingSlug);
+
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dragOverLaneId, setDragOverLaneId] = useState<TaskLaneId | null>(null);
@@ -56,21 +46,17 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
   const [viewMode, setViewMode] = useState<"super-admin" | "team-member">("super-admin");
 
   useEffect(() => {
-    setTasks(view.tasks);
-  }, [view.tasks]);
-
-  useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     const channel = supabase
       .channel(`tasks:${view.weddingId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tasks", filter: `wedding_id=eq.${view.weddingId}` },
-        () => { router.refresh(); },
+        () => { void invalidateTasks(); },
       )
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, [view.weddingId, router]);
+  }, [view.weddingId, invalidateTasks]);
 
   const summary = useMemo(() => {
     const total = tasks.length;
@@ -131,19 +117,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
   }, [filteredTasks]);
 
   async function patchTask(taskId: string, updates: { status?: WeddingTasksBoardStatus }) {
-    const previousTasks = tasks;
     setBusyTaskId(taskId);
-
-    if (updates.status) {
-      setTasks((current) =>
-        current.map((task) =>
-          task.id === taskId
-            ? enrichTask({ ...task, status: updates.status as WeddingTasksBoardStatus })
-            : task,
-        ),
-      );
-    }
-
     try {
       const response = await fetch(`/api/weddings/${view.weddingSlug}/tasks`, {
         method: "PATCH",
@@ -151,13 +125,8 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskId, status: updates.status }),
       });
-
-      if (!response.ok) {
-        throw new Error("Unable to update task.");
-      }
-      router.refresh();
-    } catch {
-      setTasks(previousTasks);
+      if (!response.ok) throw new Error("Unable to update task.");
+      await invalidateTasks();
     } finally {
       setBusyTaskId(null);
     }
@@ -430,9 +399,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
         currentUserLabel={view.currentUserLabel}
         members={view.members}
         events={view.events}
-        onTaskCreated={() => {
-          router.refresh();
-        }}
+        onTaskCreated={() => { void invalidateTasks(); }}
       />
       <TaskDetailDialog
         weddingSlug={view.weddingSlug}
@@ -440,23 +407,10 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
         members={view.members}
         open={taskDetailOpen}
         onOpenChange={setTaskDetailOpen}
-        onTaskUpdated={(taskId, updates) => {
-          setTasks((current) =>
-            current.map((task) =>
-              task.id === taskId
-                ? enrichTask({
-                    ...task,
-                    ...updates,
-                  })
-                : task,
-            ),
-          );
-          router.refresh();
-        }}
-        onTaskDeleted={(taskId) => {
-          setTasks((current) => current.filter((task) => task.id !== taskId));
+        onTaskUpdated={() => { void invalidateTasks(); }}
+        onTaskDeleted={() => {
           setSelectedTaskId(null);
-          router.refresh();
+          void invalidateTasks();
         }}
       />
     </div>
