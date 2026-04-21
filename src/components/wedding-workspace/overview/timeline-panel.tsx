@@ -23,7 +23,7 @@ export function TimelinePanel({ workspace }: TimelinePanelProps) {
           </Button>
         </div>
       </header>
-      <div className="divide-y divide-border/60">
+      <div className="max-h-[320px] overflow-y-auto divide-y divide-border/60">
         {workspace.timelineEvents.length === 0 ? (
           <p className="px-4 py-4 text-sm text-muted-foreground">
             No events in timeline yet.

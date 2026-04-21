@@ -4,7 +4,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WeddingWorkspaceViewModel } from "@/components/wedding-workspace/overview/types";
-import { cn } from "@/lib/utils";
 
 type TeamPanelProps = {
   workspace: WeddingWorkspaceViewModel;
@@ -14,7 +13,7 @@ export function TeamPanel({ workspace }: TeamPanelProps) {
   return (
     <section className="rounded-xl border border-border/70 bg-card">
       <header className="flex items-center justify-between border-b border-border/70 px-4 py-3">
-        <h2 className="text-sm font-semibold text-foreground">Team</h2>
+        <h2 className="text-sm font-semibold text-foreground">Team on this event</h2>
         <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground">
           Manage
         </Button>
@@ -47,20 +46,15 @@ export function TeamPanel({ workspace }: TeamPanelProps) {
             </div>
           ))
         )}
-        {workspace.teamInvites.map((slot) => (
-          <button
-            key={slot.id}
-            type="button"
-            className={cn(
-              "flex w-full items-center gap-3 rounded-lg border border-dashed border-border/80 bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-muted/40",
-            )}
-          >
-            <span className="flex size-9 items-center justify-center rounded-full border border-dashed border-muted-foreground/40">
-              <UserPlus className="size-4 text-muted-foreground" />
-            </span>
-            <span className="text-sm text-muted-foreground">{slot.label}</span>
-          </button>
-        ))}
+        <button
+          type="button"
+          className="flex w-full items-center gap-3 rounded-lg border border-dashed border-border/80 bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
+        >
+          <span className="flex size-9 items-center justify-center rounded-full border border-dashed border-muted-foreground/40">
+            <UserPlus className="size-4 text-muted-foreground" />
+          </span>
+          <span className="text-sm text-muted-foreground">Invite team member</span>
+        </button>
       </div>
       <footer className="flex items-start gap-2 border-t border-border/70 px-4 py-3">
         <Info className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />

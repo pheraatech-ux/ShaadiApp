@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { WeddingWorkspaceOverview } from "@/components/wedding-workspace/overview/wedding-workspace-overview";
-import { getWeddingWorkspaceBySlug } from "@/lib/data/app-data";
+import { getWeddingWorkspaceBySlug, getWeddingTasksBoardViewBySlug } from "@/lib/data/app-data";
 
 type EmployeeWeddingWorkspacePageProps = {
   params: Promise<{ weddingId: string }>;
@@ -9,10 +9,22 @@ type EmployeeWeddingWorkspacePageProps = {
 
 export default async function EmployeeWeddingWorkspacePage({ params }: EmployeeWeddingWorkspacePageProps) {
   const { weddingId } = await params;
-  const workspace = await getWeddingWorkspaceBySlug(weddingId);
+  const [workspace, tasksBoard] = await Promise.all([
+    getWeddingWorkspaceBySlug(weddingId),
+    getWeddingTasksBoardViewBySlug(weddingId),
+  ]);
   if (!workspace) {
     notFound();
   }
 
-  return <WeddingWorkspaceOverview workspace={workspace} hideWorkspaceSetup />;
+  const assignedTasks = (tasksBoard?.tasks ?? []).filter((t) => t.isAssignedToCurrentUser);
+
+  return (
+    <WeddingWorkspaceOverview
+      workspace={workspace}
+      hideWorkspaceSetup
+      hideVendors
+      assignedTasks={assignedTasks}
+    />
+  );
 }

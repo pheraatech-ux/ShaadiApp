@@ -1,17 +1,23 @@
 import { WorkspaceSetupAndLead } from "@/components/wedding-workspace/overview/workspace-setup-and-lead";
 import { TeamPanel } from "@/components/wedding-workspace/overview/team-panel";
 import { TimelinePanel } from "@/components/wedding-workspace/overview/timeline-panel";
+import { TasksForWeddingPanel } from "@/components/wedding-workspace/overview/tasks-for-wedding-panel";
 import { VendorsNeededPanel } from "@/components/wedding-workspace/overview/vendors-needed-panel";
 import { WorkspaceWeddingDetailsHeader } from "@/components/wedding-workspace/overview/workspace-wedding-details-header";
 import { WeddingWorkspaceViewModel } from "@/components/wedding-workspace/overview/types";
+import { WeddingTasksBoardTask } from "@/components/wedding-workspace/tasks/types";
 
 type WeddingWorkspaceOverviewProps = {
   workspace: WeddingWorkspaceViewModel;
   /** Hide setup chips + lead banner (e.g. employee wedding workspace). */
   hideWorkspaceSetup?: boolean;
+  /** Hide vendors needed panel (e.g. employee wedding workspace). */
+  hideVendors?: boolean;
+  /** Employee-scoped tasks to show above the timeline (employee view only). */
+  assignedTasks?: WeddingTasksBoardTask[];
 };
 
-export function WeddingWorkspaceOverview({ workspace, hideWorkspaceSetup = false }: WeddingWorkspaceOverviewProps) {
+export function WeddingWorkspaceOverview({ workspace, hideWorkspaceSetup = false, hideVendors = false, assignedTasks }: WeddingWorkspaceOverviewProps) {
   const overviewSubtitle = `Overview — ${workspace.plannerName} • ${workspace.eventCountLabel} • ${workspace.dateLabel}`;
 
   return (
@@ -27,10 +33,11 @@ export function WeddingWorkspaceOverview({ workspace, hideWorkspaceSetup = false
       />
       <p className="text-sm text-muted-foreground">{overviewSubtitle}</p>
       {hideWorkspaceSetup ? null : <WorkspaceSetupAndLead workspace={workspace} />}
+      {assignedTasks ? <TasksForWeddingPanel tasks={assignedTasks} /> : null}
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <TimelinePanel workspace={workspace} />
         <div className="flex flex-col gap-4">
-          <VendorsNeededPanel workspace={workspace} />
+          {hideVendors ? null : <VendorsNeededPanel workspace={workspace} />}
           <TeamPanel workspace={workspace} />
         </div>
       </div>
