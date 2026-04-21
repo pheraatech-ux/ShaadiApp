@@ -17,6 +17,8 @@ export type AllWeddingRow = {
   stage: AllWeddingsStage;
   stageLabel: string;
   overdueCount: number;
+  /** Open tasks: not done and not yet overdue (on time or no due date). */
+  pendingCount: number;
   tasksDone: number;
   tasksTotal: number;
   taskSubtitle: string;

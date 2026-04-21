@@ -30,6 +30,8 @@ function stageToneClassName(stage: AllWeddingRow["stage"]) {
 }
 
 export function AllWeddingsListView({ items, basePath = "/app" }: AllWeddingsListViewProps) {
+  const employeeLayout = basePath === "/app/employee";
+
   return (
     <section className="overflow-hidden rounded-2xl border border-border/70 bg-card">
       <header className="hidden grid-cols-[2fr_0.9fr_1fr_0.9fr_1fr_1fr_auto] items-center gap-3 border-b border-border/60 px-4 py-2 text-[11px] font-medium tracking-wide text-muted-foreground uppercase md:grid">
@@ -38,7 +40,7 @@ export function AllWeddingsListView({ items, basePath = "/app" }: AllWeddingsLis
         <span>Tasks</span>
         <span>Days away</span>
         <span>Documents</span>
-        <span>Budget</span>
+        <span>{employeeLayout ? "Task counts" : "Budget"}</span>
         <span className="text-right">Action</span>
       </header>
 
@@ -89,17 +91,34 @@ export function AllWeddingsListView({ items, basePath = "/app" }: AllWeddingsLis
               <p className="text-muted-foreground">files</p>
             </div>
 
-            <div className="space-y-1 text-xs">
-              <p className="font-semibold text-foreground">{item.budgetLabel}</p>
-              <div className="flex flex-wrap gap-1">
-                <span className="rounded-md bg-emerald-500/15 px-1.5 py-0 text-emerald-700 dark:text-emerald-300">
-                  Proposal: {item.proposalStatus}
-                </span>
-                <span className="rounded-md bg-amber-500/15 px-1.5 py-0 text-amber-700 dark:text-amber-300">
-                  Invoice: {item.invoiceStatus}
-                </span>
+            {employeeLayout ? (
+              <div className="grid grid-cols-3 gap-1 text-center text-xs md:max-w-[200px]">
+                <div>
+                  <p className="text-lg font-semibold tabular-nums text-amber-500 dark:text-amber-400">{item.pendingCount}</p>
+                  <p className="text-[9px] font-medium uppercase leading-tight text-muted-foreground">Pending</p>
+                </div>
+                <div>
+                  <p className="text-lg font-semibold tabular-nums text-red-500 dark:text-red-400">{item.overdueCount}</p>
+                  <p className="text-[9px] font-medium uppercase leading-tight text-muted-foreground">Overdue</p>
+                </div>
+                <div>
+                  <p className="text-lg font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{item.tasksDone}</p>
+                  <p className="text-[9px] font-medium uppercase leading-tight text-muted-foreground">Done</p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-1 text-xs">
+                <p className="font-semibold text-foreground">{item.budgetLabel}</p>
+                <div className="flex flex-wrap gap-1">
+                  <span className="rounded-md bg-emerald-500/15 px-1.5 py-0 text-emerald-700 dark:text-emerald-300">
+                    Proposal: {item.proposalStatus}
+                  </span>
+                  <span className="rounded-md bg-amber-500/15 px-1.5 py-0 text-amber-700 dark:text-amber-300">
+                    Invoice: {item.invoiceStatus}
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end">
               <Button variant="ghost" size="icon-sm" className="rounded-lg text-muted-foreground">

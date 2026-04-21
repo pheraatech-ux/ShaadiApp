@@ -521,6 +521,7 @@ export const getAllWeddingsPageView = cache(async (): Promise<AllWeddingsPageVie
       stage,
       stageLabel,
       overdueCount: taskStats.overdue,
+      pendingCount: Math.max(0, taskStats.total - taskStats.done - taskStats.overdue),
       tasksDone: taskStats.done,
       tasksTotal: taskStats.total,
       taskSubtitle,

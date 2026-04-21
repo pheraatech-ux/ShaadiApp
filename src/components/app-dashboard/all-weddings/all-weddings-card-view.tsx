@@ -28,6 +28,8 @@ function stageToneClassName(stage: AllWeddingRow["stage"]) {
 }
 
 export function AllWeddingsCardView({ items, basePath = "/app" }: AllWeddingsCardViewProps) {
+  const employeeLayout = basePath === "/app/employee";
+
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {items.map((item) => {
@@ -88,7 +90,7 @@ export function AllWeddingsCardView({ items, basePath = "/app" }: AllWeddingsCar
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Tasks</span>
+                  <span>{employeeLayout ? "Task progress" : "Tasks"}</span>
                   <span>
                     {item.tasksDone}/{item.tasksTotal}
                   </span>
@@ -97,7 +99,11 @@ export function AllWeddingsCardView({ items, basePath = "/app" }: AllWeddingsCar
                   <div
                     className={cn(
                       "h-1.5 rounded-full transition-all",
-                      item.overdueCount > 0 ? "bg-red-500/80" : "bg-emerald-500/80",
+                      employeeLayout
+                        ? "bg-violet-500/85 dark:bg-violet-400/80"
+                        : item.overdueCount > 0
+                          ? "bg-red-500/80"
+                          : "bg-emerald-500/80",
                     )}
                     style={{ width: `${progress}%` }}
                   />
@@ -105,15 +111,38 @@ export function AllWeddingsCardView({ items, basePath = "/app" }: AllWeddingsCar
                 <p className="text-[11px] text-muted-foreground">{item.taskSubtitle}</p>
               </div>
 
-              <footer className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
-                <span className="rounded-md bg-emerald-500/15 px-2 py-1 text-emerald-700 dark:text-emerald-300">
-                  Proposal: {item.proposalStatus}
-                </span>
-                <span className="rounded-md bg-amber-500/15 px-2 py-1 text-amber-700 dark:text-amber-300">
-                  Invoice: {item.invoiceStatus}
-                </span>
-                <span className="rounded-md bg-muted px-2 py-1 text-muted-foreground">{item.budgetLabel}</span>
-              </footer>
+              {employeeLayout ? (
+                <div className="grid grid-cols-3 gap-2 border-t border-border/60 pt-3">
+                  <div className="text-center">
+                    <p className="text-2xl font-semibold tabular-nums text-amber-500 dark:text-amber-400">
+                      {item.pendingCount}
+                    </p>
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Pending</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-semibold tabular-nums text-red-500 dark:text-red-400">
+                      {item.overdueCount}
+                    </p>
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Overdue</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+                      {item.tasksDone}
+                    </p>
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Done</p>
+                  </div>
+                </div>
+              ) : (
+                <footer className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
+                  <span className="rounded-md bg-emerald-500/15 px-2 py-1 text-emerald-700 dark:text-emerald-300">
+                    Proposal: {item.proposalStatus}
+                  </span>
+                  <span className="rounded-md bg-amber-500/15 px-2 py-1 text-amber-700 dark:text-amber-300">
+                    Invoice: {item.invoiceStatus}
+                  </span>
+                  <span className="rounded-md bg-muted px-2 py-1 text-muted-foreground">{item.budgetLabel}</span>
+                </footer>
+              )}
             </article>
           </Link>
         );
