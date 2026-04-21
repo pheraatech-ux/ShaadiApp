@@ -35,18 +35,27 @@ type AppSidebarProps = {
   counts: AppSidebarCounts;
   /** Planner `/app` or staff `/app/employee`. */
   basePath?: string;
+  hideBudgetTab?: boolean;
 };
 
-export function AppSidebar({ userName, userEmail, counts, basePath = "/app" }: AppSidebarProps) {
+export function AppSidebar({
+  userName,
+  userEmail,
+  counts,
+  basePath = "/app",
+  hideBudgetTab = false,
+}: AppSidebarProps) {
   const pathname = usePathname() ?? `${basePath}/dashboard`;
   const sidebarItems: SidebarItem[] = [
     { label: "Dashboard", href: `${basePath}/dashboard`, icon: LayoutGrid },
     { label: "All Weddings", href: `${basePath}/weddings`, icon: BookHeart, badgeCount: counts.weddings },
     { label: "Teams", href: `${basePath}/team`, icon: Users, badgeCount: counts.team },
     { label: "Tasks", href: `${basePath}/tasks`, icon: ClipboardList, badgeCount: counts.tasksOverdue },
-    { label: "Budget", href: `${basePath}/budget`, icon: Wallet },
     { label: "Messages", href: `${basePath}/messages`, icon: MessageSquare, badgeCount: counts.messages },
   ];
+  if (!hideBudgetTab) {
+    sidebarItems.splice(4, 0, { label: "Budget", href: `${basePath}/budget`, icon: Wallet });
+  }
 
   function isPathActive(href: string) {
     return pathname === href || pathname.startsWith(`${href}/`);

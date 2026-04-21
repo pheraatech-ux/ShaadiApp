@@ -12,6 +12,7 @@ export async function EmployeeSidebarLive() {
       userEmail={planner.userEmail}
       counts={counts}
       basePath={EMPLOYEE_BASE}
+      hideBudgetTab
     />
   );
 }

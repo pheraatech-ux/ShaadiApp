@@ -157,6 +157,7 @@ type TaskRow = {
   wedding_id: string;
   title: string;
   assignee_user_id: string | null;
+  linked_event_id: string | null;
   status: "todo" | "in_progress" | "needs_review" | "done";
   due_date: string | null;
   completed_at: string | null;
@@ -285,11 +286,82 @@ async function getTasksForWeddingIds(weddingIds: string[]) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("tasks")
-    .select("id, wedding_id, title, assignee_user_id, status, due_date, completed_at")
+    .select("id, wedding_id, title, assignee_user_id, linked_event_id, status, due_date, completed_at")
     .in("wedding_id", weddingIds)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as TaskRow[];
+}
+
+async function buildUrgentTaskItems(
+  overdueTasks: TaskRow[],
+  weddings: WeddingRow[],
+  tasksAppRoot: "/app" | "/app/employee",
+): Promise<DashboardViewModel["urgentTasks"]> {
+  const sorted = [...overdueTasks].sort((a, b) => {
+    if (!a.due_date) return 1;
+    if (!b.due_date) return -1;
+    return a.due_date.localeCompare(b.due_date);
+  });
+  const sliced = sorted.slice(0, 5);
+  if (!sliced.length) return [];
+
+  const supabase = await createSupabaseServerClient();
+  const weddingById = new Map(weddings.map((w) => [w.id, w]));
+  const taskIds = sliced.map((t) => t.id);
+  const eventIds = [...new Set(sliced.map((t) => t.linked_event_id).filter(Boolean))] as string[];
+
+  const [{ data: commentRows }, { data: eventRows }] = await Promise.all([
+    supabase.from("task_comments").select("task_id").in("task_id", taskIds),
+    eventIds.length
+      ? supabase.from("wedding_events").select("id, title").in("id", eventIds)
+      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+  ]);
+
+  const commentCountByTask = new Map<string, number>();
+  for (const row of commentRows ?? []) {
+    const tid = row.task_id;
+    commentCountByTask.set(tid, (commentCountByTask.get(tid) ?? 0) + 1);
+  }
+
+  const eventTitleById = new Map((eventRows ?? []).map((e) => [e.id, e.title]));
+
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  return sliced.map((task) => {
+    const wedding = weddingById.get(task.wedding_id);
+    const slug = wedding?.slug ?? "";
+    const coupleName = wedding?.couple_name ?? "Wedding";
+    const due = task.due_date;
+    const dueDt = due ? new Date(`${due}T00:00:00`) : null;
+    const daysOverdue = dueDt
+      ? Math.max(1, Math.ceil((todayStart.getTime() - dueDt.getTime()) / 86400000))
+      : undefined;
+
+    const dueDateLabel = dueDt
+      ? dueDt.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+      : undefined;
+
+    const contextLabel = task.linked_event_id
+      ? (eventTitleById.get(task.linked_event_id) ?? "General")
+      : "General";
+
+    const href = slug ? `${tasksAppRoot}/weddings/${encodeURIComponent(slug)}/tasks` : undefined;
+
+    return {
+      id: task.id,
+      title: task.title,
+      owner: "Team",
+      overdueLabel: daysOverdue ? `${daysOverdue}d overdue` : undefined,
+      taskHref: href,
+      coupleName,
+      contextLabel,
+      dueDateLabel,
+      daysOverdue,
+      commentCount: commentCountByTask.get(task.id) ?? 0,
+    };
+  });
 }
 
 export const getWorkspaceShellInfo = cache(async () => {
@@ -516,12 +588,7 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
     };
   });
 
-  const urgentTasks = overdueTasks.slice(0, 5).map((task) => ({
-    id: task.id,
-    title: task.title,
-    owner: "Team",
-    overdueLabel: task.due_date ? `${Math.max(1, Math.ceil((Date.now() - new Date(`${task.due_date}T00:00:00`).getTime()) / 86400000))}d overdue` : undefined,
-  }));
+  const urgentTasks = await buildUrgentTaskItems(overdueTasks, weddings, "/app");
 
   const weekdayIds = [
     { id: "monday", label: "M" },
@@ -627,12 +694,7 @@ export const getEmployeeDashboardView = cache(async (): Promise<DashboardViewMod
     };
   });
 
-  const urgentTasks = overdueTasks.slice(0, 5).map((task) => ({
-    id: task.id,
-    title: task.title,
-    owner: "Team",
-    overdueLabel: task.due_date ? `${Math.max(1, Math.ceil((Date.now() - new Date(`${task.due_date}T00:00:00`).getTime()) / 86400000))}d overdue` : undefined,
-  }));
+  const urgentTasks = await buildUrgentTaskItems(overdueTasks, weddings, "/app/employee");
 
   const weekdayIds = [
     { id: "monday", label: "M" },

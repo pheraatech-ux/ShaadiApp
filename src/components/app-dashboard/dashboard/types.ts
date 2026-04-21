@@ -31,6 +31,15 @@ export type UrgentTaskItem = {
   owner: string;
   overdueLabel?: string;
   completed?: boolean;
+  /** Wedding workspace deep link (tasks board). */
+  taskHref?: string;
+  coupleName?: string;
+  /** Linked event title, or a general label when none. */
+  contextLabel?: string;
+  /** e.g. "5 Dec" */
+  dueDateLabel?: string;
+  daysOverdue?: number;
+  commentCount?: number;
 };
 
 export type WeeklyCompletionDay = {
