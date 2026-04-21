@@ -1385,6 +1385,7 @@ export const getWeddingTeamViewBySlug = cache(
       const displayName = member.user_id === planner.userId ? `${planner.displayName} (you)` : member.display_name ?? member.invited_email ?? "Team member";
       return {
         id: member.id,
+        userId: member.user_id ?? null,
         name: displayName,
         subtitle: `${member.role} • ${member.status}`,
         avatarLabel: getInitials(displayName),

@@ -3,6 +3,8 @@ export type WeddingAccessLevel = "full" | "coordinator" | "removed";
 
 export type TeamMemberRow = {
   id: string;
+  /** The auth user_id — used to link to the member profile page. */
+  userId: string | null;
   name: string;
   subtitle: string;
   avatarLabel: string;
