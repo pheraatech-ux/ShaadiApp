@@ -13,6 +13,7 @@ export async function EmployeeSidebarLive() {
       counts={counts}
       basePath={EMPLOYEE_BASE}
       hideBudgetTab
+      hideTeamTab
     />
   );
 }

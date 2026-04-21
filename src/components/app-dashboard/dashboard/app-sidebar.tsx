@@ -36,6 +36,7 @@ type AppSidebarProps = {
   /** Planner `/app` or staff `/app/employee`. */
   basePath?: string;
   hideBudgetTab?: boolean;
+  hideTeamTab?: boolean;
 };
 
 export function AppSidebar({
@@ -44,12 +45,13 @@ export function AppSidebar({
   counts,
   basePath = "/app",
   hideBudgetTab = false,
+  hideTeamTab = false,
 }: AppSidebarProps) {
   const pathname = usePathname() ?? `${basePath}/dashboard`;
   const sidebarItems: SidebarItem[] = [
     { label: "Dashboard", href: `${basePath}/dashboard`, icon: LayoutGrid },
     { label: "All Weddings", href: `${basePath}/weddings`, icon: BookHeart, badgeCount: counts.weddings },
-    { label: "Teams", href: `${basePath}/team`, icon: Users, badgeCount: counts.team },
+    ...(!hideTeamTab ? [{ label: "Teams", href: `${basePath}/team`, icon: Users, badgeCount: counts.team } as SidebarItem] : []),
     { label: "Tasks", href: `${basePath}/tasks`, icon: ClipboardList, badgeCount: counts.tasksOverdue },
     { label: "Messages", href: `${basePath}/messages`, icon: MessageSquare, badgeCount: counts.messages },
   ];
