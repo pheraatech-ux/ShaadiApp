@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -87,7 +88,7 @@ export function NewTaskDialog({
   const [priority, setPriority] = useState<TaskPriority>("high");
   const [linkedEventId, setLinkedEventId] = useState("general");
   const [dueDate, setDueDate] = useState("");
-  const [assigneeUserId, setAssigneeUserId] = useState("unassigned");
+  const [assigneeUserIds, setAssigneeUserIds] = useState<string[]>([]);
   const [visibility, setVisibility] = useState<TaskVisibility[]>(["team_only"]);
   const [status, setStatus] = useState<WeddingTasksBoardStatus>("todo");
   const [submitting, setSubmitting] = useState(false);
@@ -99,7 +100,7 @@ export function NewTaskDialog({
     setPriority("high");
     setLinkedEventId("general");
     setDueDate("");
-    setAssigneeUserId("unassigned");
+    setAssigneeUserIds([]);
     setVisibility(["team_only"]);
     setStatus("todo");
     setError(null);
@@ -132,7 +133,7 @@ export function NewTaskDialog({
           priority,
           linkedEventId: linkedEventId === "general" ? null : linkedEventId,
           dueDate: dueDate || null,
-          assigneeUserId: assigneeUserId === "unassigned" ? null : assigneeUserId,
+          assigneeUserIds,
           visibility,
           status,
         }),
@@ -240,28 +241,44 @@ export function NewTaskDialog({
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Assign to</label>
-                <Select
-                  value={assigneeUserId}
-                  onValueChange={(value) => {
-                    if (!value) return;
-                    setAssigneeUserId(value);
-                  }}
-                >
-                  <SelectTrigger
-                    className="h-11 w-full rounded-xl border-border/70 bg-muted/40 px-3"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {members.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.isCurrentUser ? `${member.label} (you)` : member.label} - {roleLabel(member.role)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <label className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+                  Assign to
+                  {assigneeUserIds.length > 0 && (
+                    <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                      {assigneeUserIds.length}
+                    </span>
+                  )}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {members.map((member) => {
+                    const selected = assigneeUserIds.includes(member.id);
+                    return (
+                      <button
+                        key={member.id}
+                        type="button"
+                        onClick={() =>
+                          setAssigneeUserIds((current) =>
+                            current.includes(member.id)
+                              ? current.filter((id) => id !== member.id)
+                              : [...current, member.id],
+                          )
+                        }
+                        className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
+                          selected
+                            ? "border-primary/60 bg-primary/15 text-primary"
+                            : "border-border/70 bg-background text-muted-foreground hover:border-border hover:text-foreground"
+                        }`}
+                      >
+                        {selected && <Check className="size-3" />}
+                        {member.isCurrentUser ? `${member.label} (you)` : member.label}
+                        <span className="text-muted-foreground/60">· {roleLabel(member.role)}</span>
+                      </button>
+                    );
+                  })}
+                  {members.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No active members on this wedding yet.</p>
+                  )}
+                </div>
               </div>
             </div>
 

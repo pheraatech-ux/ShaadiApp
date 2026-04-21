@@ -1445,7 +1445,7 @@ export const getWeddingTasksBoardViewBySlug = cache(
     const [{ data: taskRows }, { data: memberRows }, { data: eventRows }, { data: commentRows }] = await Promise.all([
       supabase
         .from("tasks")
-        .select("id, title, description, status, priority, due_date, linked_event_id, assignee_user_id, raised_by_user_id, visibility, created_at")
+        .select("id, title, description, status, priority, due_date, linked_event_id, assignee_user_id, assignee_user_ids, raised_by_user_id, visibility, created_at")
         .eq("wedding_id", wedding.id)
         .order("created_at", { ascending: false }),
       supabase
@@ -1474,6 +1474,7 @@ export const getWeddingTasksBoardViewBySlug = cache(
       due_date: string | null;
       linked_event_id: string | null;
       assignee_user_id: string | null;
+      assignee_user_ids: string[];
       raised_by_user_id: string | null;
       visibility: ("team_only" | "client_family" | "vendor")[] | null;
       created_at: string;
@@ -1481,10 +1482,22 @@ export const getWeddingTasksBoardViewBySlug = cache(
     const rawTaskRows = (taskRows ?? []) as BoardTaskRow[];
     const taskRowsForBoard =
       persona === "employee"
-        ? rawTaskRows.filter((task) => taskTouchesWorkspaceUser(task, planner.userId))
+        ? rawTaskRows.filter((task) =>
+            taskTouchesWorkspaceUser(
+              { ...task, assignee_user_ids: task.assignee_user_ids ?? [] },
+              planner.userId,
+            ),
+          )
         : rawTaskRows;
 
-    const taskAssigneeIds = [...new Set(taskRowsForBoard.map((task) => task.assignee_user_id).filter(Boolean))] as string[];
+    const taskAssigneeIds = [
+      ...new Set(
+        taskRowsForBoard.flatMap((task) => {
+          const ids = task.assignee_user_ids ?? [];
+          return ids.length > 0 ? ids : task.assignee_user_id ? [task.assignee_user_id] : [];
+        }),
+      ),
+    ] as string[];
     const memberUserIds = [...new Set([...activeMembers.map((member) => member.user_id).filter(Boolean), ...taskAssigneeIds])] as string[];
     const { data: profileRows } =
       memberUserIds.length > 0
@@ -1542,7 +1555,20 @@ export const getWeddingTasksBoardViewBySlug = cache(
     }
 
     const tasks: WeddingTasksBoardTask[] = taskRowsForBoard.map((task) => {
-      const assignee = memberOptions.find((member) => member.id === task.assignee_user_id) ?? null;
+      const assigneeIds: string[] =
+        (task.assignee_user_ids ?? []).length > 0
+          ? task.assignee_user_ids
+          : task.assignee_user_id
+            ? [task.assignee_user_id]
+            : [];
+      const primaryAssigneeId = assigneeIds[0] ?? null;
+      const assigneeMembers = assigneeIds
+        .map((uid) => memberOptions.find((member) => member.id === uid) ?? null)
+        .filter(Boolean) as typeof memberOptions;
+      const primaryAssignee = assigneeMembers[0] ?? null;
+      const assigneeLabels = assigneeMembers.map((member) =>
+        member.isCurrentUser ? `${member.label} (you)` : member.label,
+      );
       const raisedBy = memberOptions.find((member) => member.id === task.raised_by_user_id) ?? null;
       const linkedEvent = task.linked_event_id ? eventById.get(task.linked_event_id) : null;
       const overdue = Boolean(task.status !== "done" && task.due_date && task.due_date < today);
@@ -1556,13 +1582,20 @@ export const getWeddingTasksBoardViewBySlug = cache(
         dueDate: task.due_date,
         linkedEventId: task.linked_event_id,
         linkedEventLabel: linkedEvent?.title ?? "General (no event)",
-        assigneeId: task.assignee_user_id,
-        assigneeLabel: assignee?.isCurrentUser ? `${assignee.label} (you)` : assignee?.label ?? "Unassigned",
+        assigneeId: primaryAssigneeId,
+        assigneeIds,
+        assigneeLabel:
+          assigneeLabels.length > 0
+            ? assigneeLabels.length === 1
+              ? assigneeLabels[0]
+              : `${assigneeLabels[0]} +${assigneeLabels.length - 1}`
+            : "Unassigned",
+        assigneeLabels: assigneeLabels.length > 0 ? assigneeLabels : ["Unassigned"],
         raisedByUserId: task.raised_by_user_id,
         raisedByLabel: raisedBy?.isCurrentUser ? `${raisedBy.label} (me)` : raisedBy?.label ?? "Team member",
         visibility: task.visibility ?? ["team_only"],
         commentCount: commentCountByTaskId.get(task.id) ?? 0,
-        isAssignedToCurrentUser: task.assignee_user_id === planner.userId,
+        isAssignedToCurrentUser: assigneeIds.includes(planner.userId),
         isOverdue: overdue,
         isDueThisWeek: dueThisWeek,
         createdAt: task.created_at,

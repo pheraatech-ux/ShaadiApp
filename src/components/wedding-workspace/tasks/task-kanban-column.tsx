@@ -1,10 +1,8 @@
 "use client";
 
-import { AlertCircle, MessageCircle } from "lucide-react";
+import { Calendar, MessageCircle } from "lucide-react";
 
-import type {
-  WeddingTasksBoardTask,
-} from "@/components/wedding-workspace/tasks/types";
+import type { WeddingTasksBoardTask } from "@/components/wedding-workspace/tasks/types";
 
 export type TaskLaneId = "todo" | "in_progress" | "needs_review" | "done";
 
@@ -25,6 +23,13 @@ type TaskKanbanColumnProps = {
   onTaskClick: (taskId: string) => void;
 };
 
+const laneAccent: Record<TaskLaneId, string> = {
+  todo: "bg-rose-400",
+  in_progress: "bg-sky-400",
+  needs_review: "bg-violet-400",
+  done: "bg-emerald-400",
+};
+
 function getAssigneeInitials(label: string) {
   return label
     .split(" ")
@@ -34,23 +39,16 @@ function getAssigneeInitials(label: string) {
     .join("");
 }
 
-function getTaskDueLabel(task: WeddingTasksBoardTask) {
-  if (!task.dueDate) return "No due date";
+function getDueMeta(task: WeddingTasksBoardTask): { label: string | null; dateStr: string | null } {
+  if (!task.dueDate) return { label: null, dateStr: null };
   const today = new Date();
   const startToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const due = new Date(`${task.dueDate}T00:00:00`);
   const diffDays = Math.ceil((due.getTime() - startToday.getTime()) / 86400000);
-  if (task.isOverdue) return `${Math.abs(diffDays)} days overdue`;
-  if (diffDays === 0) return "Due today";
-  return `Due in ${diffDays} days`;
-}
-
-function getEventTag(task: WeddingTasksBoardTask) {
-  const lowered = task.title.toLowerCase();
-  if (lowered.includes("sangeet")) return "Sangeet";
-  if (lowered.includes("mehendi")) return "Mehendi";
-  if (lowered.includes("anand karaj")) return "Anand Karaj";
-  return "General";
+  const dateStr = due.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (task.isOverdue) return { label: `${Math.abs(diffDays)}d overdue`, dateStr };
+  if (diffDays === 0) return { label: "Due today", dateStr };
+  return { label: `${diffDays}d left`, dateStr };
 }
 
 export function TaskKanbanColumn({
@@ -73,12 +71,10 @@ export function TaskKanbanColumn({
 
   return (
     <section
-      className={`rounded-xl border bg-card/90 p-3 transition-colors ${
-        laneDragActive ? "border-primary/70 ring-2 ring-primary/30" : "border-border/70"
+      className={`min-w-[260px] flex-1 space-y-3 px-5 transition-all first:pl-0 last:pr-0 ${
+        laneDragActive ? "rounded-2xl bg-primary/[0.03]" : ""
       }`}
-      onDragOver={(event) => {
-        event.preventDefault();
-      }}
+      onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         event.preventDefault();
         onDropTaskToLane(laneId);
@@ -89,69 +85,109 @@ export function TaskKanbanColumn({
       }}
       onDragLeave={() => onDragLeaveLane(laneId)}
     >
-      <header className="mb-3 flex items-center justify-between">
+      <header className="flex items-center gap-2 pb-1">
+        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${laneAccent[laneId]}`} />
         <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${toneClassName}`}>{count}</span>
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${toneClassName}`}>{count}</span>
       </header>
-      <div className="space-y-2.5">
+
+      <div className="space-y-3">
         {tasks.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border/70 px-3 py-4 text-center text-xs text-muted-foreground">
-            No tasks in this column
-          </p>
+          <p className="py-8 text-center text-xs text-muted-foreground/50">Empty</p>
         ) : (
-          tasks.map((task) => (
-            <article
-              key={task.id}
-              draggable={busyTaskId !== task.id}
-              onClick={() => onTaskClick(task.id)}
-              onDragStart={(event) => {
-                event.dataTransfer.effectAllowed = "move";
-                event.dataTransfer.setData("text/plain", task.id);
-                onDragStartTask(task.id);
-              }}
-              onDragEnd={onDragEndTask}
-              className={`space-y-3 rounded-lg border border-border/70 bg-background/80 p-3 transition-opacity ${
-                draggingTaskId === task.id ? "opacity-50" : "opacity-100"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-base leading-snug font-medium text-foreground">{task.title}</p>
-                <span className={`h-2 w-2 shrink-0 rounded-full ${task.isOverdue ? "bg-rose-400" : "bg-primary/70"}`} />
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                <span className="rounded bg-rose-500/10 px-1.5 py-0.5 font-medium text-rose-300">{task.priority[0].toUpperCase() + task.priority.slice(1)}</span>
-                <span className="rounded bg-amber-500/10 px-1.5 py-0.5 font-medium text-amber-300">{task.linkedEventLabel || getEventTag(task)}</span>
-                {task.isOverdue || !task.assigneeId ? (
-                  <span className="rounded bg-violet-500/10 px-1.5 py-0.5 font-medium text-violet-300">Flagged</span>
-                ) : null}
-              </div>
-              <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <AlertCircle className="size-3.5" />
-                  <span className={task.isOverdue ? "font-medium text-rose-300" : ""}>{getTaskDueLabel(task)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1">
-                    <MessageCircle className="size-3.5" />
-                    {task.commentCount}
+          tasks.map((task) => {
+            const { label: dueLabel, dateStr } = getDueMeta(task);
+
+            const assigneeInitialsList = task.assigneeIds
+              .slice(0, 3)
+              .map((uid) => {
+                const match = task.assigneeLabels[task.assigneeIds.indexOf(uid)] ?? uid;
+                return getAssigneeInitials(match);
+              });
+            const extraAssignees = task.assigneeIds.length > 3 ? task.assigneeIds.length - 3 : 0;
+
+            return (
+              <article
+                key={task.id}
+                draggable={busyTaskId !== task.id}
+                onClick={() => onTaskClick(task.id)}
+                onDragStart={(event) => {
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("text/plain", task.id);
+                  onDragStartTask(task.id);
+                }}
+                onDragEnd={onDragEndTask}
+                className={`group cursor-pointer rounded-2xl border border-border/60 bg-card p-4 shadow-sm transition-all hover:border-border hover:shadow-md ${
+                  draggingTaskId === task.id ? "scale-95 opacity-40" : ""
+                } ${busyTaskId === task.id ? "animate-pulse" : ""}`}
+              >
+                {/* title */}
+                <p className="mb-1.5 text-sm font-semibold leading-snug text-foreground">{task.title}</p>
+
+                {/* description */}
+                {task.description && (
+                  <p className="mb-3 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{task.description}</p>
+                )}
+
+                {/* tags */}
+                <div className={`flex flex-wrap items-center gap-1.5 ${task.description ? "mb-4" : "mb-3 mt-2"}`}>
+                  <span className="rounded-md bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-400">
+                    {task.priority}
                   </span>
-                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                    {getAssigneeInitials(task.assigneeLabel)}
-                  </span>
+                  {task.linkedEventLabel && (
+                    <span className="rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400">
+                      {task.linkedEventLabel}
+                    </span>
+                  )}
+                  {(task.isOverdue || task.assigneeIds.length === 0) && (
+                    <span className="rounded-md bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-violet-400">
+                      Flagged
+                    </span>
+                  )}
                 </div>
-              </div>
-              <div className="border-t border-border/50 pt-2 text-[11px] text-muted-foreground">
-                <p className="truncate">Raised by {task.raisedByLabel}</p>
-                <p className="truncate">Assigned to {task.assigneeLabel}</p>
-                <p className="truncate">
-                  Visibility:{" "}
-                  {task.visibility
-                    .map((item) => item.replace("_", " "))
-                    .join(", ")}
-                </p>
-              </div>
-            </article>
-          ))
+
+                {/* footer row */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    {dueLabel ? (
+                      <>
+                        <Calendar className="size-3 shrink-0" />
+                        <span className={task.isOverdue ? "font-semibold text-rose-400" : ""}>{dueLabel}</span>
+                        <span className="text-border">|</span>
+                        <span>{dateStr}</span>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground/40">No date</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <span className="flex items-center gap-0.5">
+                      <MessageCircle className="size-3" />
+                      {task.commentCount}
+                    </span>
+                    <span className="flex items-center">
+                      {assigneeInitialsList.length === 0 ? (
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground/60">—</span>
+                      ) : (
+                        assigneeInitialsList.map((ini, i) => (
+                          <span
+                            key={i}
+                            style={{ marginLeft: i > 0 ? "-4px" : 0 }}
+                            className="inline-flex size-5 items-center justify-center rounded-full bg-primary/15 text-[9px] font-bold text-primary ring-1 ring-card"
+                          >
+                            {ini}
+                          </span>
+                        ))
+                      )}
+                      {extraAssignees > 0 && (
+                        <span className="ml-1 text-[10px] text-muted-foreground">+{extraAssignees}</span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </article>
+            );
+          })
         )}
       </div>
     </section>

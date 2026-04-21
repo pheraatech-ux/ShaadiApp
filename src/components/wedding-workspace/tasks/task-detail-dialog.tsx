@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -37,6 +39,13 @@ type TaskDetailDialogProps = {
 
 type ReminderChannel = "internal" | "whatsapp" | "both";
 
+const STATUS_LABELS: Record<WeddingTasksBoardStatus, string> = {
+  todo: "To do",
+  in_progress: "In progress",
+  needs_review: "Needs review",
+  done: "Done",
+};
+
 function getRelativeAgeLabel(isoDate: string) {
   const diffMs = Date.now() - new Date(isoDate).getTime();
   const minutes = Math.max(1, Math.floor(diffMs / 60000));
@@ -57,7 +66,8 @@ export function TaskDetailDialog({
   onTaskDeleted,
 }: TaskDetailDialogProps) {
   const [status, setStatus] = useState<WeddingTasksBoardStatus>("todo");
-  const [assigneeUserId, setAssigneeUserId] = useState("unassigned");
+  const [assigneeUserIds, setAssigneeUserIds] = useState<string[]>([]);
+  const [dueDate, setDueDate] = useState("");
   const [description, setDescription] = useState("");
   const [comments, setComments] = useState<WeddingTaskComment[]>([]);
   const [commentBody, setCommentBody] = useState("");
@@ -67,23 +77,23 @@ export function TaskDetailDialog({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const assigneeLabel = useMemo(() => {
-    if (!task) return "Unassigned";
-    if (!task.assigneeId) return "Unassigned";
-    const member = members.find((item) => item.id === task.assigneeId);
-    return member ? (member.isCurrentUser ? `${member.label} (you)` : member.label) : task.assigneeLabel;
+  const primaryAssigneeLabel = useMemo(() => {
+    if (!task || task.assigneeIds.length === 0) return "Unassigned";
+    const first = members.find((m) => m.id === task.assigneeIds[0]);
+    return first ? (first.isCurrentUser ? `${first.label} (you)` : first.label) : task.assigneeLabel;
   }, [members, task]);
 
   useEffect(() => {
     if (!task || !open) return;
     setStatus(task.status);
-    setAssigneeUserId(task.assigneeId ?? "unassigned");
+    setAssigneeUserIds(task.assigneeIds);
+    setDueDate(task.dueDate ?? "");
     setDescription(task.description ?? "");
     setCommentBody("");
     setReminderBody(
-      `Hi ${assigneeLabel}, please update "${task.title}" today. Let me know if there is any blocker.`,
+      `Hi ${primaryAssigneeLabel}, please update "${task.title}" today. Let me know if there is any blocker.`,
     );
-  }, [assigneeLabel, open, task]);
+  }, [primaryAssigneeLabel, open, task]);
 
   useEffect(() => {
     if (!task || !open) return;
@@ -112,12 +122,12 @@ export function TaskDetailDialog({
   if (!task) return null;
 
   const dueStats = (() => {
-    if (!task.dueDate) {
+    if (!dueDate) {
       return { value: "--", label: "No due date", tone: "text-muted-foreground" };
     }
     const today = new Date();
     const startToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const due = new Date(`${task.dueDate}T00:00:00`);
+    const due = new Date(`${dueDate}T00:00:00`);
     const diffDays = Math.ceil((due.getTime() - startToday.getTime()) / 86400000);
     if (diffDays < 0) {
       return { value: `${Math.abs(diffDays)}d`, label: "Overdue", tone: "text-rose-300" };
@@ -131,6 +141,12 @@ export function TaskDetailDialog({
   const latestActivityAt = comments.length > 0 ? comments[comments.length - 1].createdAt : task.createdAt;
   const latestActivityLabel = `${getRelativeAgeLabel(latestActivityAt)} ago`;
 
+  function toggleAssignee(userId: string) {
+    setAssigneeUserIds((current) =>
+      current.includes(userId) ? current.filter((id) => id !== userId) : [...current, userId],
+    );
+  }
+
   async function saveChanges() {
     if (!task) return;
     setSaving(true);
@@ -142,18 +158,25 @@ export function TaskDetailDialog({
         body: JSON.stringify({
           taskId: task.id,
           status,
-          assigneeUserId: assigneeUserId === "unassigned" ? null : assigneeUserId,
+          assigneeUserIds,
+          dueDate: dueDate || null,
           description: description.trim() || null,
         }),
       });
       if (!response.ok) throw new Error();
 
-      const member = members.find((item) => item.id === assigneeUserId);
-      const assigneeText = assigneeUserId === "unassigned" ? "Unassigned" : member ? (member.isCurrentUser ? `${member.label} (you)` : member.label) : task.assigneeLabel;
+      const assigneeMembers = assigneeUserIds
+        .map((uid) => members.find((m) => m.id === uid))
+        .filter(Boolean) as WeddingTasksBoardMemberOption[];
+      const labels = assigneeMembers.map((m) => (m.isCurrentUser ? `${m.label} (you)` : m.label));
+
       onTaskUpdated(task.id, {
         status,
-        assigneeId: assigneeUserId === "unassigned" ? null : assigneeUserId,
-        assigneeLabel: assigneeText,
+        assigneeIds: assigneeUserIds,
+        assigneeId: assigneeUserIds[0] ?? null,
+        assigneeLabel: labels.length > 0 ? (labels.length === 1 ? labels[0] : `${labels[0]} +${labels.length - 1}`) : "Unassigned",
+        assigneeLabels: labels.length > 0 ? labels : ["Unassigned"],
+        dueDate: dueDate || null,
         description: description.trim() || null,
       });
       onOpenChange(false);
@@ -188,11 +211,7 @@ export function TaskDetailDialog({
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        body,
-        kind,
-        channel: reminderChannel,
-      }),
+      body: JSON.stringify({ body, kind, channel: reminderChannel }),
     });
     if (!response.ok) return;
 
@@ -212,9 +231,9 @@ export function TaskDetailDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-[calc(100%-2rem)] gap-0 overflow-hidden rounded-2xl bg-card p-0 sm:max-w-[760px]">
         <DialogHeader className="border-b border-border/60 px-6 pt-5 pb-4">
-          <DialogTitle>Task detail - {task.title}</DialogTitle>
+          <DialogTitle>Task detail — {task.title}</DialogTitle>
           <DialogDescription>
-            Created by {task.raisedByLabel} - Assigned to {task.assigneeLabel}
+            Created by {task.raisedByLabel}
           </DialogDescription>
         </DialogHeader>
 
@@ -254,7 +273,7 @@ export function TaskDetailDialog({
                 }}
               >
                 <SelectTrigger className="h-11 w-full rounded-xl border-border/70 bg-muted/40 px-3">
-                  <SelectValue />
+                  <span>{STATUS_LABELS[status]}</span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todo">To do</SelectItem>
@@ -265,26 +284,47 @@ export function TaskDetailDialog({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Assigned to</label>
-              <Select
-                value={assigneeUserId}
-                onValueChange={(value) => {
-                  if (!value) return;
-                  setAssigneeUserId(value);
-                }}
-              >
-                <SelectTrigger className="h-11 w-full rounded-xl border-border/70 bg-muted/40 px-3">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {members.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.isCurrentUser ? `${member.label} (you)` : member.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Due date</label>
+              <Input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="h-11 rounded-xl border-border/70 bg-muted/40"
+              />
+            </div>
+          </section>
+
+          <section className="space-y-2">
+            <label className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+              Assigned to
+              {assigneeUserIds.length > 0 && (
+                <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                  {assigneeUserIds.length}
+                </span>
+              )}
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {members.map((member) => {
+                const selected = assigneeUserIds.includes(member.id);
+                return (
+                  <button
+                    key={member.id}
+                    type="button"
+                    onClick={() => toggleAssignee(member.id)}
+                    className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
+                      selected
+                        ? "border-primary/60 bg-primary/15 text-primary"
+                        : "border-border/70 bg-background text-muted-foreground hover:border-border hover:text-foreground"
+                    }`}
+                  >
+                    {selected && <Check className="size-3" />}
+                    {member.isCurrentUser ? `${member.label} (you)` : member.label}
+                  </button>
+                );
+              })}
+              {members.length === 0 && (
+                <p className="text-xs text-muted-foreground">No active members on this wedding.</p>
+              )}
             </div>
           </section>
 

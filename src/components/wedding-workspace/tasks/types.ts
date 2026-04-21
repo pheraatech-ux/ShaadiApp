@@ -20,8 +20,12 @@ export type WeddingTasksBoardTask = {
   dueDate: string | null;
   linkedEventId: string | null;
   linkedEventLabel: string;
+  /** Primary assignee id (first in array) — kept for backward-compat filters. */
   assigneeId: string | null;
+  /** All assignee user ids. */
+  assigneeIds: string[];
   assigneeLabel: string;
+  assigneeLabels: string[];
   raisedByUserId: string | null;
   raisedByLabel: string;
   visibility: WeddingTaskVisibility[];

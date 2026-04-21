@@ -15,7 +15,7 @@ type CreateTaskPayload = {
   priority?: TaskPriority;
   linkedEventId?: string | null;
   dueDate?: string | null;
-  assigneeUserId?: string | null;
+  assigneeUserIds?: string[];
   visibility?: TaskVisibility[];
   status?: TaskStatus;
 };
@@ -27,9 +27,9 @@ type UpdateTaskPayload = {
   priority?: TaskPriority;
   linkedEventId?: string | null;
   dueDate?: string | null;
-  assigneeUserId?: string | null;
-  visibility?: TaskVisibility[];
+  assigneeUserIds?: string[];
   status?: TaskStatus;
+  visibility?: TaskVisibility[];
 };
 
 const VALID_STATUSES = new Set<TaskStatus>(["todo", "in_progress", "needs_review", "done"]);
@@ -55,20 +55,20 @@ async function getWeddingIdBySlug(request: NextRequest, weddingSlug: string) {
   return { supabase, weddingId: wedding.id, userId: user.id };
 }
 
-async function validateMemberBelongsToWedding(
+async function validateMembersBelogToWedding(
   supabase: ReturnType<typeof createSupabaseRouteHandlerClient>,
   weddingId: string,
-  userId: string | null | undefined,
+  userIds: string[],
 ) {
-  if (!userId) return true;
-  const { data: member } = await supabase
+  if (userIds.length === 0) return true;
+  const { data: members } = await supabase
     .from("wedding_members")
-    .select("id")
+    .select("user_id")
     .eq("wedding_id", weddingId)
-    .eq("user_id", userId)
-    .eq("status", "active")
-    .maybeSingle();
-  return Boolean(member);
+    .in("user_id", userIds)
+    .eq("status", "active");
+  const validIds = new Set((members ?? []).map((m) => m.user_id));
+  return userIds.every((id) => validIds.has(id));
 }
 
 async function validateEventBelongsToWedding(
@@ -106,25 +106,28 @@ export async function POST(
     if ("errorResponse" in lookup) return lookup.errorResponse;
     const { supabase, weddingId, userId } = lookup;
 
-    const [memberValid, eventValid] = await Promise.all([
-      validateMemberBelongsToWedding(supabase, weddingId, payload.assigneeUserId),
+    const assigneeUserIds = (payload.assigneeUserIds ?? []).filter(Boolean);
+    const [membersValid, eventValid] = await Promise.all([
+      validateMembersBelogToWedding(supabase, weddingId, assigneeUserIds),
       validateEventBelongsToWedding(supabase, weddingId, payload.linkedEventId),
     ]);
-    if (!memberValid) {
-      return NextResponse.json({ error: "Assignee must be an active wedding member." }, { status: 400 });
+    if (!membersValid) {
+      return NextResponse.json({ error: "All assignees must be active wedding members." }, { status: 400 });
     }
     if (!eventValid) {
       return NextResponse.json({ error: "Linked event must belong to the same wedding." }, { status: 400 });
     }
 
-    const { error } = await supabase.from("tasks").insert({
+    const primaryAssignee = assigneeUserIds[0] ?? null;
+    const { error } = await (supabase.from("tasks") as any).insert({
       wedding_id: weddingId,
       title,
       description: payload.description?.trim() || null,
       priority,
       linked_event_id: payload.linkedEventId || null,
       due_date: payload.dueDate || null,
-      assignee_user_id: payload.assigneeUserId || null,
+      assignee_user_id: primaryAssignee,
+      assignee_user_ids: assigneeUserIds,
       raised_by_user_id: userId,
       visibility,
       status,
@@ -167,13 +170,17 @@ export async function PATCH(
     if ("errorResponse" in lookup) return lookup.errorResponse;
     const { supabase, weddingId, userId } = lookup;
 
-    const updates: Database["public"]["Tables"]["tasks"]["Update"] = {};
+    const updates: Database["public"]["Tables"]["tasks"]["Update"] & { assignee_user_ids?: string[] } = {};
     if (typeof payload.title === "string") updates.title = payload.title.trim();
     if (payload.description !== undefined) updates.description = payload.description?.trim() || null;
     if (payload.priority) updates.priority = payload.priority;
     if (payload.linkedEventId !== undefined) updates.linked_event_id = payload.linkedEventId || null;
     if (payload.dueDate !== undefined) updates.due_date = payload.dueDate || null;
-    if (payload.assigneeUserId !== undefined) updates.assignee_user_id = payload.assigneeUserId || null;
+    if (payload.assigneeUserIds !== undefined) {
+      const ids = (payload.assigneeUserIds ?? []).filter(Boolean);
+      updates.assignee_user_ids = ids;
+      updates.assignee_user_id = ids[0] ?? null;
+    }
     if (payload.visibility !== undefined) updates.visibility = payload.visibility;
     if (payload.status) {
       updates.status = payload.status;
@@ -186,7 +193,7 @@ export async function PATCH(
 
     const { data: task, error: taskError } = await supabase
       .from("tasks")
-      .select("id, assignee_user_id, raised_by_user_id")
+      .select("id, assignee_user_id, assignee_user_ids, raised_by_user_id")
       .eq("id", payload.taskId)
       .eq("wedding_id", weddingId)
       .maybeSingle();
@@ -196,14 +203,21 @@ export async function PATCH(
     }
 
     const persona = await resolvePersona(supabase, userId);
-    if (persona === "employee" && !taskTouchesWorkspaceUser(task, userId)) {
+    if (
+      persona === "employee" &&
+      !taskTouchesWorkspaceUser(
+        { ...task, assignee_user_ids: (task as any).assignee_user_ids ?? [] },
+        userId,
+      )
+    ) {
       return NextResponse.json({ error: "Forbidden." }, { status: 403 });
     }
 
-    if (payload.assigneeUserId !== undefined) {
-      const memberValid = await validateMemberBelongsToWedding(supabase, weddingId, payload.assigneeUserId);
-      if (!memberValid) {
-        return NextResponse.json({ error: "Assignee must be an active wedding member." }, { status: 400 });
+    if (payload.assigneeUserIds !== undefined) {
+      const ids = (payload.assigneeUserIds ?? []).filter(Boolean);
+      const membersValid = await validateMembersBelogToWedding(supabase, weddingId, ids);
+      if (!membersValid) {
+        return NextResponse.json({ error: "All assignees must be active wedding members." }, { status: 400 });
       }
     }
 
@@ -214,7 +228,7 @@ export async function PATCH(
       }
     }
 
-    const { error } = await supabase.from("tasks").update(updates).eq("id", payload.taskId);
+    const { error } = await supabase.from("tasks").update(updates as Database["public"]["Tables"]["tasks"]["Update"]).eq("id", payload.taskId);
     if (error) {
       return NextResponse.json({ error: error.message || "Unable to update task." }, { status: 400 });
     }
@@ -242,7 +256,7 @@ export async function DELETE(
 
     const { data: task, error: taskError } = await supabase
       .from("tasks")
-      .select("id, assignee_user_id, raised_by_user_id")
+      .select("id, assignee_user_id, assignee_user_ids, raised_by_user_id")
       .eq("id", payload.taskId)
       .eq("wedding_id", weddingId)
       .maybeSingle();
@@ -251,7 +265,13 @@ export async function DELETE(
     }
 
     const persona = await resolvePersona(supabase, userId);
-    if (persona === "employee" && !taskTouchesWorkspaceUser(task, userId)) {
+    if (
+      persona === "employee" &&
+      !taskTouchesWorkspaceUser(
+        { ...task, assignee_user_ids: (task as any).assignee_user_ids ?? [] },
+        userId,
+      )
+    ) {
       return NextResponse.json({ error: "Forbidden." }, { status: 403 });
     }
 

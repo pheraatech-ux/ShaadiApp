@@ -58,8 +58,8 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
     const completed = tasks.filter((task) => task.status === "done").length;
     const overdue = tasks.filter((task) => task.isOverdue).length;
     const dueThisWeek = tasks.filter((task) => task.isDueThisWeek).length;
-    const flagged = tasks.filter((task) => task.isOverdue || !task.assigneeId).length;
-    const myTasks = tasks.filter((task) => task.assigneeId === view.currentUserId).length;
+    const flagged = tasks.filter((task) => task.isOverdue || task.assigneeIds.length === 0).length;
+    const myTasks = tasks.filter((task) => task.assigneeIds.includes(view.currentUserId)).length;
     return { total, completed, overdue, dueThisWeek, flagged, myTasks };
   }, [tasks, view.currentUserId]);
 
@@ -69,16 +69,20 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
     let current = tasks;
 
     if (!scopedBoard && viewMode === "team-member") {
-      current = current.filter((task) => task.assigneeId === view.currentUserId);
+      current = current.filter((task) => task.assigneeIds.includes(view.currentUserId));
     }
 
-    if (activeFilter === "my") current = current.filter((task) => task.assigneeId === view.currentUserId);
+    if (activeFilter === "my") current = current.filter((task) => task.assigneeIds.includes(view.currentUserId));
     if (activeFilter === "overdue") current = current.filter((task) => task.isOverdue);
-    if (activeFilter === "unassigned") current = current.filter((task) => !task.assigneeId);
-    if (activeFilter === "flagged") current = current.filter((task) => task.isOverdue || !task.assigneeId);
+    if (activeFilter === "unassigned") current = current.filter((task) => task.assigneeIds.length === 0);
+    if (activeFilter === "flagged") current = current.filter((task) => task.isOverdue || task.assigneeIds.length === 0);
 
     if (assigneeFilter !== "all") {
-      current = current.filter((task) => (assigneeFilter === "unassigned" ? !task.assigneeId : task.assigneeId === assigneeFilter));
+      current = current.filter((task) =>
+        assigneeFilter === "unassigned"
+          ? task.assigneeIds.length === 0
+          : task.assigneeIds.includes(assigneeFilter),
+      );
     }
 
     if (
@@ -107,7 +111,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
     };
   }, [filteredTasks]);
 
-  async function patchTask(taskId: string, updates: { status?: WeddingTasksBoardStatus; assigneeUserId?: string | null }) {
+  async function patchTask(taskId: string, updates: { status?: WeddingTasksBoardStatus }) {
     const previousTasks = tasks;
     setBusyTaskId(taskId);
 
@@ -115,26 +119,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
       setTasks((current) =>
         current.map((task) =>
           task.id === taskId
-            ? enrichTask({
-                ...task,
-                status: updates.status as WeddingTasksBoardStatus,
-              })
-            : task,
-        ),
-      );
-    }
-
-    if (updates.assigneeUserId !== undefined) {
-      const assignee = view.members.find((member) => member.id === updates.assigneeUserId);
-      setTasks((current) =>
-        current.map((task) =>
-          task.id === taskId
-            ? enrichTask({
-                ...task,
-                assigneeId: updates.assigneeUserId ?? null,
-                assigneeLabel: assignee ? (assignee.isCurrentUser ? `${assignee.label} (you)` : assignee.label) : "Unassigned",
-                isAssignedToCurrentUser: updates.assigneeUserId === view.currentUserId,
-              })
+            ? enrichTask({ ...task, status: updates.status as WeddingTasksBoardStatus })
             : task,
         ),
       );
@@ -145,11 +130,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          taskId,
-          status: updates.status,
-          assigneeUserId: updates.assigneeUserId,
-        }),
+        body: JSON.stringify({ taskId, status: updates.status }),
       });
 
       if (!response.ok) {
@@ -239,7 +220,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
             { id: "all", label: `All (${summary.total})` },
             { id: "my", label: `My tasks (${summary.myTasks})` },
             { id: "overdue", label: `Overdue (${summary.overdue})` },
-            { id: "unassigned", label: `Unassigned (${tasks.filter((task) => !task.assigneeId).length})` },
+            { id: "unassigned", label: `Unassigned (${tasks.filter((task) => task.assigneeIds.length === 0).length})` },
             { id: "flagged", label: `Flagged (${summary.flagged})` },
           ].map((filter) => (
             <button
@@ -304,7 +285,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
         </div>
       </section>
 
-      <section className="grid gap-3 xl:grid-cols-4">
+      <section className="flex divide-x divide-dashed divide-border/50 overflow-x-auto">
         <TaskKanbanColumn
           laneId="todo"
           title="To do"
