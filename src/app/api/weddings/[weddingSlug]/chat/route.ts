@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Anthropic from "@anthropic-ai/sdk";
 
 import { getWeddingSectionSummaryBySlug } from "@/lib/data/app-data";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type DeepChatMessage = { role: string; text: string };
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(
   req: NextRequest,
@@ -60,25 +60,21 @@ BUDGET: ${formatINR(budgetTotal)} allocated, ${formatINR(budgetSpent)} spent, ${
 DOCUMENTS: ${summary.documents.length} uploaded
 MESSAGES: ${summary.messages.length} on record
 
-You are aware of all the above data. When asked about missing events or ceremonies, compare what's listed above against the typical ceremonies for a ${summary.wedding.cultures?.join(" and ") || "traditional"} wedding and identify gaps. Be specific about what's present and what's missing. Be helpful, warm, and concise. Use markdown for formatting when useful.`;
+You are aware of all the above data. When asked about missing events or ceremonies, compare what's listed above against the typical ceremonies for a ${summary.wedding.cultures?.join(" and ") || "traditional"} wedding and identify gaps. Be specific about what's present and what's missing. Be helpful, warm, and concise. Use markdown for formatting when useful — but never use # headings; use **bold** for section titles instead.`;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-  const history = messages.slice(0, -1).map((m) => ({
-    role: m.role === "ai" ? "model" : "user",
-    parts: [{ text: m.text }],
+  const anthropicMessages = messages.map((m) => ({
+    role: (m.role === "ai" ? "assistant" : "user") as "user" | "assistant",
+    content: m.text,
   }));
 
-  const lastMessage = messages[messages.length - 1];
-
   try {
-    const chat = model.startChat({
-      history,
-      systemInstruction: { role: "user", parts: [{ text: systemPrompt }] },
+    const result = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: anthropicMessages,
     });
-
-    const result = await chat.sendMessage(lastMessage.text);
-    const text = result.response.text();
+    const text = result.content[0].type === "text" ? result.content[0].text : "";
     return NextResponse.json({ text });
   } catch (err) {
     const message = err instanceof Error ? err.message : "AI request failed.";
