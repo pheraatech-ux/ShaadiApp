@@ -153,3 +153,56 @@
     display: none;
   }
 }
+
+/* Landing page animations */
+@keyframes lp-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-18px); }
+}
+@keyframes lp-float-b {
+  0%, 100% { transform: translateY(0px) translateX(0px); }
+  33% { transform: translateY(-12px) translateX(8px); }
+  66% { transform: translateY(8px) translateX(-6px); }
+}
+@keyframes lp-glow-pulse {
+  0%, 100% { opacity: 0.18; transform: scale(1); }
+  50% { opacity: 0.32; transform: scale(1.08); }
+}
+@keyframes lp-glow-pulse-b {
+  0%, 100% { opacity: 0.12; transform: scale(1); }
+  50% { opacity: 0.22; transform: scale(1.12); }
+}
+@keyframes lp-shimmer {
+  0% { background-position: -600px 0; }
+  100% { background-position: 600px 0; }
+}
+@keyframes lp-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes lp-fade-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes lp-spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes lp-border-flow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.lp-float      { animation: lp-float 7s ease-in-out infinite; }
+.lp-float-b    { animation: lp-float-b 9s ease-in-out infinite; }
+.lp-glow-a     { animation: lp-glow-pulse 5s ease-in-out infinite; }
+.lp-glow-b     { animation: lp-glow-pulse-b 7s ease-in-out infinite 1.5s; }
+.lp-glow-c     { animation: lp-glow-pulse 6s ease-in-out infinite 3s; }
+.lp-marquee    { animation: lp-marquee 32s linear infinite; }
+.lp-fade-up    { animation: lp-fade-up 0.8s ease-out both; }
+.lp-fade-up-1  { animation: lp-fade-up 0.8s ease-out 0.1s both; }
+.lp-fade-up-2  { animation: lp-fade-up 0.8s ease-out 0.2s both; }
+.lp-fade-up-3  { animation: lp-fade-up 0.8s ease-out 0.3s both; }
+.lp-fade-up-4  { animation: lp-fade-up 0.8s ease-out 0.45s both; }
+.lp-spin-slow  { animation: lp-spin-slow 22s linear infinite; }
+.lp-border-flow { animation: lp-border-flow 3s ease-in-out infinite; }
