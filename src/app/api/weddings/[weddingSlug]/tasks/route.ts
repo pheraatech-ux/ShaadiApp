@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-import { resolvePersona } from "@/lib/employee/persona";
+import { resolvePersonaFromUser } from "@/lib/employee/persona";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
 import { taskTouchesWorkspaceUser } from "@/lib/wedding-task-scope";
 import type { WeddingTasksBoardTask } from "@/components/wedding-workspace/tasks/types";
@@ -53,7 +53,7 @@ async function getWeddingIdBySlug(request: NextRequest, weddingSlug: string) {
 
   if (weddingError || !wedding) return { errorResponse: NextResponse.json({ error: "Wedding not found." }, { status: 404 }) };
 
-  return { supabase, weddingId: wedding.id, userId: user.id };
+  return { supabase, weddingId: wedding.id, userId: user.id, user };
 }
 
 async function validateMembersBelogToWedding(
@@ -95,16 +95,20 @@ export async function GET(
     const { weddingSlug } = await context.params;
     const lookup = await getWeddingIdBySlug(request, weddingSlug);
     if ("errorResponse" in lookup) return lookup.errorResponse;
-    const { supabase, weddingId, userId } = lookup;
+    const { supabase, weddingId, userId, user } = lookup;
 
-    const persona = await resolvePersona(supabase, userId);
+    const persona = resolvePersonaFromUser(user);
+
+    const tasksBaseQuery = supabase
+      .from("tasks")
+      .select("id, title, description, status, priority, due_date, linked_event_id, assignee_user_id, assignee_user_ids, raised_by_user_id, visibility, created_at")
+      .eq("wedding_id", weddingId)
+      .order("created_at", { ascending: false });
 
     const [{ data: taskRows }, { data: memberRows }, { data: eventRows }, { data: commentRows }] = await Promise.all([
-      supabase
-        .from("tasks")
-        .select("id, title, description, status, priority, due_date, linked_event_id, assignee_user_id, assignee_user_ids, raised_by_user_id, visibility, created_at")
-        .eq("wedding_id", weddingId)
-        .order("created_at", { ascending: false }),
+      persona === "employee"
+        ? tasksBaseQuery.or(`assignee_user_ids.cs.{${userId}},assignee_user_id.eq.${userId},raised_by_user_id.eq.${userId}`)
+        : tasksBaseQuery,
       supabase
         .from("wedding_members")
         .select("user_id, invited_email, display_name, role")
@@ -131,12 +135,7 @@ export async function GET(
       created_at: string;
     };
 
-    let rawTasks = (taskRows ?? []) as RawTask[];
-    if (persona === "employee") {
-      rawTasks = rawTasks.filter((t) =>
-        taskTouchesWorkspaceUser({ ...t, assignee_user_ids: t.assignee_user_ids ?? [] }, userId),
-      );
-    }
+    const rawTasks = (taskRows ?? []) as RawTask[];
 
     const memberUserIds = [...new Set((memberRows ?? []).map((m) => m.user_id).filter(Boolean))] as string[];
     const allAssigneeIds = [...new Set(rawTasks.flatMap((t) => t.assignee_user_ids ?? []))];
@@ -301,7 +300,7 @@ export async function PATCH(
 
     const lookup = await getWeddingIdBySlug(request, weddingSlug);
     if ("errorResponse" in lookup) return lookup.errorResponse;
-    const { supabase, weddingId, userId } = lookup;
+    const { supabase, weddingId, userId, user } = lookup;
 
     const updates: Database["public"]["Tables"]["tasks"]["Update"] & { assignee_user_ids?: string[] } = {};
     if (typeof payload.title === "string") updates.title = payload.title.trim();
@@ -335,7 +334,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Task not found." }, { status: 404 });
     }
 
-    const persona = await resolvePersona(supabase, userId);
+    const persona = resolvePersonaFromUser(user);
     if (
       persona === "employee" &&
       !taskTouchesWorkspaceUser(
@@ -385,7 +384,7 @@ export async function DELETE(
 
     const lookup = await getWeddingIdBySlug(request, weddingSlug);
     if ("errorResponse" in lookup) return lookup.errorResponse;
-    const { supabase, weddingId, userId } = lookup;
+    const { supabase, weddingId, userId, user } = lookup;
 
     const { data: task, error: taskError } = await supabase
       .from("tasks")
@@ -397,7 +396,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Task not found." }, { status: 404 });
     }
 
-    const persona = await resolvePersona(supabase, userId);
+    const persona = resolvePersonaFromUser(user);
     if (
       persona === "employee" &&
       !taskTouchesWorkspaceUser(

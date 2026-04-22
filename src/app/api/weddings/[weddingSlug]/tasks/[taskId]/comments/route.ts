@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-import { resolvePersona } from "@/lib/employee/persona";
+import { resolvePersonaFromUser } from "@/lib/employee/persona";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
 import { taskTouchesWorkspaceUser } from "@/lib/wedding-task-scope";
 
@@ -32,7 +32,7 @@ async function resolveContext(
     .maybeSingle();
   if (!task) return { errorResponse: NextResponse.json({ error: "Task not found." }, { status: 404 }) };
 
-  const persona = await resolvePersona(supabase, user.id);
+  const persona = resolvePersonaFromUser(user);
   if (persona === "employee" && !taskTouchesWorkspaceUser(task, user.id)) {
     return { errorResponse: NextResponse.json({ error: "Forbidden." }, { status: 403 }) };
   }

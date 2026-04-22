@@ -25,7 +25,7 @@ import {
   mapBudgetCategoryToBucket,
   type BudgetBucketId,
 } from "@/lib/budget-recommendations";
-import { resolvePersona } from "@/lib/employee/persona";
+import { resolvePersonaFromUser } from "@/lib/employee/persona";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { taskTouchesWorkspaceUser } from "@/lib/wedding-task-scope";
 import type { Database } from "@/types/database";
@@ -316,9 +316,10 @@ export const getPlannerContext = cache(async (): Promise<PlannerContext> => {
   return getPlannerContextFromSupabase(supabase);
 });
 
-const getPersona = cache(async (userId: string) => {
+const getPersona = cache(async (_userId: string) => {
   const supabase = await createSupabaseServerClient();
-  return resolvePersona(supabase, userId);
+  const { data: { user } } = await supabase.auth.getUser();
+  return resolvePersonaFromUser(user);
 });
 
 const getAccessibleWeddings = cache(async (userId: string): Promise<WeddingRow[]> => {
@@ -495,11 +496,16 @@ export const getAllWeddingsPageView = cache(async (): Promise<AllWeddingsPageVie
     createSupabaseServerClient(),
     getPersona(planner.userId),
   ]);
+
+  const tasksBaseQuery = supabase
+    .from("tasks")
+    .select("wedding_id, status, due_date, assignee_user_id, raised_by_user_id")
+    .in("wedding_id", weddingIds);
+
   const [{ data: tasksData }, { data: docsData }] = await Promise.all([
-    supabase
-      .from("tasks")
-      .select("wedding_id, status, due_date, assignee_user_id, raised_by_user_id")
-      .in("wedding_id", weddingIds),
+    persona === "employee"
+      ? tasksBaseQuery.or(`assignee_user_ids.cs.{${planner.userId}},assignee_user_id.eq.${planner.userId},raised_by_user_id.eq.${planner.userId}`)
+      : tasksBaseQuery,
     supabase
       .from("documents")
       .select("wedding_id")
@@ -514,8 +520,7 @@ export const getAllWeddingsPageView = cache(async (): Promise<AllWeddingsPageVie
     raised_by_user_id: string | null;
   };
   const rawTasks = (tasksData ?? []) as TaskAggRow[];
-  const tasksForStats =
-    persona === "employee" ? rawTasks.filter((t) => taskTouchesWorkspaceUser(t, planner.userId)) : rawTasks;
+  const tasksForStats = rawTasks;
 
   const tasksByWedding = new Map<
     string,
@@ -887,12 +892,17 @@ export const getWeddingWorkspaceBySlug = cache(
       createSupabaseServerClient(),
       getPersona(planner.userId),
     ]);
+
+    const tasksBaseQuery = supabase
+      .from("tasks")
+      .select("id, title, status, due_date, assignee_user_id, raised_by_user_id")
+      .eq("wedding_id", wedding.id);
+
     const [{ data: tasksData }, { data: eventsData }, { data: vendorsData }, { data: membersData }] =
       await Promise.all([
-        supabase
-          .from("tasks")
-          .select("id, title, status, due_date, assignee_user_id, raised_by_user_id")
-          .eq("wedding_id", wedding.id),
+        persona === "employee"
+          ? tasksBaseQuery.or(`assignee_user_ids.cs.{${planner.userId}},assignee_user_id.eq.${planner.userId},raised_by_user_id.eq.${planner.userId}`)
+          : tasksBaseQuery,
         supabase
           .from("wedding_events")
           .select("id, title, event_date, culture_label")
@@ -921,8 +931,7 @@ export const getWeddingWorkspaceBySlug = cache(
     const vendors = (vendorsData ?? []) as { id: string; name: string; category: string; notes: string | null; status: "pending" | "confirmed" | "declined" }[];
     const members = (membersData ?? []) as WeddingMemberRow[];
 
-    const scopedTasks =
-      persona === "employee" ? tasks.filter((task) => taskTouchesWorkspaceUser(task, planner.userId)) : tasks;
+    const scopedTasks = tasks;
 
     const activeMembers = members.filter((member) => member.status === "active");
     const currentMembership = activeMembers.find((member) => member.user_id === planner.userId);
@@ -1058,6 +1067,12 @@ export const getWorkspaceSidebarCounts = cache(
       createSupabaseServerClient(),
       getPersona(planner.userId),
     ]);
+
+    const tasksBaseQuery = supabase
+      .from("tasks")
+      .select("status, due_date, assignee_user_id, raised_by_user_id")
+      .eq("wedding_id", wedding.id);
+
     const [{ count: teamCount }, { count: vendorPendingCount }, { data: tasks }, { count: messageCount }] =
       await Promise.all([
         supabase
@@ -1070,10 +1085,9 @@ export const getWorkspaceSidebarCounts = cache(
           .select("*", { head: true, count: "exact" })
           .eq("wedding_id", wedding.id)
           .neq("status", "confirmed"),
-        supabase
-          .from("tasks")
-          .select("status, due_date, assignee_user_id, raised_by_user_id")
-          .eq("wedding_id", wedding.id),
+        persona === "employee"
+          ? tasksBaseQuery.or(`assignee_user_ids.cs.{${planner.userId}},assignee_user_id.eq.${planner.userId},raised_by_user_id.eq.${planner.userId}`)
+          : tasksBaseQuery,
         supabase
           .from("messages")
           .select("*", { head: true, count: "exact" })
@@ -1086,10 +1100,7 @@ export const getWorkspaceSidebarCounts = cache(
       assignee_user_id: string | null;
       raised_by_user_id: string | null;
     }[];
-    const scopedForOverdue =
-      persona === "employee"
-        ? taskRows.filter((task) => taskTouchesWorkspaceUser(task, planner.userId))
-        : taskRows;
+    const scopedForOverdue = taskRows;
 
     const today = new Date().toISOString().slice(0, 10);
     const taskOverdueCount = scopedForOverdue.filter(
@@ -1551,12 +1562,16 @@ export const getWeddingTasksBoardViewBySlug = cache(
       createSupabaseServerClient(),
       getPersona(planner.userId),
     ]);
+    const tasksBaseQuery = supabase
+      .from("tasks")
+      .select("id, title, description, status, priority, due_date, linked_event_id, assignee_user_id, assignee_user_ids, raised_by_user_id, visibility, created_at")
+      .eq("wedding_id", wedding.id)
+      .order("created_at", { ascending: false });
+
     const [{ data: taskRows }, { data: memberRows }, { data: eventRows }, { data: commentRows }] = await Promise.all([
-      supabase
-        .from("tasks")
-        .select("id, title, description, status, priority, due_date, linked_event_id, assignee_user_id, assignee_user_ids, raised_by_user_id, visibility, created_at")
-        .eq("wedding_id", wedding.id)
-        .order("created_at", { ascending: false }),
+      persona === "employee"
+        ? tasksBaseQuery.or(`assignee_user_ids.cs.{${planner.userId}},assignee_user_id.eq.${planner.userId},raised_by_user_id.eq.${planner.userId}`)
+        : tasksBaseQuery,
       supabase
         .from("wedding_members")
         .select("id, user_id, invited_email, display_name, role, status")
@@ -1589,15 +1604,7 @@ export const getWeddingTasksBoardViewBySlug = cache(
       created_at: string;
     };
     const rawTaskRows = (taskRows ?? []) as BoardTaskRow[];
-    const taskRowsForBoard =
-      persona === "employee"
-        ? rawTaskRows.filter((task) =>
-            taskTouchesWorkspaceUser(
-              { ...task, assignee_user_ids: task.assignee_user_ids ?? [] },
-              planner.userId,
-            ),
-          )
-        : rawTaskRows;
+    const taskRowsForBoard = rawTaskRows;
 
     const taskAssigneeIds = [
       ...new Set(

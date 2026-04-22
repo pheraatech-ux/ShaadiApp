@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { plannerPathToEmployeePath, resolvePersona } from "@/lib/employee/persona";
+import { plannerPathToEmployeePath, resolvePersonaFromUser } from "@/lib/employee/persona";
 import { getSupabaseEnv } from "@/lib/env";
 import { Database } from "@/types/database";
 
@@ -49,7 +49,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user) {
-    const persona = await resolvePersona(supabase, user.id);
+    const persona = resolvePersonaFromUser(user);
 
     if (persona === "employee") {
       const onPlannerAppSurface =
