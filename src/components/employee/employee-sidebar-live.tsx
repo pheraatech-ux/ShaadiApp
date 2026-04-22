@@ -1,17 +1,15 @@
-import { AppSidebar } from "@/components/app-dashboard/dashboard/app-sidebar";
+import { AppSidebarWithLiveCounts } from "@/components/app-dashboard/dashboard/app-sidebar-with-live-counts";
 import { getAppSidebarCounts, getWorkspaceShellInfo } from "@/lib/data/app-data";
 
-const EMPLOYEE_BASE = "/app/employee";
-
 export async function EmployeeSidebarLive() {
-  const [planner, counts] = await Promise.all([getWorkspaceShellInfo(), getAppSidebarCounts()]);
+  const [planner, initialCounts] = await Promise.all([getWorkspaceShellInfo(), getAppSidebarCounts()]);
 
   return (
-    <AppSidebar
+    <AppSidebarWithLiveCounts
       userName={planner.userName}
       userEmail={planner.userEmail}
-      counts={counts}
-      basePath={EMPLOYEE_BASE}
+      initialCounts={initialCounts}
+      basePath="/app/employee"
       hideBudgetTab
       hideTeamTab
     />

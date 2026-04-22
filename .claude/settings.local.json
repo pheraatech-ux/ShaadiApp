@@ -6,7 +6,13 @@
       "Bash(npx tsc *)",
       "Bash(xxd)",
       "mcp__code-review-graph__get_architecture_overview_tool",
-      "mcp__code-review-graph__query_graph_tool"
+      "mcp__code-review-graph__query_graph_tool",
+      "mcp__code-review-graph__list_communities_tool",
+      "Bash(npm run *)",
+      "Bash(npx next *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
+      "Bash(curl *)",
+      "Bash(echo \"EXIT: $?\")"
     ]
   },
   "enableAllProjectMcpServers": true,

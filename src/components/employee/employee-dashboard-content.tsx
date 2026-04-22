@@ -7,14 +7,11 @@ import { WeeklyCompletionWidget } from "@/components/app-dashboard/tasks/weekly-
 import { WeddingListWidget } from "@/components/app-dashboard/dashboard/wedding-list-widget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getEmployeeDashboardView } from "@/lib/data/app-data";
-import { getCurrentPlanner } from "@/lib/get-current-planner";
-import { buildTimeOfDayGreeting } from "@/lib/planner-display";
 import { cn } from "@/lib/utils";
 
 export async function EmployeeDashboardContent() {
-  const [data, planner] = await Promise.all([getEmployeeDashboardView(), getCurrentPlanner()]);
-  const greeting = buildTimeOfDayGreeting(planner.displayName);
-  const [salutation, ...nameParts] = greeting.split(",");
+  const data = await getEmployeeDashboardView();
+  const [salutation, ...nameParts] = data.greeting.split(",");
   const greetedName = nameParts.join(",").trim();
 
   return (
@@ -28,7 +25,7 @@ export async function EmployeeDashboardContent() {
             {greetedName}
           </p>
         ) : (
-          <p className="text-lg text-muted-foreground">{greeting}</p>
+          <p className="text-lg text-muted-foreground">{data.greeting}</p>
         )}
       </div>
       <StatsGrid items={data.stats} />

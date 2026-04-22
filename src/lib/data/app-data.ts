@@ -311,39 +311,34 @@ async function getPlannerContextFromSupabase(supabase: SupabaseClient<Database>)
   };
 }
 
-const getPlannerContext = cache(async (): Promise<PlannerContext> => {
+export const getPlannerContext = cache(async (): Promise<PlannerContext> => {
   const supabase = await createSupabaseServerClient();
   return getPlannerContextFromSupabase(supabase);
 });
 
-async function getAccessibleWeddingIds(userId: string) {
+const getPersona = cache(async (userId: string) => {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+  return resolvePersona(supabase, userId);
+});
+
+const getAccessibleWeddings = cache(async (userId: string): Promise<WeddingRow[]> => {
+  const supabase = await createSupabaseServerClient();
+  const { data: memberData, error: memberError } = await supabase
     .from("wedding_members")
     .select("wedding_id")
     .eq("user_id", userId)
     .neq("status", "removed");
-
-  if (error) throw error;
-  return [...new Set((data ?? []).map((row) => row.wedding_id))];
-}
-
-async function getAccessibleWeddings(userId: string) {
-  const supabase = await createSupabaseServerClient();
-  const weddingIds = await getAccessibleWeddingIds(userId);
-  if (!weddingIds.length) return [] as WeddingRow[];
-
+  if (memberError) throw memberError;
+  const weddingIds = [...new Set((memberData ?? []).map((r) => r.wedding_id))];
+  if (!weddingIds.length) return [];
   const { data, error } = await supabase
     .from("weddings")
-    .select(
-      "id, slug, couple_name, bride_name, groom_name, city, venue_name, wedding_date, cultures, status, total_budget_paise, spent_budget_paise",
-    )
+    .select("id, slug, couple_name, bride_name, groom_name, city, venue_name, wedding_date, cultures, status, total_budget_paise, spent_budget_paise")
     .in("id", weddingIds)
     .order("created_at", { ascending: false });
-
   if (error) throw error;
   return (data ?? []) as WeddingRow[];
-}
+});
 
 async function getTasksForWeddingIds(weddingIds: string[]) {
   if (!weddingIds.length) return [] as TaskRow[];
@@ -503,8 +498,10 @@ export const getAllWeddingsPageView = cache(async (): Promise<AllWeddingsPageVie
     };
   }
 
-  const supabase = await createSupabaseServerClient();
-  const persona = await resolvePersona(supabase, planner.userId);
+  const [supabase, persona] = await Promise.all([
+    createSupabaseServerClient(),
+    getPersona(planner.userId),
+  ]);
   const [{ data: tasksData }, { data: docsData }] = await Promise.all([
     supabase
       .from("tasks")
@@ -847,8 +844,10 @@ export const getWeddingWorkspaceBySlug = cache(
     const wedding = weddings.find((row) => row.slug === weddingSlug);
     if (!wedding) return null;
 
-    const supabase = await createSupabaseServerClient();
-    const persona = await resolvePersona(supabase, planner.userId);
+    const [supabase, persona] = await Promise.all([
+      createSupabaseServerClient(),
+      getPersona(planner.userId),
+    ]);
     const [{ data: tasksData }, { data: eventsData }, { data: vendorsData }, { data: membersData }] =
       await Promise.all([
         supabase
@@ -1016,8 +1015,10 @@ export const getWorkspaceSidebarCounts = cache(
       return { teamCount: 0, memberCap: 3, vendorPendingCount: 0, taskOverdueCount: 0, messageCount: 0 };
     }
 
-    const supabase = await createSupabaseServerClient();
-    const persona = await resolvePersona(supabase, planner.userId);
+    const [supabase, persona] = await Promise.all([
+      createSupabaseServerClient(),
+      getPersona(planner.userId),
+    ]);
     const [{ count: teamCount }, { count: vendorPendingCount }, { data: tasks }, { count: messageCount }] =
       await Promise.all([
         supabase

@@ -6,13 +6,10 @@ import { UrgentTasksWidget } from "@/components/app-dashboard/tasks/urgent-tasks
 import { WeeklyCompletionWidget } from "@/components/app-dashboard/tasks/weekly-completion-widget";
 import { WeddingListWidget } from "@/components/app-dashboard/dashboard/wedding-list-widget";
 import { getDashboardView } from "@/lib/data/app-data";
-import { getCurrentPlanner } from "@/lib/get-current-planner";
-import { buildTimeOfDayGreeting } from "@/lib/planner-display";
 
 export async function DashboardContent() {
-  const [data, planner] = await Promise.all([getDashboardView(), getCurrentPlanner()]);
-  const greeting = buildTimeOfDayGreeting(planner.displayName);
-  const [salutation, ...nameParts] = greeting.split(",");
+  const data = await getDashboardView();
+  const [salutation, ...nameParts] = data.greeting.split(",");
   const greetedName = nameParts.join(",").trim();
 
   return (
@@ -26,7 +23,7 @@ export async function DashboardContent() {
             {greetedName}
           </p>
         ) : (
-          <p className="text-lg text-muted-foreground">{greeting}</p>
+          <p className="text-lg text-muted-foreground">{data.greeting}</p>
         )}
       </div>
       <StatsGrid items={data.stats} />
