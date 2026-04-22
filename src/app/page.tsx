@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
+import { useScroll, useSpring, useTransform, useReducedMotion } from "framer-motion";
+import { div as MotionDiv, section as MotionSection } from "framer-motion/client";
 import {
   CalendarCheck2,
   ListChecks,
@@ -27,6 +29,7 @@ import {
 } from "lucide-react";
 
 import { HashSessionCapture } from "@/components/auth/hash-session-capture";
+import { HeroDashboardPreview } from "@/components/landing/hero-dashboard-preview";
 
 /* ─────────────────────────────────────────
    Data
@@ -131,540 +134,8 @@ const PRICING_TIERS = [
 ];
 
 /* ─────────────────────────────────────────
-   Mock UI Components
+   Mock UI Components (other sections)
 ───────────────────────────────────────── */
-
-function DashboardMock() {
-  const WEDDING_COLORS = ["#FF8C42", "#9B5DE5", "#06D6A0", "#E8567A"];
-  return (
-    <div
-      style={{
-        background: "#111113",
-        border: "1px solid rgba(255,255,255,0.08)",
-        borderRadius: "14px",
-        overflow: "hidden",
-        fontFamily: "var(--font-sans)",
-      }}
-    >
-      {/* Mac browser chrome */}
-      <div
-        style={{
-          background: "#0d0d0f",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
-          padding: "11px 16px",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-        }}
-      >
-        <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
-          <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#FF5F57" }} />
-          <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#FFBD2E" }} />
-          <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#28C840" }} />
-        </div>
-        <div style={{ display: "flex", gap: "3px", marginLeft: "8px" }}>
-          <span style={{ color: "#2a2a2e", fontSize: "13px", lineHeight: 1 }}>‹</span>
-          <span style={{ color: "#2a2a2e", fontSize: "13px", lineHeight: 1 }}>›</span>
-        </div>
-        <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
-          <div
-            style={{
-              background: "#1a1a1e",
-              border: "1px solid rgba(255,255,255,0.06)",
-              borderRadius: "6px",
-              padding: "4px 0",
-              fontSize: "10px",
-              color: "#52525b",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "5px",
-              maxWidth: "320px",
-              width: "100%",
-            }}
-          >
-            <span style={{ color: "#06D6A0", fontSize: "8px" }}>🔒</span>
-            app.shaadi.in/dashboard
-          </div>
-        </div>
-        <div
-          style={{
-            background: "rgba(255,140,66,0.12)",
-            border: "1px solid rgba(255,140,66,0.25)",
-            borderRadius: "5px",
-            padding: "3px 9px",
-            fontSize: "9px",
-            color: "#FF8C42",
-            fontWeight: 700,
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-          }}
-        >
-          <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#FF8C42" }} />
-          4 LIVE
-        </div>
-      </div>
-
-      {/* App shell */}
-      <div style={{ display: "flex", height: "520px" }}>
-
-        {/* ── Sidebar ── */}
-        <div
-          style={{
-            width: "178px",
-            background: "#0d0d0f",
-            borderRight: "1px solid rgba(255,255,255,0.045)",
-            padding: "14px 10px",
-            flexShrink: 0,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "7px", padding: "5px 8px", marginBottom: "18px" }}>
-            <div
-              style={{
-                background: "linear-gradient(135deg, #FF8C42, #E8567A)",
-                borderRadius: "7px",
-                width: "22px",
-                height: "22px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "11px",
-                flexShrink: 0,
-              }}
-            >
-              🪷
-            </div>
-            <span style={{ color: "#fafafa", fontSize: "12.5px", fontWeight: 700, letterSpacing: "-0.02em" }}>Shaadi</span>
-            <span
-              style={{
-                marginLeft: "auto",
-                background: "rgba(6,214,160,0.14)",
-                color: "#06D6A0",
-                fontSize: "7.5px",
-                padding: "1px 5px",
-                borderRadius: "3px",
-                fontWeight: 700,
-              }}
-            >
-              PRO
-            </span>
-          </div>
-
-          {[
-            { section: "WORKSPACE", items: [
-              { label: "Dashboard", active: true, badge: null, dot: null },
-              { label: "Weddings", active: false, badge: "4", dot: null },
-              { label: "Tasks", active: false, badge: "12", dot: null },
-              { label: "Calendar", active: false, badge: null, dot: null },
-            ]},
-            { section: "FINANCES", items: [
-              { label: "Budget", active: false, badge: null, dot: null },
-              { label: "Vendors", active: false, badge: null, dot: "#FFD166" },
-              { label: "Invoices", active: false, badge: null, dot: null },
-            ]},
-            { section: "TEAM", items: [
-              { label: "Team", active: false, badge: null, dot: null },
-              { label: "Messages", active: false, badge: null, dot: "#E8567A" },
-              { label: "Reports", active: false, badge: null, dot: null },
-            ]},
-          ].map(({ section, items }) => (
-            <div key={section} style={{ marginBottom: "10px" }}>
-              <p style={{ color: "#252528", fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.08em", padding: "0 8px", marginBottom: "3px" }}>
-                {section}
-              </p>
-              {items.map((item) => (
-                <div
-                  key={item.label}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "7px",
-                    padding: "5.5px 8px",
-                    borderRadius: "6px",
-                    marginBottom: "1px",
-                    background: item.active ? "rgba(255,140,66,0.1)" : "transparent",
-                    color: item.active ? "#FF8C42" : "#52525b",
-                    fontSize: "11.5px",
-                    fontWeight: item.active ? 600 : 400,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "5px",
-                      height: "5px",
-                      borderRadius: "50%",
-                      background: item.active ? "#FF8C42" : item.dot ?? "#252528",
-                      flexShrink: 0,
-                    }}
-                  />
-                  <span style={{ flex: 1 }}>{item.label}</span>
-                  {item.badge && (
-                    <span
-                      style={{
-                        background: item.active ? "rgba(255,140,66,0.18)" : "rgba(255,255,255,0.05)",
-                        color: item.active ? "#FF8C42" : "#3f3f46",
-                        fontSize: "8px",
-                        padding: "0 5px",
-                        borderRadius: "3px",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          ))}
-
-          <div style={{ marginTop: "auto", borderTop: "1px solid rgba(255,255,255,0.04)", paddingTop: "10px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "5px 8px" }}>
-              <div
-                style={{
-                  width: "26px",
-                  height: "26px",
-                  borderRadius: "50%",
-                  background: "linear-gradient(135deg, #FF8C42, #E8567A)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "9px",
-                  fontWeight: 700,
-                  color: "white",
-                  flexShrink: 0,
-                }}
-              >
-                PM
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ color: "#e4e4e7", fontSize: "10.5px", fontWeight: 600 }}>Priya Mehta</p>
-                <p style={{ color: "#3f3f46", fontSize: "9px" }}>Studio Plan</p>
-              </div>
-              <span style={{ color: "#2a2a2e", fontSize: "11px" }}>⚙</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Main area ── */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#0f0f11" }}>
-
-          {/* Top bar */}
-          <div
-            style={{
-              borderBottom: "1px solid rgba(255,255,255,0.04)",
-              padding: "10px 18px",
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              background: "#111113",
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <p style={{ color: "#3f3f46", fontSize: "9.5px", marginBottom: "1px" }}>Wednesday, 12 April 2025</p>
-              <p style={{ color: "#fafafa", fontSize: "13.5px", fontWeight: 700, letterSpacing: "-0.02em" }}>
-                Good morning, Priya ✨
-              </p>
-            </div>
-            <div
-              style={{
-                background: "#1a1a1e",
-                border: "1px solid rgba(255,255,255,0.06)",
-                borderRadius: "7px",
-                padding: "5px 10px",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-                width: "140px",
-              }}
-            >
-              <span style={{ color: "#3f3f46", fontSize: "10px" }}>⌕</span>
-              <span style={{ color: "#252528", fontSize: "10px" }}>Search weddings...</span>
-            </div>
-            {[
-              { label: "7 tasks due today", color: "#E8567A", bg: "rgba(232,86,122,0.1)" },
-              { label: "2 vendor follow-ups", color: "#FFD166", bg: "rgba(255,209,102,0.1)" },
-            ].map((b) => (
-              <div
-                key={b.label}
-                style={{
-                  background: b.bg,
-                  border: `1px solid ${b.color}28`,
-                  borderRadius: "5px",
-                  padding: "3px 9px",
-                  fontSize: "9px",
-                  color: b.color,
-                  fontWeight: 600,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {b.label}
-              </div>
-            ))}
-            <div
-              style={{
-                position: "relative",
-                width: "28px",
-                height: "28px",
-                background: "#1a1a1e",
-                border: "1px solid rgba(255,255,255,0.06)",
-                borderRadius: "7px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "12px",
-                flexShrink: 0,
-              }}
-            >
-              🔔
-              <div
-                style={{
-                  position: "absolute",
-                  top: "5px",
-                  right: "5px",
-                  width: "6px",
-                  height: "6px",
-                  background: "#E8567A",
-                  borderRadius: "50%",
-                  border: "1.5px solid #111113",
-                }}
-              />
-            </div>
-          </div>
-
-          {/* KPI strip */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: "8px",
-              padding: "12px 18px",
-              borderBottom: "1px solid rgba(255,255,255,0.04)",
-              flexShrink: 0,
-            }}
-          >
-            {[
-              { label: "Active Weddings", value: "4", sub: "+1 this month", color: "#FF8C42", bars: [3,5,4,7,6,8,10] },
-              { label: "Revenue MTD", value: "₹3.2L", sub: "+22% vs last mo", color: "#06D6A0", bars: [4,5,6,5,8,7,11] },
-              { label: "Tasks Overdue", value: "7", sub: "3 critical", color: "#E8567A", bars: [2,3,5,4,6,5,8] },
-              { label: "Budget Utilised", value: "61%", sub: "Across 4 weddings", color: "#9B5DE5", bars: [3,4,5,6,5,7,7] },
-            ].map((s) => (
-              <div
-                key={s.label}
-                style={{
-                  background: "#111113",
-                  border: "1px solid rgba(255,255,255,0.05)",
-                  borderRadius: "9px",
-                  padding: "10px 12px",
-                }}
-              >
-                <p style={{ color: "#52525b", fontSize: "8.5px", fontWeight: 500, marginBottom: "2px" }}>{s.label}</p>
-                <p style={{ color: s.color, fontSize: "18px", fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1 }}>{s.value}</p>
-                <p style={{ color: "#3f3f46", fontSize: "8px", marginTop: "2px" }}>{s.sub}</p>
-                <div style={{ display: "flex", alignItems: "flex-end", gap: "2px", marginTop: "7px", height: "18px" }}>
-                  {s.bars.map((h, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        flex: 1,
-                        height: `${h * 1.6}px`,
-                        background: i === s.bars.length - 1 ? s.color : `${s.color}30`,
-                        borderRadius: "2px 2px 0 0",
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Body: wedding cards + right panel */}
-          <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-
-            {/* Wedding cards grid */}
-            <div style={{ flex: 1, padding: "14px 18px", overflow: "hidden" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                <p style={{ color: "#a1a1aa", fontSize: "11px", fontWeight: 600, letterSpacing: "-0.01em" }}>Active Weddings</p>
-                <span style={{ color: "#3f3f46", fontSize: "9px" }}>4 total · by date</span>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "7px" }}>
-                {[
-                  { name: "Sharma × Kapoor", date: "Apr 28", daysLeft: "16d", urgent: true, tag: "Punjabi", venue: "Taj Palace, Delhi", guests: "350", budget: "₹18L", spent: "₹12.4L", pct: 72, color: "#FF8C42", tasks: "4 due today", milestone: "Final vendor review", team: ["RS","MK","AJ"] },
-                  { name: "Gupta × Sharma", date: "May 18", daysLeft: "36d", urgent: false, tag: "Hindu", venue: "ITC Grand, Mumbai", guests: "220", budget: "₹12L", spent: "₹5.3L", pct: 44, color: "#9B5DE5", tasks: "11 tasks", milestone: "Decor shortlist", team: ["RG","PM"] },
-                  { name: "Verma × Patel", date: "Jun 22", daysLeft: "71d", urgent: false, tag: "Gujarati", venue: "Oberoi, Udaipur", guests: "480", budget: "₹25L", spent: "₹4.5L", pct: 18, color: "#06D6A0", tasks: "23 tasks", milestone: "Venue locked", team: ["NV","SK","PM"] },
-                  { name: "Nair × Iyer", date: "Jul 5", daysLeft: "84d", urgent: false, tag: "Kerala", venue: "Leela, Kovalam", guests: "160", budget: "₹9L", spent: "₹1.8L", pct: 20, color: "#E8567A", tasks: "8 tasks", milestone: "Catering quotes", team: ["AN","PM"] },
-                ].map((w) => (
-                  <div
-                    key={w.name}
-                    style={{
-                      background: "#111113",
-                      border: `1px solid ${w.urgent ? `${w.color}30` : "rgba(255,255,255,0.045)"}`,
-                      borderRadius: "10px",
-                      padding: "11px 12px",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
-                      <div>
-                        <p style={{ color: "#e4e4e7", fontSize: "11px", fontWeight: 700, letterSpacing: "-0.015em", marginBottom: "3px" }}>{w.name}</p>
-                        <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
-                          <span style={{ background: `${w.color}18`, color: w.color, fontSize: "7.5px", padding: "1px 5px", borderRadius: "3px", fontWeight: 600 }}>{w.tag}</span>
-                          <span style={{ color: "#3f3f46", fontSize: "8.5px" }}>{w.date}</span>
-                        </div>
-                      </div>
-                      <span
-                        style={{
-                          background: w.urgent ? "rgba(232,86,122,0.12)" : "rgba(255,255,255,0.04)",
-                          color: w.urgent ? "#E8567A" : "#3f3f46",
-                          fontSize: "8px",
-                          padding: "2px 6px",
-                          borderRadius: "4px",
-                          fontWeight: 600,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {w.daysLeft}
-                      </span>
-                    </div>
-
-                    <p style={{ color: "#3f3f46", fontSize: "8.5px", marginBottom: "7px" }}>
-                      📍 {w.venue} &nbsp;·&nbsp; {w.guests} guests
-                    </p>
-
-                    <div style={{ marginBottom: "7px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "3px" }}>
-                        <span style={{ color: "#52525b", fontSize: "8.5px" }}>{w.spent} of {w.budget}</span>
-                        <span style={{ color: w.color, fontSize: "8.5px", fontWeight: 600 }}>{w.pct}%</span>
-                      </div>
-                      <div style={{ height: "3px", background: "rgba(255,255,255,0.05)", borderRadius: "99px" }}>
-                        <div style={{ height: "100%", width: `${w.pct}%`, background: `linear-gradient(90deg, ${w.color}, ${w.color}bb)`, borderRadius: "99px" }} />
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div style={{ display: "flex" }}>
-                        {w.team.map((t, i) => (
-                          <div
-                            key={i}
-                            style={{
-                              width: "18px",
-                              height: "18px",
-                              borderRadius: "50%",
-                              background: `${WEDDING_COLORS[i % 4]}30`,
-                              border: "1.5px solid #111113",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: "6.5px",
-                              color: WEDDING_COLORS[i % 4],
-                              fontWeight: 700,
-                              marginLeft: i > 0 ? "-5px" : "0",
-                            }}
-                          >
-                            {t}
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                        <span style={{ color: "#3f3f46", fontSize: "8.5px" }}>{w.tasks}</span>
-                        <span style={{ color: "#252528" }}>·</span>
-                        <span style={{ color: "#52525b", fontSize: "8.5px" }}>{w.milestone}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right panel */}
-            <div
-              style={{
-                width: "194px",
-                borderLeft: "1px solid rgba(255,255,255,0.04)",
-                display: "flex",
-                flexDirection: "column",
-                flexShrink: 0,
-                overflow: "hidden",
-              }}
-            >
-              {/* Activity feed */}
-              <div style={{ padding: "13px 14px", borderBottom: "1px solid rgba(255,255,255,0.04)", flex: 1 }}>
-                <p style={{ color: "#a1a1aa", fontSize: "10.5px", fontWeight: 600, marginBottom: "10px" }}>Recent Activity</p>
-                <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
-                  {[
-                    { dot: "#06D6A0", text: "Raj Photography confirmed", sub: "Sharma · 2m ago" },
-                    { dot: "#FF8C42", text: "Budget updated to ₹25L", sub: "Verma · 18m ago" },
-                    { dot: "#E8567A", text: "Task overdue: Book pandit", sub: "Gupta · 1h ago" },
-                    { dot: "#9B5DE5", text: "Invoice raised ₹84,000", sub: "Dreams Decor · 3h ago" },
-                    { dot: "#FFD166", text: "Deposit pending approval", sub: "Nair · 5h ago" },
-                    { dot: "#06D6A0", text: "Mehendi artist booked ✓", sub: "Sharma · 6h ago" },
-                  ].map((a, i) => (
-                    <div key={i} style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
-                      <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: a.dot, marginTop: "3px", flexShrink: 0 }} />
-                      <div>
-                        <p style={{ color: "#71717a", fontSize: "9.5px", lineHeight: 1.3 }}>{a.text}</p>
-                        <p style={{ color: "#3f3f46", fontSize: "8px", marginTop: "1px" }}>{a.sub}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Due today */}
-              <div style={{ padding: "11px 14px" }}>
-                <p style={{ color: "#a1a1aa", fontSize: "10.5px", fontWeight: 600, marginBottom: "8px" }}>Due Today</p>
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  {[
-                    { text: "Finalise menu — Sharma", color: "#E8567A", done: false },
-                    { text: "Send invite proofs", color: "#FF8C42", done: false },
-                    { text: "Confirm DJ booking", color: "#FFD166", done: false },
-                    { text: "STL booking done", color: "#06D6A0", done: true },
-                  ].map((t, i) => (
-                    <div key={i} style={{ display: "flex", gap: "7px", alignItems: "flex-start" }}>
-                      <div
-                        style={{
-                          width: "12px",
-                          height: "12px",
-                          borderRadius: "3px",
-                          border: `1px solid ${t.done ? t.color : "rgba(255,255,255,0.08)"}`,
-                          background: t.done ? `${t.color}22` : "transparent",
-                          flexShrink: 0,
-                          marginTop: "1px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "7px",
-                          color: t.color,
-                        }}
-                      >
-                        {t.done ? "✓" : ""}
-                      </div>
-                      <p
-                        style={{
-                          color: t.done ? "#3f3f46" : "#71717a",
-                          fontSize: "9.5px",
-                          textDecoration: t.done ? "line-through" : "none",
-                          lineHeight: 1.3,
-                        }}
-                      >
-                        {t.text}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function TaskBoardMock() {
   return (
@@ -676,7 +147,8 @@ function TaskBoardMock() {
         overflow: "hidden",
         fontFamily: "var(--font-sans)",
         boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 60px rgba(155,93,229,0.08)",
-        width: "340px",
+        width: "100%",
+        maxWidth: "340px",
       }}
     >
       <div
@@ -989,26 +461,35 @@ export default function Home() {
   const [billing, setBilling] = useState<"monthly" | "annual">("annual");
   const marqueeItems = [...CULTURES, ...CULTURES];
 
-  const budgetSectionRef = useRef<HTMLElement>(null);
-  const [heroTilt, setHeroTilt] = useState(8);
-  const [cardSpread, setCardSpread] = useState(0);
+  const budgetSectionRef = useRef<HTMLElement | null>(null);
+  const prefersReducedMotion = useReducedMotion();
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      setHeroTilt(Math.min(22, 8 + (scrollY / 650) * 14));
+  const { scrollYProgress } = useScroll({
+    target: budgetSectionRef,
+    offset: ["start 0.92", "start 0.18"],
+  });
 
-      if (budgetSectionRef.current) {
-        const rect = budgetSectionRef.current.getBoundingClientRect();
-        const trigger = rect.height * 0.2;
-        const scrolledPast = Math.max(0, -rect.top - trigger);
-        const range = rect.height * 0.5;
-        setCardSpread(Math.max(0, Math.min(1, scrolledPast / range)));
-      }
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const spreadRaw = useTransform(scrollYProgress, [0, 1], [0, 1], { clamp: true });
+  const spread = useSpring(spreadRaw, {
+    stiffness: prefersReducedMotion ? 420 : 44,
+    damping: prefersReducedMotion ? 52 : 18,
+    mass: 0.82,
+  });
+
+  const motion = prefersReducedMotion ? 0 : 1;
+
+  /* Stacked / overlapped at t≈0 (straight, nudged toward center), fan out dramatically by t≈1 */
+  const terminalX = useTransform(spread, (t) => motion * ((1 - t) * 96 - t * 58));
+  const terminalRotate = useTransform(spread, (t) => motion * t * -13);
+
+  const budgetX = useTransform(spread, (t) => motion * (-(1 - t) * 8 + t * 22));
+  const budgetRotate = useTransform(spread, (t) => motion * t * 6);
+
+  const taskX = useTransform(spread, (t) => motion * (-(1 - t) * 102 + t * 62));
+  const taskRotate = useTransform(spread, (t) => motion * t * 12);
+
+  const glowParallaxPx = useTransform(scrollYProgress, [0, 0.5, 1], [0, -22, 0]);
+  const glowY = useTransform(glowParallaxPx, (px) => `calc(-50% + ${px}px)`);
 
   return (
     <div
@@ -1284,36 +765,14 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Dashboard mock — overlaps into marquee below */}
+        {/* App dashboard snapshot — overlaps into marquee below */}
         <div
-          className="relative z-20 hidden md:flex justify-center"
+          className="relative z-20 mx-auto hidden w-full max-w-6xl justify-center md:flex md:px-4 lg:px-6"
           style={{ marginBottom: "-120px" }}
         >
-          <div
-            style={{
-              transform: `perspective(1800px) rotateX(${heroTilt}deg)`,
-              transformOrigin: "top center",
-              width: "80%",
-              willChange: "transform",
-              borderRadius: "14px",
-              boxShadow: "0 0 0 1px rgba(255,255,255,0.06), 0 60px 140px rgba(0,0,0,0.85), 0 0 140px rgba(255,140,66,0.07)",
-            }}
-          >
-            <DashboardMock />
+          <div className="w-full overflow-hidden rounded-2xl">
+            <HeroDashboardPreview />
           </div>
-          {/* Fade gradient — sits flush at the bottom of the mock */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: "240px",
-              background: "linear-gradient(to bottom, transparent 0%, #09090b 80%)",
-              pointerEvents: "none",
-              zIndex: 5,
-            }}
-          />
         </div>
       </section>
 
@@ -1698,7 +1157,7 @@ export default function Home() {
       </section>
 
       {/* ── AI SECTION — terminal + overlapping mocks ── */}
-      <section
+      <MotionSection
         ref={budgetSectionRef}
         style={{
           background: "linear-gradient(180deg, #09090b 0%, #0c0a12 50%, #09090b 100%)",
@@ -1710,14 +1169,15 @@ export default function Home() {
         }}
       >
         {/* Background glow */}
-        <div
+        <MotionDiv
           className="absolute pointer-events-none lp-glow-b"
           style={{
             width: "700px",
             height: "700px",
             top: "50%",
             left: "50%",
-            transform: "translate(-50%, -50%)",
+            x: "-50%",
+            y: glowY,
             background: "radial-gradient(circle, rgba(155,93,229,0.1) 0%, transparent 65%)",
             borderRadius: "50%",
           }}
@@ -1758,36 +1218,20 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Three-layer mock composition */}
-          <div
-            style={{
-              position: "relative",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "flex-start",
-              minHeight: "420px",
-            }}
-          >
-            {/* Layer 1: Terminal (back, slightly left → spreads to far left) */}
-            <div
-              style={{
-                position: "absolute",
-                left: "50%",
-                transform: `translateX(calc(-55% - ${cardSpread * 260}px)) rotateZ(${-cardSpread * 8}deg)`,
-                top: "40px",
-                zIndex: 1,
-                willChange: "transform",
-                transition: "none",
-              }}
-              className="hidden md:block"
+          {/* Three cards: terminal (left), budget (center), tasks (right) — centered so scroll can fan from a tight stack */}
+          <div className="relative mx-auto hidden min-h-[480px] w-full max-w-6xl items-start justify-center gap-0 md:flex md:px-2 lg:px-4">
+            {/* Left: AI terminal */}
+            <MotionDiv
+              className="z-10 flex min-w-0 max-w-[min(100%,420px)] shrink-0 justify-end pt-6 md:pt-8 md:-mr-10 lg:-mr-14 xl:-mr-16"
+              style={{ x: terminalX, rotate: terminalRotate }}
             >
               <div
+                className="w-full max-w-[380px]"
                 style={{
                   background: "#0d0d0f",
                   border: "1px solid rgba(255,255,255,0.07)",
                   borderRadius: "14px",
                   overflow: "hidden",
-                  width: "460px",
                   boxShadow: "0 32px 80px rgba(0,0,0,0.6)",
                   fontFamily: "var(--font-geist-mono)",
                   fontSize: "12px",
@@ -1851,60 +1295,31 @@ export default function Home() {
                   <div style={{ color: "#06D6A0", marginTop: "10px" }}>✓ Allocation complete</div>
                 </div>
               </div>
-            </div>
+            </MotionDiv>
 
-            {/* Layer 2: Budget allocation card (front center → spreads to right) */}
-            <div
-              style={{
-                position: "absolute",
-                left: "50%",
-                transform: `translateX(calc(5% + ${cardSpread * 270}px)) rotateZ(${2 + cardSpread * 5}deg)`,
-                top: 0,
-                zIndex: 10,
-                willChange: "transform",
-                transition: "none",
-              }}
-              className="hidden md:block"
+            {/* Center: budget allocation (hero) */}
+            <MotionDiv
+              className="relative z-20 shrink-0 -translate-y-1 md:-translate-y-2"
+              style={{ x: budgetX, rotate: budgetRotate }}
             >
-              <div
-                style={{
-                  transform: "rotate(2deg)",
-                  transformOrigin: "top center",
-                }}
-              >
-                <BudgetAllocationMock />
-              </div>
-            </div>
-
-            {/* Layer 3: Task board (back left → spreads to center) */}
-            <div
-              style={{
-                position: "absolute",
-                left: "50%",
-                transform: `translateX(calc(-105% + ${cardSpread * 185}px)) translateY(${-cardSpread * 24}px) rotateZ(${-3 + cardSpread * 4}deg)`,
-                top: "20px",
-                zIndex: cardSpread > 0.4 ? 8 : 2,
-                opacity: 0.7 + cardSpread * 0.3,
-                willChange: "transform",
-                transition: "none",
-              }}
-              className="hidden lg:block"
-            >
-              <div style={{ transform: "rotate(0deg)", transformOrigin: "top right" }}>
-                <TaskBoardMock />
-              </div>
-            </div>
-
-            {/* Mobile fallback */}
-            <div className="block md:hidden w-full">
               <BudgetAllocationMock />
-            </div>
+            </MotionDiv>
 
-            {/* Spacer for absolute layout */}
-            <div style={{ height: "460px", width: "100%" }} className="hidden md:block" />
+            {/* Right: task board */}
+            <MotionDiv
+              className="z-10 flex min-w-0 max-w-[min(100%,360px)] shrink-0 justify-start pt-5 md:pt-7 md:-ml-10 lg:-ml-14 xl:-ml-16"
+              style={{ x: taskX, rotate: taskRotate }}
+            >
+              <TaskBoardMock />
+            </MotionDiv>
+          </div>
+
+          {/* Mobile: single primary mock */}
+          <div className="mx-auto w-full max-w-sm md:hidden">
+            <BudgetAllocationMock />
           </div>
         </div>
-      </section>
+      </MotionSection>
 
       {/* ── VENDOR SECTION ── */}
       <section

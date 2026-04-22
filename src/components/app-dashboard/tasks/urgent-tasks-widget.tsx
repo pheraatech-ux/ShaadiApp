@@ -11,24 +11,40 @@ type UrgentTasksWidgetProps = {
   items: UrgentTaskItem[];
   /** Base route for the global tasks list (planner vs employee). */
   allTasksHref?: string;
+  /** When set (e.g. marketing preview), no links or navigation. */
+  disableNavigation?: boolean;
 };
 
 function hasSpotlightData(item: UrgentTaskItem) {
   return item.dueDateLabel != null && item.daysOverdue != null;
 }
 
-export function UrgentTasksWidget({ items, allTasksHref = "/app/tasks" }: UrgentTasksWidgetProps) {
+export function UrgentTasksWidget({
+  items,
+  allTasksHref = "/app/tasks",
+  disableNavigation = false,
+}: UrgentTasksWidgetProps) {
+  const allTasksCta = disableNavigation ? (
+    <span
+      className={cn(
+        buttonVariants({ variant: "ghost", size: "sm" }),
+        "inline-flex items-center justify-center rounded-xl",
+      )}
+    >
+      All tasks
+    </span>
+  ) : (
+    <Link
+      href={allTasksHref}
+      className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "rounded-xl")}
+    >
+      All tasks
+    </Link>
+  );
   return (
     <SectionCard
       title="Urgent tasks"
-      action={
-        <Link
-          href={allTasksHref}
-          className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "rounded-xl")}
-        >
-          All tasks
-        </Link>
-      }
+      action={allTasksCta}
     >
       <div className="space-y-3">
         {items.length === 0 ? (
@@ -87,7 +103,7 @@ export function UrgentTasksWidget({ items, allTasksHref = "/app/tasks" }: Urgent
                       ) : null}
                     </div>
 
-                    {item.taskHref ? (
+                    {item.taskHref && !disableNavigation ? (
                       <Link
                         href={item.taskHref}
                         className="shrink-0 text-sm font-medium text-primary hover:underline"
