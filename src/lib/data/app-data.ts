@@ -25,7 +25,7 @@ import {
   mapBudgetCategoryToBucket,
   type BudgetBucketId,
 } from "@/lib/budget-recommendations";
-import { resolvePersonaFromUser } from "@/lib/employee/persona";
+import { resolvePersonaFromUser, type AppPersona } from "@/lib/employee/persona";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { taskTouchesWorkspaceUser } from "@/lib/wedding-task-scope";
 import type { Database } from "@/types/database";
@@ -171,6 +171,7 @@ type PlannerContext = {
   email: string;
   displayName: string;
   workspaceName: string;
+  persona: AppPersona;
 };
 
 function formatDateLabel(dateStr?: string | null) {
@@ -308,6 +309,7 @@ async function getPlannerContextFromSupabase(supabase: SupabaseClient<Database>)
     email: user.email ?? "",
     displayName,
     workspaceName,
+    persona: resolvePersonaFromUser(user),
   };
 }
 
@@ -316,11 +318,6 @@ export const getPlannerContext = cache(async (): Promise<PlannerContext> => {
   return getPlannerContextFromSupabase(supabase);
 });
 
-const getPersona = cache(async (_userId: string) => {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return resolvePersonaFromUser(user);
-});
 
 const getAccessibleWeddings = cache(async (userId: string): Promise<WeddingRow[]> => {
   const supabase = await createSupabaseServerClient();
@@ -436,8 +433,14 @@ export const getAppSidebarCounts = cache(async (): Promise<AppSidebarCounts> => 
   }
   const supabase = await createSupabaseServerClient();
   const today = new Date().toISOString().slice(0, 10);
-  const [tasks, { data: memberRows }, { count: messageCount }] = await Promise.all([
-    getAccessibleTasks(),
+  const [{ count: overdueCount }, { data: memberRows }, { count: messageCount }] = await Promise.all([
+    supabase
+      .from("tasks")
+      .select("*", { head: true, count: "exact" })
+      .in("wedding_id", weddingIds)
+      .neq("status", "done")
+      .not("due_date", "is", null)
+      .lt("due_date", today),
     supabase
       .from("wedding_members")
       .select("user_id")
@@ -449,13 +452,12 @@ export const getAppSidebarCounts = cache(async (): Promise<AppSidebarCounts> => 
       .select("*", { head: true, count: "exact" })
       .in("wedding_id", weddingIds),
   ]);
-  const overdue = tasks.filter((task) => task.status !== "done" && task.due_date && task.due_date < today).length;
   const memberSet = new Set((memberRows ?? []).map((row) => row.user_id).filter(Boolean));
 
   return {
     weddings: weddings.length,
     team: memberSet.size,
-    tasksOverdue: overdue,
+    tasksOverdue: overdueCount ?? 0,
     messages: messageCount ?? 0,
   };
 });
@@ -492,10 +494,8 @@ export const getAllWeddingsPageView = cache(async (): Promise<AllWeddingsPageVie
     };
   }
 
-  const [supabase, persona] = await Promise.all([
-    createSupabaseServerClient(),
-    getPersona(planner.userId),
-  ]);
+  const supabase = await createSupabaseServerClient();
+  const persona = planner.persona;
 
   const tasksBaseQuery = supabase
     .from("tasks")
@@ -888,10 +888,8 @@ export const getWeddingWorkspaceBySlug = cache(
     const wedding = weddings.find((row) => row.slug === weddingSlug);
     if (!wedding) return null;
 
-    const [supabase, persona] = await Promise.all([
-      createSupabaseServerClient(),
-      getPersona(planner.userId),
-    ]);
+    const supabase = await createSupabaseServerClient();
+    const persona = planner.persona;
 
     const tasksBaseQuery = supabase
       .from("tasks")
@@ -1063,10 +1061,8 @@ export const getWorkspaceSidebarCounts = cache(
       return { teamCount: 0, memberCap: 3, vendorPendingCount: 0, taskOverdueCount: 0, messageCount: 0 };
     }
 
-    const [supabase, persona] = await Promise.all([
-      createSupabaseServerClient(),
-      getPersona(planner.userId),
-    ]);
+    const supabase = await createSupabaseServerClient();
+    const persona = planner.persona;
 
     const tasksBaseQuery = supabase
       .from("tasks")
@@ -1558,10 +1554,8 @@ export const getWeddingTasksBoardViewBySlug = cache(
     const wedding = weddings.find((row) => row.slug === weddingSlug);
     if (!wedding) return null;
 
-    const [supabase, persona] = await Promise.all([
-      createSupabaseServerClient(),
-      getPersona(planner.userId),
-    ]);
+    const supabase = await createSupabaseServerClient();
+    const persona = planner.persona;
     const tasksBaseQuery = supabase
       .from("tasks")
       .select("id, title, description, status, priority, due_date, linked_event_id, assignee_user_id, assignee_user_ids, raised_by_user_id, visibility, created_at")

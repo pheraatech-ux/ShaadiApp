@@ -40,6 +40,7 @@ export function AppSidebarWithLiveCounts({
     queryKey: SIDEBAR_COUNTS_QUERY_KEY,
     queryFn: fetchSidebarCounts,
     initialData: initialCounts,
+    initialDataUpdatedAt: Date.now(),
     staleTime: 5 * 60 * 1000,
   });
 

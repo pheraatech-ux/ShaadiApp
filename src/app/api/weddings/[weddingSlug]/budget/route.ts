@@ -34,15 +34,6 @@ async function getWeddingLookup(request: NextRequest, weddingSlug: string) {
   return { supabase, weddingId: wedding.id };
 }
 
-async function syncWeddingBudgetSpent(
-  supabase: ReturnType<typeof createSupabaseRouteHandlerClient>,
-  weddingId: string,
-) {
-  const { data: rows } = await supabase.from("budget_items").select("spent_paise").eq("wedding_id", weddingId);
-  const spentTotal = (rows ?? []).reduce((sum, row) => sum + row.spent_paise, 0);
-  await supabase.from("weddings").update({ spent_budget_paise: spentTotal }).eq("id", weddingId);
-}
-
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ weddingSlug: string }> },
@@ -72,7 +63,6 @@ export async function POST(
       return NextResponse.json({ error: error.message || "Unable to create budget item." }, { status: 400 });
     }
 
-    await syncWeddingBudgetSpent(supabase, weddingId);
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Unable to create budget item." }, { status: 500 });
@@ -135,7 +125,6 @@ export async function PATCH(
       return NextResponse.json({ error: error.message || "Unable to update budget item." }, { status: 400 });
     }
 
-    await syncWeddingBudgetSpent(supabase, weddingId);
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch {
     return NextResponse.json({ error: "Unable to update budget item." }, { status: 500 });
@@ -172,7 +161,6 @@ export async function DELETE(
       return NextResponse.json({ error: error.message || "Unable to delete budget item." }, { status: 400 });
     }
 
-    await syncWeddingBudgetSpent(supabase, weddingId);
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch {
     return NextResponse.json({ error: "Unable to delete budget item." }, { status: 500 });

@@ -18,6 +18,7 @@ export function useTasksQuery(weddingSlug: string, initialData: WeddingTasksBoar
     queryKey: tasksQueryKey(weddingSlug),
     queryFn: () => fetchTasks(weddingSlug),
     initialData,
+    initialDataUpdatedAt: Date.now(),
     staleTime: 30 * 1000,
   });
 }
