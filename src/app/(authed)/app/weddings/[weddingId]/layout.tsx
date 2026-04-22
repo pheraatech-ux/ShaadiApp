@@ -7,6 +7,7 @@ import {
 } from "@/components/wedding-workspace/skeletons";
 import { WorkspaceSidebarLive } from "@/components/wedding-workspace/overview/workspace-sidebar-live";
 import { WorkspaceTopbar } from "@/components/wedding-workspace/overview/workspace-topbar";
+import { WeddingChatWidget } from "@/components/wedding-workspace/ai-chat/wedding-chat-widget";
 
 type WeddingWorkspaceLayoutProps = {
   children: ReactNode;
@@ -17,19 +18,22 @@ export default async function WeddingWorkspaceLayout({ children, params }: Weddi
   const { weddingId } = await params;
 
   return (
-    <DashboardShell
-      sidebar={
-        <Suspense fallback={<WorkspaceSidebarSkeleton />}>
-          <WorkspaceSidebarLive weddingId={weddingId} />
-        </Suspense>
-      }
-      topbar={
-        <Suspense fallback={<WorkspaceTopbarSkeleton />}>
-          <WorkspaceTopbar />
-        </Suspense>
-      }
-    >
-      {children}
-    </DashboardShell>
+    <>
+      <DashboardShell
+        sidebar={
+          <Suspense fallback={<WorkspaceSidebarSkeleton />}>
+            <WorkspaceSidebarLive weddingId={weddingId} />
+          </Suspense>
+        }
+        topbar={
+          <Suspense fallback={<WorkspaceTopbarSkeleton />}>
+            <WorkspaceTopbar />
+          </Suspense>
+        }
+      >
+        {children}
+      </DashboardShell>
+      <WeddingChatWidget weddingId={weddingId} />
+    </>
   );
 }
