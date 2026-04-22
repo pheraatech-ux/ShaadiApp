@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { AppSidebar } from "@/components/app-dashboard/dashboard/app-sidebar";
@@ -19,6 +19,7 @@ type Props = {
   userName: string;
   userEmail: string;
   initialCounts: AppSidebarCounts;
+  weddingIds: string[];
   basePath?: string;
   hideBudgetTab?: boolean;
   hideTeamTab?: boolean;
@@ -28,6 +29,7 @@ export function AppSidebarWithLiveCounts({
   userName,
   userEmail,
   initialCounts,
+  weddingIds,
   basePath,
   hideBudgetTab,
   hideTeamTab,
@@ -41,19 +43,23 @@ export function AppSidebarWithLiveCounts({
     staleTime: 5 * 60 * 1000,
   });
 
+  const weddingIdsFilter = useMemo(() => weddingIds.join(","), [weddingIds]);
+
   useEffect(() => {
+    if (!weddingIdsFilter) return;
     const supabase = getSupabaseBrowserClient();
+    const filter = `wedding_id=in.(${weddingIdsFilter})`;
     const invalidate = () => {
       void queryClient.invalidateQueries({ queryKey: SIDEBAR_COUNTS_QUERY_KEY });
     };
     const channel = supabase
       .channel("sidebar-counts-invalidation")
-      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, invalidate)
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, invalidate)
-      .on("postgres_changes", { event: "*", schema: "public", table: "wedding_members" }, invalidate)
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks", filter }, invalidate)
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter }, invalidate)
+      .on("postgres_changes", { event: "*", schema: "public", table: "wedding_members", filter }, invalidate)
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, [queryClient]);
+  }, [queryClient, weddingIdsFilter]);
 
   return (
     <AppSidebar

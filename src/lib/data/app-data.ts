@@ -352,11 +352,19 @@ async function getTasksForWeddingIds(weddingIds: string[]) {
   return (data ?? []) as TaskRow[];
 }
 
-async function buildUrgentTaskItems(
+const getAccessibleTasks = cache(async (): Promise<TaskRow[]> => {
+  const planner = await getPlannerContext();
+  const weddings = await getAccessibleWeddings(planner.userId);
+  return getTasksForWeddingIds(weddings.map((w) => w.id));
+});
+
+function buildUrgentTaskItems(
   overdueTasks: TaskRow[],
   weddings: WeddingRow[],
   tasksAppRoot: "/app" | "/app/employee",
-): Promise<DashboardViewModel["urgentTasks"]> {
+  commentCountByTask: Map<string, number>,
+  eventTitleById: Map<string, string>,
+): DashboardViewModel["urgentTasks"] {
   const sorted = [...overdueTasks].sort((a, b) => {
     if (!a.due_date) return 1;
     if (!b.due_date) return -1;
@@ -365,26 +373,7 @@ async function buildUrgentTaskItems(
   const sliced = sorted.slice(0, 5);
   if (!sliced.length) return [];
 
-  const supabase = await createSupabaseServerClient();
   const weddingById = new Map(weddings.map((w) => [w.id, w]));
-  const taskIds = sliced.map((t) => t.id);
-  const eventIds = [...new Set(sliced.map((t) => t.linked_event_id).filter(Boolean))] as string[];
-
-  const [{ data: commentRows }, { data: eventRows }] = await Promise.all([
-    supabase.from("task_comments").select("task_id").in("task_id", taskIds),
-    eventIds.length
-      ? supabase.from("wedding_events").select("id, title").in("id", eventIds)
-      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
-  ]);
-
-  const commentCountByTask = new Map<string, number>();
-  for (const row of commentRows ?? []) {
-    const tid = row.task_id;
-    commentCountByTask.set(tid, (commentCountByTask.get(tid) ?? 0) + 1);
-  }
-
-  const eventTitleById = new Map((eventRows ?? []).map((e) => [e.id, e.title]));
-
   const today = new Date();
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
@@ -444,24 +433,22 @@ export const getAppSidebarCounts = cache(async (): Promise<AppSidebarCounts> => 
       messages: 0,
     };
   }
-  const tasks = await getTasksForWeddingIds(weddingIds);
-
-  const today = new Date().toISOString().slice(0, 10);
-  const overdue = tasks.filter((task) => task.status !== "done" && task.due_date && task.due_date < today).length;
-
   const supabase = await createSupabaseServerClient();
-  const { data: memberRows } = await supabase
-    .from("wedding_members")
-    .select("user_id")
-    .in("wedding_id", weddingIds)
-    .eq("status", "active")
-    .not("user_id", "is", null);
-
-  const { count: messageCount } = await supabase
-    .from("messages")
-    .select("*", { head: true, count: "exact" })
-    .in("wedding_id", weddingIds);
-
+  const today = new Date().toISOString().slice(0, 10);
+  const [tasks, { data: memberRows }, { count: messageCount }] = await Promise.all([
+    getAccessibleTasks(),
+    supabase
+      .from("wedding_members")
+      .select("user_id")
+      .in("wedding_id", weddingIds)
+      .eq("status", "active")
+      .not("user_id", "is", null),
+    supabase
+      .from("messages")
+      .select("*", { head: true, count: "exact" })
+      .in("wedding_id", weddingIds),
+  ]);
+  const overdue = tasks.filter((task) => task.status !== "done" && task.due_date && task.due_date < today).length;
   const memberSet = new Set((memberRows ?? []).map((row) => row.user_id).filter(Boolean));
 
   return {
@@ -476,6 +463,12 @@ export const getWeddingSlugList = cache(async () => {
   const planner = await getPlannerContext();
   const weddings = await getAccessibleWeddings(planner.userId);
   return weddings.map((wedding) => wedding.slug);
+});
+
+export const getAccessibleWeddingIds = cache(async (): Promise<string[]> => {
+  const planner = await getPlannerContext();
+  const weddings = await getAccessibleWeddings(planner.userId);
+  return weddings.map((w) => w.id);
 });
 
 export const getAllWeddingsPageView = cache(async (): Promise<AllWeddingsPageView> => {
@@ -623,15 +616,14 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
   const planner = await getPlannerContext();
   const weddings = await getAccessibleWeddings(planner.userId);
   const weddingIds = weddings.map((w) => w.id);
-  const tasks = await getTasksForWeddingIds(weddingIds);
   const supabase = await createSupabaseServerClient();
 
-  const { data: vendorRows } = weddingIds.length
-    ? await supabase
-        .from("vendors")
-        .select("status, wedding_id")
-        .in("wedding_id", weddingIds)
-    : { data: [] as { status: "pending" | "confirmed" | "declined"; wedding_id: string }[] };
+  const [tasks, { data: vendorRows }] = await Promise.all([
+    getAccessibleTasks(),
+    weddingIds.length
+      ? supabase.from("vendors").select("status, wedding_id").in("wedding_id", weddingIds)
+      : Promise.resolve({ data: [] as { status: "pending" | "confirmed" | "declined"; wedding_id: string }[] }),
+  ]);
 
   const today = new Date().toISOString().slice(0, 10);
   const overdueTasks = tasks.filter((task) => task.status !== "done" && task.due_date && task.due_date < today);
@@ -639,6 +631,30 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
   const budgetTotal = weddings.reduce((sum, wedding) => sum + wedding.total_budget_paise, 0);
   const overBudgetCount = weddings.filter((wedding) => wedding.spent_budget_paise > wedding.total_budget_paise).length;
   const vendorPending = (vendorRows ?? []).filter((vendor) => vendor.status !== "confirmed").length;
+
+  const sortedOverdue = [...overdueTasks].sort((a, b) => {
+    if (!a.due_date) return 1;
+    if (!b.due_date) return -1;
+    return a.due_date.localeCompare(b.due_date);
+  });
+  const slicedOverdue = sortedOverdue.slice(0, 5);
+  const overdueTaskIds = slicedOverdue.map((t) => t.id);
+  const overdueEventIds = [...new Set(slicedOverdue.map((t) => t.linked_event_id).filter(Boolean))] as string[];
+
+  const [{ data: commentRows }, { data: urgentEventRows }] = await Promise.all([
+    overdueTaskIds.length
+      ? supabase.from("task_comments").select("task_id").in("task_id", overdueTaskIds)
+      : Promise.resolve({ data: [] as { task_id: string }[] }),
+    overdueEventIds.length
+      ? supabase.from("wedding_events").select("id, title").in("id", overdueEventIds)
+      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+  ]);
+
+  const commentCountByTask = new Map<string, number>();
+  for (const row of commentRows ?? []) {
+    commentCountByTask.set(row.task_id, (commentCountByTask.get(row.task_id) ?? 0) + 1);
+  }
+  const eventTitleById = new Map((urgentEventRows ?? []).map((e) => [e.id, e.title]));
 
   const tasksByWedding = new Map<string, { total: number; done: number }>();
   for (const task of tasks) {
@@ -662,7 +678,7 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
     };
   });
 
-  const urgentTasks = await buildUrgentTaskItems(overdueTasks, weddings, "/app");
+  const urgentTasks = buildUrgentTaskItems(overdueTasks, weddings, "/app", commentCountByTask, eventTitleById);
 
   const weekdayIds = [
     { id: "monday", label: "M" },
@@ -739,7 +755,7 @@ export const getEmployeeDashboardView = cache(async (): Promise<DashboardViewMod
   const planner = await getPlannerContext();
   const weddings = await getAccessibleWeddings(planner.userId);
   const weddingIds = weddings.map((w) => w.id);
-  const tasks = await getTasksForWeddingIds(weddingIds);
+  const tasks = await getAccessibleTasks();
   const scopedTasks = tasks.filter((task) => taskTouchesWorkspaceUser(task, planner.userId));
 
   const today = new Date().toISOString().slice(0, 10);
@@ -770,10 +786,33 @@ export const getEmployeeDashboardView = cache(async (): Promise<DashboardViewMod
     };
   });
 
-  const [urgentTasks, recentActivity] = await Promise.all([
-    buildUrgentTaskItems(overdueTasks, weddings, "/app/employee"),
+  const sortedOverdue = [...overdueTasks].sort((a, b) => {
+    if (!a.due_date) return 1;
+    if (!b.due_date) return -1;
+    return a.due_date.localeCompare(b.due_date);
+  });
+  const slicedOverdue = sortedOverdue.slice(0, 5);
+  const overdueTaskIds = slicedOverdue.map((t) => t.id);
+  const overdueEventIds = [...new Set(slicedOverdue.map((t) => t.linked_event_id).filter(Boolean))] as string[];
+
+  const supabase = await createSupabaseServerClient();
+  const [{ data: commentRows }, { data: urgentEventRows }, recentActivity] = await Promise.all([
+    overdueTaskIds.length
+      ? supabase.from("task_comments").select("task_id").in("task_id", overdueTaskIds)
+      : Promise.resolve({ data: [] as { task_id: string }[] }),
+    overdueEventIds.length
+      ? supabase.from("wedding_events").select("id, title").in("id", overdueEventIds)
+      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
     getEmployeeRecentActivityItems(weddingIds),
   ]);
+
+  const commentCountByTask = new Map<string, number>();
+  for (const row of commentRows ?? []) {
+    commentCountByTask.set(row.task_id, (commentCountByTask.get(row.task_id) ?? 0) + 1);
+  }
+  const eventTitleById = new Map((urgentEventRows ?? []).map((e) => [e.id, e.title]));
+
+  const urgentTasks = buildUrgentTaskItems(overdueTasks, weddings, "/app/employee", commentCountByTask, eventTitleById);
 
   const weekdayIds = [
     { id: "monday", label: "M" },
@@ -1420,9 +1459,6 @@ export const getTeamMemberProfileView = cache(
 
 export const getWeddingTeamViewBySlug = cache(
   async (weddingSlug: string): Promise<TeamPageViewModel | null> => {
-    const workspace = await getWeddingWorkspaceBySlug(weddingSlug);
-    if (!workspace) return null;
-
     const planner = await getPlannerContext();
     const weddings = await getAccessibleWeddings(planner.userId);
     const wedding = weddings.find((row) => row.slug === weddingSlug);
@@ -1473,15 +1509,19 @@ export const getWeddingTeamViewBySlug = cache(
     const totalAssigned = rows.reduce((sum, row) => sum + row.activeTaskCount, 0);
     const totalDone = rows.reduce((sum, row) => sum + row.completedTaskCount, 0);
 
+    const coupleName = wedding.couple_name;
+    const plannerName = [wedding.venue_name, wedding.city].filter(Boolean).join(", ") || "Venue not set";
+    const dateLabel = formatDateLabel(wedding.wedding_date);
+
     return {
       weddingId: weddingSlug,
-      coupleName: workspace.coupleName,
-      avatarLabel: workspace.avatarLabel,
-      cultureTags: workspace.cultureTags.slice(0, 2).map((label, index) => ({
+      coupleName,
+      avatarLabel: getInitials(coupleName),
+      cultureTags: (wedding.cultures ?? []).slice(0, 2).map((label, index) => ({
         label,
         tone: index % 2 === 0 ? "punjabi" : "tamil",
       })),
-      venueLine: `Team - ${workspace.plannerName} • ${workspace.dateLabel}`,
+      venueLine: `Team - ${plannerName} • ${dateLabel}`,
       memberCountLabel: `${activeCount}/3`,
       memberCap: 3,
       summaryDescription: "Members only see this wedding and its related modules.",
@@ -1507,8 +1547,10 @@ export const getWeddingTasksBoardViewBySlug = cache(
     const wedding = weddings.find((row) => row.slug === weddingSlug);
     if (!wedding) return null;
 
-    const supabase = await createSupabaseServerClient();
-    const persona = await resolvePersona(supabase, planner.userId);
+    const [supabase, persona] = await Promise.all([
+      createSupabaseServerClient(),
+      getPersona(planner.userId),
+    ]);
     const [{ data: taskRows }, { data: memberRows }, { data: eventRows }, { data: commentRows }] = await Promise.all([
       supabase
         .from("tasks")
