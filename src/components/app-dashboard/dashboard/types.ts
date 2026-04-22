@@ -48,6 +48,14 @@ export type WeeklyCompletionDay = {
   value: number;
 };
 
+export type RecentActivityItem = {
+  id: string;
+  initials: string;
+  initialsClassName: string;
+  text: string;
+  time: string;
+};
+
 export type DashboardViewModel = {
   greeting: string;
   workspaceName: string;
@@ -58,4 +66,5 @@ export type DashboardViewModel = {
   weddings: WeddingItem[];
   urgentTasks: UrgentTaskItem[];
   weeklyCompletion: WeeklyCompletionDay[];
+  recentActivity: RecentActivityItem[];
 };

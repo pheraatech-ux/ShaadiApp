@@ -11,44 +11,6 @@ import { getCurrentPlanner } from "@/lib/get-current-planner";
 import { buildTimeOfDayGreeting } from "@/lib/planner-display";
 import { cn } from "@/lib/utils";
 
-const activityRows = [
-  {
-    id: "1",
-    initials: "ME",
-    initialsClassName: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-    text: 'Meera added a comment on "Confirm caterer headcount"',
-    time: "2h ago",
-  },
-  {
-    id: "2",
-    initials: "AK",
-    initialsClassName: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
-    text: 'Arjun Kumar marked "Book baraat horse" as Done',
-    time: "5h ago",
-  },
-  {
-    id: "3",
-    initials: "ME",
-    initialsClassName: "bg-violet-500/15 text-violet-700 dark:text-violet-300",
-    text: "Meera assigned you to Ananya & Vivek wedding",
-    time: "1d ago",
-  },
-  {
-    id: "4",
-    initials: "SK",
-    initialsClassName: "bg-amber-500/15 text-amber-800 dark:text-amber-300",
-    text: "Sanjay Khanna uploaded vendor contract for décor",
-    time: "1d ago",
-  },
-  {
-    id: "5",
-    initials: "RK",
-    initialsClassName: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
-    text: 'Riya Kapoor commented on "Finalise mehendi artist shortlist"',
-    time: "2d ago",
-  },
-];
-
 export async function EmployeeDashboardContent() {
   const [data, planner] = await Promise.all([getEmployeeDashboardView(), getCurrentPlanner()]);
   const greeting = buildTimeOfDayGreeting(planner.displayName);
@@ -89,27 +51,31 @@ export async function EmployeeDashboardContent() {
             <CardTitle className="text-sm font-semibold">Recent activity</CardTitle>
           </CardHeader>
           <CardContent className="flex-1">
-            <div className="space-y-3">
-              {activityRows.map((row, index) => (
-                <div key={row.id}>
-                  <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
-                    <span
-                      className={cn(
-                        "inline-flex h-10 w-10 items-center justify-center rounded-xl text-sm font-semibold",
-                        row.initialsClassName,
-                      )}
-                    >
-                      {row.initials}
-                    </span>
-                    <p className="text-sm leading-6 text-foreground">{row.text}</p>
-                    <span className="text-xs text-muted-foreground">{row.time}</span>
+            {data.recentActivity.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">No recent activity yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {data.recentActivity.map((row, index) => (
+                  <div key={row.id}>
+                    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
+                      <span
+                        className={cn(
+                          "inline-flex h-10 w-10 items-center justify-center rounded-xl text-sm font-semibold",
+                          row.initialsClassName,
+                        )}
+                      >
+                        {row.initials}
+                      </span>
+                      <p className="text-sm leading-6 text-foreground">{row.text}</p>
+                      <span className="text-xs text-muted-foreground">{row.time}</span>
+                    </div>
+                    {index < data.recentActivity.length - 1 ? (
+                      <div className="mt-3 h-px bg-border/70" />
+                    ) : null}
                   </div>
-                  {index < activityRows.length - 1 ? (
-                    <div className="mt-3 h-px bg-border/70" />
-                  ) : null}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

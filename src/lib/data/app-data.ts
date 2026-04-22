@@ -1,7 +1,7 @@
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { DashboardViewModel, WeddingItem } from "@/components/app-dashboard/dashboard/types";
+import type { DashboardViewModel, RecentActivityItem, WeddingItem } from "@/components/app-dashboard/dashboard/types";
 import type {
   TeamListPageViewModel,
   TeamMemberProfileViewModel,
@@ -204,6 +204,67 @@ function toInrLakh(paise: number) {
   const rupees = paise / 100;
   const lakh = rupees / 100000;
   return `₹${lakh.toLocaleString("en-IN", { maximumFractionDigits: 1 })}L`;
+}
+
+const ACTIVITY_COLORS = [
+  "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+  "bg-violet-500/15 text-violet-700 dark:text-violet-300",
+  "bg-amber-500/15 text-amber-800 dark:text-amber-300",
+  "bg-rose-500/15 text-rose-700 dark:text-rose-300",
+  "bg-teal-500/15 text-teal-700 dark:text-teal-300",
+];
+
+function activityColorForName(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) % ACTIVITY_COLORS.length;
+  return ACTIVITY_COLORS[Math.abs(hash)];
+}
+
+function personInitials(firstName: string | null, lastName: string | null): string {
+  return [(firstName ?? "").charAt(0), (lastName ?? "").charAt(0)]
+    .filter(Boolean)
+    .join("")
+    .toUpperCase() || "?";
+}
+
+function formatRelativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 60) return `${Math.max(1, mins)}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return `${Math.floor(days / 7)}w ago`;
+}
+
+async function getEmployeeRecentActivityItems(weddingIds: string[]): Promise<RecentActivityItem[]> {
+  if (!weddingIds.length) return [];
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("task_comments")
+    .select("id, body, created_at, profiles!author_user_id(first_name, last_name), tasks!task_id(title)")
+    .in("wedding_id", weddingIds)
+    .eq("is_system", false)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  return (data ?? []).map((row) => {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    const task = Array.isArray(row.tasks) ? row.tasks[0] : row.tasks;
+    const firstName = profile?.first_name ?? null;
+    const lastName = profile?.last_name ?? null;
+    const actorName = [firstName, lastName].filter(Boolean).join(" ") || "Someone";
+    const taskTitle = task?.title ?? "a task";
+    return {
+      id: row.id,
+      initials: personInitials(firstName, lastName),
+      initialsClassName: activityColorForName(actorName),
+      text: `${actorName} commented on "${taskTitle}"`,
+      time: formatRelativeTime(row.created_at),
+    };
+  });
 }
 
 function normalizeInviteStatus(value: string | null | undefined): "not_sent" | "sent" | "joined" {
@@ -673,6 +734,7 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
     weddings: weddingItems,
     urgentTasks,
     weeklyCompletion,
+    recentActivity: [],
   };
 });
 
@@ -711,7 +773,10 @@ export const getEmployeeDashboardView = cache(async (): Promise<DashboardViewMod
     };
   });
 
-  const urgentTasks = await buildUrgentTaskItems(overdueTasks, weddings, "/app/employee");
+  const [urgentTasks, recentActivity] = await Promise.all([
+    buildUrgentTaskItems(overdueTasks, weddings, "/app/employee"),
+    getEmployeeRecentActivityItems(weddingIds),
+  ]);
 
   const weekdayIds = [
     { id: "monday", label: "M" },
@@ -771,6 +836,7 @@ export const getEmployeeDashboardView = cache(async (): Promise<DashboardViewMod
     weddings: weddingItems,
     urgentTasks,
     weeklyCompletion,
+    recentActivity,
   };
 });
 
