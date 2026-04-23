@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,6 +9,7 @@ import { MessagesConversationList } from "@/components/wedding-workspace/message
 import { MessagesThread } from "@/components/wedding-workspace/messages/messages-thread";
 import { NewThreadDialog } from "@/components/wedding-workspace/messages/new-thread-dialog";
 import type { WeddingMessageItem, WeddingMessagesWorkspaceViewModel } from "@/components/wedding-workspace/messages/types";
+import { useMessagesQuery, useInvalidateMessages } from "@/components/wedding-workspace/messages/use-messages-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,7 +40,9 @@ function getInitials(name: string) {
 }
 
 export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessagesWorkspaceProps) {
-  const router = useRouter();
+  const { data: serverMessages } = useMessagesQuery(view.weddingSlug, view.messages);
+  const invalidateMessages = useInvalidateMessages(view.weddingSlug);
+
   const [search, setSearch] = useState("");
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(
     initialThreadId ?? view.defaultThreadId,
@@ -49,7 +51,8 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
   const [optimisticThreads, setOptimisticThreads] = useState<WeddingMessagesWorkspaceViewModel["threads"]>([]);
   const [optimisticMessages, setOptimisticMessages] = useState<WeddingMessageItem[]>([]);
 
-  // Supabase Realtime: listen for new messages from other users
+  // Supabase Realtime: when another user sends a message, invalidate the TanStack Query cache
+  // — same pattern as tasks kanban, instant update without a full page refresh
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     const channel = supabase
@@ -65,16 +68,16 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
         (payload) => {
           const raw = payload.new as { author_user_id?: string };
           if (raw.author_user_id !== view.currentUserId) {
-            router.refresh();
+            void invalidateMessages();
           }
         },
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
-  }, [view.weddingId, view.currentUserId, router]);
+  }, [view.weddingId, view.currentUserId, invalidateMessages]);
 
   const allThreads = useMemo(() => {
     const byId = new Map(view.threads.map((thread) => [thread.id, thread]));
@@ -98,15 +101,15 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
     );
   }, [allThreads, search]);
 
-  // Deduplicate: once real messages arrive from view, drop matching optimistic ones
-  const realMessageIds = useMemo(() => new Set(view.messages.map((m) => m.id)), [view.messages]);
+  // Deduplicate: once TanStack Query refetches and the real message arrives, drop the matching optimistic entry
+  const realMessageIds = useMemo(() => new Set(serverMessages.map((m) => m.id)), [serverMessages]);
 
   const allMessages = useMemo(() => {
     const pending = optimisticMessages.filter((m) => !realMessageIds.has(m.id));
-    return [...view.messages, ...pending].sort(
+    return [...serverMessages, ...pending].sort(
       (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     );
-  }, [view.messages, optimisticMessages, realMessageIds]);
+  }, [serverMessages, optimisticMessages, realMessageIds]);
 
   const filteredMessages = useMemo(
     () => (activeThreadId ? allMessages.filter((message) => message.threadId === activeThreadId) : []),
@@ -145,13 +148,13 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
       const realId = data.message?.id;
 
       if (realId) {
-        // Replace temp ID with real ID so dedup works on next refresh
+        // Replace temp ID with real ID so dedup works when TanStack Query refetches
         setOptimisticMessages((prev) =>
           prev.map((m) => (m.id === tempId ? { ...m, id: realId, isPending: false } : m)),
         );
       }
 
-      router.refresh();
+      void invalidateMessages();
     } catch {
       setOptimisticMessages((prev) => prev.filter((m) => m.id !== tempId));
       toast.error("Message failed to send. Please try again.");
@@ -240,7 +243,7 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
           };
           setOptimisticThreads((current) => [nextThread, ...current.filter((thread) => thread.id !== nextThread.id)]);
           setSelectedThreadId(nextThread.id);
-          router.refresh();
+          void invalidateMessages();
         }}
       />
     </div>
