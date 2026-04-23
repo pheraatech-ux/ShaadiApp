@@ -1859,6 +1859,17 @@ export const getWeddingMessagesWorkspaceViewBySlug = cache(
             .in("thread_id", rawThreads.map((thread) => thread.id))
         : { data: [] as { thread_id: string; user_id: string }[] };
 
+    // Only expose threads the current user is a member of (privacy: DMs are private)
+    const accessibleThreadIds = new Set(
+      (threadMemberRows ?? [])
+        .filter((row) => row.user_id === planner.userId)
+        .map((row) => row.thread_id),
+    );
+    const accessibleRawThreads = rawThreads.filter((t) => accessibleThreadIds.has(t.id));
+    const accessibleMessageRows = (messageRows ?? []).filter((m) =>
+      accessibleThreadIds.has((m as { thread_id: string }).thread_id),
+    );
+
     const members = (memberRows ?? []) as {
       user_id: string | null;
       display_name: string | null;
@@ -1867,12 +1878,12 @@ export const getWeddingMessagesWorkspaceViewBySlug = cache(
     }[];
     const threadMembers = (threadMemberRows ?? []) as { thread_id: string; user_id: string }[];
 
-    const fallbackThreadIds = rawThreads.map((thread) => thread.id);
+    const fallbackThreadIds = accessibleRawThreads.map((thread) => thread.id);
     const userIds = [
       ...new Set(
         [
           ...members.map((member) => member.user_id),
-          ...((messageRows ?? []).map((message) => message.author_user_id) as Array<string | null>),
+          ...(accessibleMessageRows.map((message) => (message as { author_user_id: string | null }).author_user_id) as Array<string | null>),
           ...threadMembers.map((member) => member.user_id),
         ].filter(Boolean),
       ),
@@ -1907,7 +1918,7 @@ export const getWeddingMessagesWorkspaceViewBySlug = cache(
       );
     }
 
-    const messages = ((messageRows ?? []) as {
+    const messages = (accessibleMessageRows as {
       id: string;
       body: string;
       created_at: string;
@@ -1995,16 +2006,27 @@ export const getWeddingMessagesWorkspaceViewBySlug = cache(
       threadMessageStats.set(message.threadId, current);
     }
 
-    const threads = rawThreads
+    const threads = accessibleRawThreads
       .map((thread) => {
         const participantIds = [...new Set(threadParticipantIds.get(thread.id) ?? [])];
         const participantLabels = participantIds
           .map((participantId) => participantByUserId.get(participantId)?.label ?? displayNameByUserId.get(participantId) ?? "Team member")
           .sort((a, b) => a.localeCompare(b));
         const stats = threadMessageStats.get(thread.id) ?? { count: 0, lastMessageAt: null };
+
+        // WhatsApp-style DM naming: show the other person's name, not "X & Y"
+        let displayTitle = thread.title;
+        if (!thread.is_default && participantIds.length === 2 && participantIds.includes(planner.userId)) {
+          const otherUserId = participantIds.find((id) => id !== planner.userId);
+          if (otherUserId) {
+            const otherName = participantByUserId.get(otherUserId)?.label ?? displayNameByUserId.get(otherUserId);
+            if (otherName) displayTitle = otherName;
+          }
+        }
+
         return {
           id: thread.id,
-          title: thread.title,
+          title: displayTitle,
           isDefault: thread.is_default,
           participantIds,
           participantLabels,

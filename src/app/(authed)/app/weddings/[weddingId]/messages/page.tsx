@@ -15,5 +15,9 @@ export default async function WeddingWorkspaceMessagesPage({ params, searchParam
     notFound();
   }
 
-  return <WeddingMessagesWorkspace view={view} initialThreadId={resolvedSearch.thread} />;
+  return (
+    <div className="-mx-4 -my-5 flex h-[calc(100svh-4rem)] sm:-mx-6 sm:-my-6">
+      <WeddingMessagesWorkspace view={view} initialThreadId={resolvedSearch.thread} />
+    </div>
+  );
 }

@@ -7,28 +7,17 @@ import { toast } from "sonner";
 import { MessagesComposer } from "@/components/wedding-workspace/messages/messages-composer";
 import { MessagesConversationList } from "@/components/wedding-workspace/messages/messages-conversation-list";
 import { MessagesThread } from "@/components/wedding-workspace/messages/messages-thread";
+import { MessagesThreadHeader } from "@/components/wedding-workspace/messages/messages-thread-header";
 import { NewThreadDialog } from "@/components/wedding-workspace/messages/new-thread-dialog";
 import type { WeddingMessageItem, WeddingMessagesWorkspaceViewModel } from "@/components/wedding-workspace/messages/types";
 import { useMessagesQuery, useInvalidateMessages } from "@/components/wedding-workspace/messages/use-messages-query";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type WeddingMessagesWorkspaceProps = {
   view: WeddingMessagesWorkspaceViewModel;
   initialThreadId?: string;
 };
-
-function formatLastActivity(value: string | null) {
-  if (!value) return "No activity yet";
-  return `Last update ${new Date(value).toLocaleString("en-IN", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  })}`;
-}
 
 function getInitials(name: string) {
   return name
@@ -91,16 +80,6 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
   const activeThreadId =
     selectedThreadId && threadById.has(selectedThreadId) ? selectedThreadId : view.defaultThreadId ?? allThreads[0]?.id ?? null;
 
-  const filteredThreads = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return allThreads;
-    return allThreads.filter(
-      (thread) =>
-        thread.title.toLowerCase().includes(query) ||
-        thread.participantLabels.some((participantLabel) => participantLabel.toLowerCase().includes(query)),
-    );
-  }, [allThreads, search]);
-
   // Deduplicate: once TanStack Query refetches and the real message arrives, drop the matching optimistic entry
   const realMessageIds = useMemo(() => new Set(serverMessages.map((m) => m.id)), [serverMessages]);
 
@@ -110,6 +89,37 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
       (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     );
   }, [serverMessages, optimisticMessages, realMessageIds]);
+
+  // Derive the latest message timestamp per thread from live messages so the list
+  // re-sorts in real time (WhatsApp-style bubble-to-top) without waiting for a page refresh
+  const threadLastActivity = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const msg of allMessages) {
+      map.set(msg.threadId, msg.createdAt);
+    }
+    return map;
+  }, [allMessages]);
+
+  const sortedThreads = useMemo(
+    () =>
+      [...allThreads].sort((a, b) => {
+        if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
+        const aTime = threadLastActivity.get(a.id) ?? a.lastMessageAt;
+        const bTime = threadLastActivity.get(b.id) ?? b.lastMessageAt;
+        return (bTime ? new Date(bTime).getTime() : 0) - (aTime ? new Date(aTime).getTime() : 0);
+      }),
+    [allThreads, threadLastActivity],
+  );
+
+  const filteredThreads = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return sortedThreads;
+    return sortedThreads.filter(
+      (thread) =>
+        thread.title.toLowerCase().includes(query) ||
+        thread.participantLabels.some((participantLabel) => participantLabel.toLowerCase().includes(query)),
+    );
+  }, [sortedThreads, search]);
 
   const filteredMessages = useMemo(
     () => (activeThreadId ? allMessages.filter((message) => message.threadId === activeThreadId) : []),
@@ -161,43 +171,38 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
     }
   }
 
+  const activeThread = activeThreadId ? threadById.get(activeThreadId) ?? null : null;
+
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
-      <Card className="border-border/70">
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Messages - {view.coupleName}</CardTitle>
-            <Button size="sm" className="rounded-xl" onClick={() => setThreadDialogOpen(true)}>
-              <Plus className="size-4" />
-              New thread
-            </Button>
+    <div className="flex h-full w-full overflow-hidden">
+      {/* Left: conversation list */}
+      <div className="flex w-[360px] shrink-0 flex-col overflow-hidden border-r border-border/70 bg-card">
+        <div className="flex h-[58px] shrink-0 items-center justify-between border-b border-border/70 px-4">
+          <span className="text-sm font-semibold">Messages</span>
+          <Button size="sm" variant="outline" className="h-7 rounded-lg px-2 text-xs" onClick={() => setThreadDialogOpen(true)}>
+            <Plus className="size-3" />
+            New
+          </Button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-hidden p-3">
+          <MessagesConversationList
+            threads={filteredThreads}
+            search={search}
+            onSearchChange={setSearch}
+            selectedThreadId={activeThreadId}
+            onSelectThreadId={setSelectedThreadId}
+          />
+        </div>
+      </div>
+
+      {/* Right: active thread */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
+        {activeThread && (
+          <div className="flex h-[58px] shrink-0 items-center border-b border-border/70 bg-card px-4">
+            <MessagesThreadHeader thread={activeThread} currentUserId={view.currentUserId} />
           </div>
-          <CardDescription className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary">{view.summary.totalMessages} messages</Badge>
-            <Badge variant="outline">{view.summary.threadCount} threads</Badge>
-            <Badge variant="outline">{view.summary.participantCount} participants</Badge>
-            <span>{formatLastActivity(view.summary.lastMessageAt)}</span>
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
-      <div className="grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[320px_1fr]">
-        <Card className="flex min-h-0 flex-col border-border/70">
-          <CardHeader>
-            <CardTitle className="text-sm">Conversations</CardTitle>
-          </CardHeader>
-          <CardContent className="min-h-0 flex-1 overflow-hidden">
-            <MessagesConversationList
-              threads={filteredThreads}
-              search={search}
-              onSearchChange={setSearch}
-              selectedThreadId={activeThreadId}
-              onSelectThreadId={setSelectedThreadId}
-            />
-          </CardContent>
-        </Card>
-
-        <div className="flex min-h-0 flex-col gap-4">
+        )}
+        <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
           <MessagesThread messages={filteredMessages} />
           <MessagesComposer threadId={activeThreadId} onSend={sendMessage} />
         </div>

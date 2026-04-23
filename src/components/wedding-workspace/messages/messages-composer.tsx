@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { SendHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 
 type MessagesComposerProps = {
   threadId: string | null;
@@ -14,11 +13,20 @@ type MessagesComposerProps = {
 export function MessagesComposer({ threadId, onSend }: MessagesComposerProps) {
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  function autoResize() {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }
 
   async function handleSend() {
     const body = value.trim();
     if (!body || !threadId || submitting) return;
     setValue("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
     setSubmitting(true);
     try {
       await onSend(body);
@@ -33,30 +41,36 @@ export function MessagesComposer({ threadId, onSend }: MessagesComposerProps) {
         e.preventDefault();
         handleSend();
       }}
-      className="space-y-2 rounded-xl border border-border/70 bg-card p-3"
+      className="flex items-center gap-2 rounded-xl border border-border/70 bg-card px-3 py-2"
     >
-      <Textarea
+      <textarea
+        ref={textareaRef}
+        rows={1}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => {
+          setValue(e.target.value);
+          autoResize();
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             handleSend();
           }
         }}
-        placeholder="Type your message…"
-        className="min-h-20 resize-y"
+        placeholder={threadId ? "Type a message…" : "Select a thread to send a message."}
         disabled={!threadId}
+        className="flex-1 resize-none overflow-hidden bg-transparent text-sm leading-5 outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        style={{ maxHeight: "8rem" }}
       />
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground">
-          {threadId ? "Enter ↵ to send · Shift+Enter for new line" : "Select a thread before sending a message."}
-        </p>
-        <Button type="submit" size="lg" disabled={!threadId || !value.trim() || submitting}>
-          <SendHorizontal className="size-4" />
-          {submitting ? "Sending…" : "Send"}
-        </Button>
-      </div>
+      <Button
+        type="submit"
+        size="sm"
+        disabled={!threadId || !value.trim() || submitting}
+        className="shrink-0"
+      >
+        <SendHorizontal className="size-4" />
+        {submitting ? "Sending…" : "Send"}
+      </Button>
     </form>
   );
 }

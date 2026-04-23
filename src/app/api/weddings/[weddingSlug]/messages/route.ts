@@ -37,10 +37,34 @@ export async function GET(
       return NextResponse.json({ error: "Wedding not found." }, { status: 404 });
     }
 
+    // Get only thread IDs this user is a member of within this wedding
+    const { data: weddingThreadRows } = await supabase
+      .from("message_threads")
+      .select("id")
+      .eq("wedding_id", wedding.id);
+
+    const weddingThreadIds = (weddingThreadRows ?? []).map((r) => r.id);
+
+    const { data: memberThreadRows } =
+      weddingThreadIds.length > 0
+        ? await supabase
+            .from("message_thread_members")
+            .select("thread_id")
+            .eq("user_id", user.id)
+            .in("thread_id", weddingThreadIds)
+        : { data: [] as { thread_id: string }[] };
+
+    const accessibleThreadIds = (memberThreadRows ?? []).map((r) => r.thread_id);
+
+    if (accessibleThreadIds.length === 0) {
+      return NextResponse.json({ messages: [] });
+    }
+
     const { data: messageRows, error: messageError } = await supabase
       .from("messages")
       .select("id, body, created_at, author_user_id, thread_id")
       .eq("wedding_id", wedding.id)
+      .in("thread_id", accessibleThreadIds)
       .order("created_at", { ascending: true });
 
     if (messageError) {

@@ -28,16 +28,16 @@ export function MessagesThread({ messages }: MessagesThreadProps) {
 
   if (!messages.length) {
     return (
-      <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-dashed border-border/70 bg-muted/20 px-4 text-center">
+      <div className="flex flex-1 items-center justify-center px-4 text-center">
         <p className="max-w-sm text-sm text-muted-foreground">
-          No messages yet in this view. Start a conversation using the composer below.
+          No messages yet. Start a conversation using the composer below.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-xl border border-border/70 bg-background p-3">
+    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-1">
       {messages.map((message) => (
         <div
           key={message.id}
@@ -49,10 +49,10 @@ export function MessagesThread({ messages }: MessagesThreadProps) {
             </Avatar>
           ) : null}
           <div className={cn("max-w-[80%] space-y-1", message.isCurrentUser ? "items-end text-right" : "text-left")}>
-            <p className="text-xs text-muted-foreground">{message.isCurrentUser ? "You" : message.authorLabel}</p>
+            <p className="text-sm text-muted-foreground">{message.isCurrentUser ? "You" : message.authorLabel}</p>
             <div
               className={cn(
-                "rounded-2xl px-3 py-2 text-sm leading-relaxed shadow-sm",
+                "rounded-2xl px-3.5 py-2.5 text-base leading-relaxed shadow-sm",
                 message.isCurrentUser
                   ? "rounded-br-sm bg-emerald-600 text-white"
                   : "rounded-bl-sm border border-border/70 bg-card text-card-foreground",
@@ -60,7 +60,7 @@ export function MessagesThread({ messages }: MessagesThreadProps) {
             >
               {message.body}
             </div>
-            <p className="text-[11px] text-muted-foreground">{formatMessageTimestamp(message.createdAt)}</p>
+            <p className="text-xs text-muted-foreground">{formatMessageTimestamp(message.createdAt)}</p>
           </div>
         </div>
       ))}
