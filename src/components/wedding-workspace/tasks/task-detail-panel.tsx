@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
+  CalendarDays,
   ChevronDown,
   Lock,
   Send,
@@ -483,28 +484,31 @@ export function TaskDetailPanel({
           </div>
 
           {/* 4 stat blocks */}
-          <div className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border/60 bg-border/50 sm:grid-cols-4">
-            <div className="flex flex-col bg-card px-4 py-3">
-              <span className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+          <div className="-mx-6 mb-6 grid grid-cols-2 border-y border-border/60 sm:grid-cols-4">
+            {/* Due Date */}
+            <div className="flex flex-col items-center justify-center border-r border-border/60 px-4 py-4 text-center">
+              <span className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                 Due Date
               </span>
               {isEditing ? (
                 <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="mt-1 flex h-8 w-full items-center rounded-lg border border-border/70 bg-muted/40 px-2.5 text-left text-xs text-foreground hover:bg-muted/60"
-                    >
-                      {dueDate
-                        ? new Date(`${dueDate}T00:00:00`).toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" })
-                        : <span className="text-muted-foreground">Pick a date</span>}
-                    </button>
+                  <PopoverTrigger className="flex h-8 items-center gap-1.5 rounded-lg border border-border/70 bg-muted/40 px-2.5 text-xs text-foreground hover:bg-muted/60">
+                    <CalendarDays className="size-3.5 shrink-0 text-muted-foreground" />
+                    {dueDate
+                      ? new Date(`${dueDate}T00:00:00`).toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" })
+                      : <span className="text-muted-foreground">Pick a date</span>}
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0" align="start" side="bottom">
                     <Calendar
                       mode="single"
                       selected={dueDate ? new Date(`${dueDate}T00:00:00`) : undefined}
-                      onSelect={(day) => setDueDate(day ? day.toISOString().slice(0, 10) : "")}
+                      onSelect={(day) =>
+                        setDueDate(
+                          day
+                            ? `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`
+                            : "",
+                        )
+                      }
                     />
                   </PopoverContent>
                 </Popover>
@@ -515,8 +519,9 @@ export function TaskDetailPanel({
                 </>
               )}
             </div>
-            <div className="flex flex-col bg-card px-4 py-3">
-              <span className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            {/* Last Updated */}
+            <div className="flex flex-col items-center justify-center px-4 py-4 text-center sm:border-r sm:border-border/60">
+              <span className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                 Last Updated
               </span>
               <span className="text-[15px] font-bold text-violet-400">{relativeAge(latestAt)}</span>
@@ -524,13 +529,14 @@ export function TaskDetailPanel({
                 {comments.length > 0 ? "Comment added" : "Task created"}
               </span>
             </div>
-            <div className="flex flex-col bg-card px-4 py-3">
-              <span className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            {/* Priority */}
+            <div className="flex flex-col items-center justify-center border-r border-t border-border/60 px-4 py-4 text-center sm:border-t-0">
+              <span className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                 Priority
               </span>
               {isEditing ? (
                 <Select value={priority} onValueChange={(v) => setPriority(v as WeddingTaskPriority)}>
-                  <SelectTrigger className="mt-1 h-8 rounded-lg border-border/70 bg-muted/40 text-xs">
+                  <SelectTrigger className="h-8 rounded-lg border-border/70 bg-muted/40 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -546,13 +552,12 @@ export function TaskDetailPanel({
                 </>
               )}
             </div>
-            <div className="flex flex-col bg-card px-4 py-3">
-              <span className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            {/* Status */}
+            <div className="flex flex-col items-center justify-center border-t border-border/60 px-4 py-4 text-center sm:border-t-0">
+              <span className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                 Status
               </span>
-              <span className="text-[15px] font-bold text-foreground">
-                {STATUS_LABELS[status]}
-              </span>
+              <span className="text-[15px] font-bold text-foreground">{STATUS_LABELS[status]}</span>
               <span className="mt-0.5 text-[11px] text-muted-foreground">Current</span>
             </div>
           </div>
