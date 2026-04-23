@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { LayoutGrid, List, MessageSquare, Mail } from "lucide-react";
+import { LayoutGrid, List, Loader2, MessageSquare, Mail } from "lucide-react";
 
 import type { TeamMemberRow, TeamPageViewModel } from "@/components/wedding-workspace/team/team-types";
 import { WorkspaceCoupleHeader } from "@/components/wedding-workspace/overview/workspace-couple-header";
@@ -59,11 +60,35 @@ function MemberProfileModal({ member, open, onClose }: { member: TeamMemberRow |
 }
 
 export function EmployeeWorkspaceTeamView({ view }: EmployeeWorkspaceTeamViewProps) {
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   const [selectedMember, setSelectedMember] = useState<TeamMemberRow | null>(null);
+  const [messagingUserId, setMessagingUserId] = useState<string | null>(null);
 
   const activeMembers = view.members.filter((m) => m.status !== "placeholder");
-  const messagesHref = `/app/employee/weddings/${view.weddingId}/messages`;
+
+  async function handleMessage(e: React.MouseEvent, targetUserId: string) {
+    e.stopPropagation();
+    if (messagingUserId) return;
+    setMessagingUserId(targetUserId);
+    try {
+      const res = await fetch(`/api/weddings/${view.weddingId}/messages/threads/dm`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId }),
+      });
+      if (!res.ok) throw new Error();
+      const data = (await res.json()) as { thread?: { id: string } };
+      const threadId = data.thread?.id;
+      const href = `/app/employee/weddings/${view.weddingId}/messages${threadId ? `?thread=${threadId}` : ""}`;
+      router.push(href);
+    } catch {
+      router.push(`/app/employee/weddings/${view.weddingId}/messages`);
+    } finally {
+      setMessagingUserId(null);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -141,14 +166,22 @@ export function EmployeeWorkspaceTeamView({ view }: EmployeeWorkspaceTeamViewPro
                   <p className="truncate text-xs text-muted-foreground">{m.subtitle}</p>
                 </div>
                 <span className={cn("shrink-0 text-xs font-medium", m.rightClassName)}>{m.rightLabel}</span>
-                <Link
-                  href={messagesHref}
-                  onClick={(e) => e.stopPropagation()}
-                  className={buttonVariants({ variant: "outline", size: "sm", className: "h-8 shrink-0 rounded-lg px-2" })}
-                >
-                  <MessageSquare className="size-3.5" />
-                  <span className="ml-1 text-xs">Message</span>
-                </Link>
+                {m.userId && m.userId !== view.currentUserId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 shrink-0 rounded-lg px-2"
+                    disabled={messagingUserId === m.userId}
+                    onClick={(e) => handleMessage(e, m.userId!)}
+                  >
+                    {messagingUserId === m.userId ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <MessageSquare className="size-3.5" />
+                    )}
+                    <span className="ml-1 text-xs">Message</span>
+                  </Button>
+                )}
               </div>
             ))}
           </CardContent>
@@ -176,14 +209,22 @@ export function EmployeeWorkspaceTeamView({ view }: EmployeeWorkspaceTeamViewPro
                     </div>
                     <span className={cn("shrink-0 text-xs font-medium", m.rightClassName)}>{m.rightLabel}</span>
                   </div>
-                  <Link
-                    href={messagesHref}
-                    onClick={(e) => e.stopPropagation()}
-                    className={buttonVariants({ variant: "outline", size: "sm", className: "h-8 w-full rounded-lg" })}
-                  >
-                    <MessageSquare className="size-3.5" />
-                    <span className="ml-1 text-xs">Message</span>
-                  </Link>
+                  {m.userId && m.userId !== view.currentUserId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-full rounded-lg"
+                      disabled={messagingUserId === m.userId}
+                      onClick={(e) => handleMessage(e, m.userId!)}
+                    >
+                      {messagingUserId === m.userId ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <MessageSquare className="size-3.5" />
+                      )}
+                      <span className="ml-1 text-xs">Message</span>
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>

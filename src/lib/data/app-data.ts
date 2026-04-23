@@ -1522,6 +1522,7 @@ export const getWeddingTeamViewBySlug = cache(
 
     return {
       weddingId: weddingSlug,
+      currentUserId: planner.userId,
       coupleName,
       avatarLabel: getInitials(coupleName),
       cultureTags: (wedding.cultures ?? []).slice(0, 2).map((label, index) => ({

@@ -28,6 +28,7 @@ export type WeddingTeamKpi = {
 
 export type TeamPageViewModel = {
   weddingId: string;
+  currentUserId: string;
   coupleName: string;
   avatarLabel: string;
   cultureTags: { label: string; tone: "punjabi" | "tamil" }[];
