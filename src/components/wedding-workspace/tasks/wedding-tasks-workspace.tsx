@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useInvalidateTasks, useTasksQuery } from "@/components/wedding-workspace/tasks/use-tasks-query";
-import { Search, Sparkles } from "lucide-react";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { NewTaskDialog } from "@/components/wedding-workspace/tasks/new-task-dialog";
@@ -28,7 +28,6 @@ type WeddingTasksWorkspaceProps = {
 };
 
 type TopFilter = "all" | "my" | "overdue" | "unassigned" | "flagged";
-type StatusFilter = "all" | WeddingTasksBoardStatus;
 
 
 export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
@@ -43,7 +42,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<TopFilter>("all");
   const [assigneeFilter, setAssigneeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"super-admin" | "team-member">("super-admin");
 
@@ -99,13 +98,8 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
       );
     }
 
-    if (
-      statusFilter === "todo" ||
-      statusFilter === "in_progress" ||
-      statusFilter === "needs_review" ||
-      statusFilter === "done"
-    ) {
-      current = current.filter((task) => task.status === statusFilter);
+    if (priorityFilter !== "all") {
+      current = current.filter((task) => task.priority.toLowerCase() === priorityFilter);
     }
 
     if (search.trim()) {
@@ -114,7 +108,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
     }
 
     return current;
-  }, [activeFilter, assigneeFilter, scopedBoard, search, statusFilter, tasksWithOptimistic, view.currentUserId, viewMode]);
+  }, [activeFilter, assigneeFilter, priorityFilter, scopedBoard, search, tasksWithOptimistic, view.currentUserId, viewMode]);
 
   const columns = useMemo(() => {
     return {
@@ -195,26 +189,19 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-xl border border-border/70 bg-card px-4 py-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span>Viewing</span>
-              <span className="rounded-full border border-border/60 px-2 py-0.5 text-foreground">
-                {viewMode === "super-admin" ? "Super admin — all tasks" : "Team member — my tasks"}
-              </span>
-            </div>
+    <div className="flex flex-col">
+      {/* Header */}
+      <section className="-mx-4 border-b border-border/60 px-4 pb-4 sm:-mx-6 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">Tasks — {view.coupleName}</h1>
-            <div className="flex flex-wrap items-center gap-2">
-              {view.cultureTags.slice(0, 2).map((culture) => (
-                <span key={culture} className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-300">
-                  {culture}
-                </span>
-              ))}
-            </div>
+            {view.cultureTags.slice(0, 2).map((culture) => (
+              <span key={culture} className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-300">
+                {culture}
+              </span>
+            ))}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             {scopedBoard ? null : (
               <Button
                 variant="outline"
@@ -224,10 +211,6 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
                 {viewMode === "super-admin" ? "Team member view" : "Super admin view"}
               </Button>
             )}
-            <Button variant="outline" className="h-9 rounded-xl">
-              <Sparkles className="size-4" />
-              AI task suggestions
-            </Button>
             <Button className="h-9 rounded-xl bg-emerald-600 text-white hover:bg-emerald-600/90" onClick={() => setTaskDialogOpen(true)}>
               + New task
             </Button>
@@ -235,6 +218,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
         </div>
       </section>
 
+      {/* KPI cards — shares top border with header bottom */}
       <TaskKpiCards
         total={summary.total}
         completed={summary.completed}
@@ -243,50 +227,48 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
         flagged={summary.flagged}
       />
 
+      {/* Member stats */}
       {!scopedBoard && viewMode === "super-admin" && view.memberSummaries.length > 0 && (
-        <TaskMemberStatsCards
-          members={view.memberSummaries}
-          currentUserId={view.currentUserId}
-        />
+        <div className="py-4">
+          <TaskMemberStatsCards
+            members={view.memberSummaries}
+            currentUserId={view.currentUserId}
+          />
+        </div>
       )}
 
-      <section className="space-y-3 rounded-xl border border-border/70 bg-card p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            { id: "all", label: `All (${summary.total})` },
-            { id: "my", label: `My tasks (${summary.myTasks})` },
-            { id: "overdue", label: `Overdue (${summary.overdue})` },
-            { id: "unassigned", label: `Unassigned (${tasks.filter((task) => task.assigneeIds.length === 0).length})` },
-            { id: "flagged", label: `Flagged (${summary.flagged})` },
-          ].map((filter) => (
-            <button
-              key={filter.id}
-              type="button"
-              onClick={() => setActiveFilter(filter.id as TopFilter)}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-                activeFilter === filter.id
-                  ? "bg-foreground text-background"
-                  : "border border-border/70 bg-background text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
-        <div className="grid gap-2 lg:grid-cols-[1fr_auto_auto]">
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search tasks..." className="h-9 pl-9" />
-          </div>
+      {/* Filter bar — single row */}
+      <section className="-mx-4 border-b border-border/60 px-4 py-2.5 sm:-mx-6 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <Select
-              value={assigneeFilter}
-              onValueChange={(value) => {
-                if (!value) return;
-                setAssigneeFilter(value);
-              }}
-            >
-              <SelectTrigger className="h-9 w-[170px] rounded-xl">
+            {[
+              { id: "all", label: `All (${summary.total})` },
+              { id: "my", label: `My tasks (${summary.myTasks})` },
+              { id: "overdue", label: `Overdue (${summary.overdue})` },
+              { id: "unassigned", label: `Unassigned (${tasks.filter((task) => task.assigneeIds.length === 0).length})` },
+              { id: "flagged", label: `Flagged (${summary.flagged})` },
+            ].map((filter) => (
+              <button
+                key={filter.id}
+                type="button"
+                onClick={() => setActiveFilter(filter.id as TopFilter)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                  activeFilter === filter.id
+                    ? "bg-foreground text-background"
+                    : "border border-border/70 bg-background text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="relative w-[260px]">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search tasks..." className="h-8 pl-8 text-xs" />
+            </div>
+            <Select value={assigneeFilter} onValueChange={(value) => { if (!value) return; setAssigneeFilter(value); }}>
+              <SelectTrigger className="h-8 w-[120px] rounded-xl text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -299,29 +281,22 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
                 ))}
               </SelectContent>
             </Select>
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => {
-                if (!value) return;
-                setStatusFilter(value as StatusFilter);
-              }}
-            >
-              <SelectTrigger className="h-9 w-[170px] rounded-xl">
+            <Select value={priorityFilter} onValueChange={(value) => { if (!value) return; setPriorityFilter(value); }}>
+              <SelectTrigger className="h-8 w-[120px] rounded-xl text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Group: status</SelectItem>
-                <SelectItem value="todo">To do</SelectItem>
-                <SelectItem value="in_progress">In progress</SelectItem>
-                <SelectItem value="needs_review">Needs review</SelectItem>
-                <SelectItem value="done">Done</SelectItem>
+                <SelectItem value="all">All priority</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
       </section>
 
-      <section className="flex divide-x divide-dashed divide-border/50 overflow-x-auto">
+      <section className="mt-4 flex divide-x divide-dashed divide-border/50 overflow-x-auto">
         <TaskKanbanColumn
           laneId="todo"
           title="To do"
