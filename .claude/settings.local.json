@@ -15,7 +15,9 @@
       "Bash(echo \"EXIT: $?\")",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(xargs grep *)",
+      "Bash(xargs cat *)"
     ]
   },
   "enableAllProjectMcpServers": true,

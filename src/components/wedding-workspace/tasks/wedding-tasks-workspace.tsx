@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useInvalidateTasks, useTasksQuery } from "@/components/wedding-workspace/tasks/use-tasks-query";
 import { Search, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 
 import { NewTaskDialog } from "@/components/wedding-workspace/tasks/new-task-dialog";
 import { TaskDetailDialog } from "@/components/wedding-workspace/tasks/task-detail-dialog";
@@ -33,6 +34,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
   const { data: tasks } = useTasksQuery(view.weddingSlug, view.tasks);
   const invalidateTasks = useInvalidateTasks(view.weddingSlug);
 
+  const [optimisticStatus, setOptimisticStatus] = useState<Record<string, WeddingTasksBoardStatus>>({});
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dragOverLaneId, setDragOverLaneId] = useState<TaskLaneId | null>(null);
@@ -58,20 +60,27 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
     return () => { void supabase.removeChannel(channel); };
   }, [view.weddingId, invalidateTasks]);
 
+  const tasksWithOptimistic = useMemo(() => {
+    if (Object.keys(optimisticStatus).length === 0) return tasks;
+    return tasks.map((task) =>
+      optimisticStatus[task.id] ? { ...task, status: optimisticStatus[task.id] } : task,
+    );
+  }, [tasks, optimisticStatus]);
+
   const summary = useMemo(() => {
-    const total = tasks.length;
-    const completed = tasks.filter((task) => task.status === "done").length;
-    const overdue = tasks.filter((task) => task.isOverdue).length;
-    const dueThisWeek = tasks.filter((task) => task.isDueThisWeek).length;
-    const flagged = tasks.filter((task) => task.isOverdue || task.assigneeIds.length === 0).length;
-    const myTasks = tasks.filter((task) => task.assigneeIds.includes(view.currentUserId)).length;
+    const total = tasksWithOptimistic.length;
+    const completed = tasksWithOptimistic.filter((task) => task.status === "done").length;
+    const overdue = tasksWithOptimistic.filter((task) => task.isOverdue).length;
+    const dueThisWeek = tasksWithOptimistic.filter((task) => task.isDueThisWeek).length;
+    const flagged = tasksWithOptimistic.filter((task) => task.isOverdue || task.assigneeIds.length === 0).length;
+    const myTasks = tasksWithOptimistic.filter((task) => task.assigneeIds.includes(view.currentUserId)).length;
     return { total, completed, overdue, dueThisWeek, flagged, myTasks };
-  }, [tasks, view.currentUserId]);
+  }, [tasksWithOptimistic, view.currentUserId]);
 
   const scopedBoard = Boolean(view.scopedToEmployeeTasks);
 
   const filteredTasks = useMemo(() => {
-    let current = tasks;
+    let current = tasksWithOptimistic;
 
     if (!scopedBoard && viewMode === "team-member") {
       current = current.filter((task) => task.assigneeIds.includes(view.currentUserId));
@@ -105,7 +114,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
     }
 
     return current;
-  }, [activeFilter, assigneeFilter, scopedBoard, search, statusFilter, tasks, view.currentUserId, viewMode]);
+  }, [activeFilter, assigneeFilter, scopedBoard, search, statusFilter, tasksWithOptimistic, view.currentUserId, viewMode]);
 
   const columns = useMemo(() => {
     return {
@@ -132,26 +141,40 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
     }
   }
 
+  const laneToStatus: Record<TaskLaneId, WeddingTasksBoardStatus> = {
+    todo: "todo",
+    in_progress: "in_progress",
+    needs_review: "needs_review",
+    done: "done",
+  };
+
+  const laneLabel: Record<TaskLaneId, string> = {
+    todo: "To do",
+    in_progress: "In progress",
+    needs_review: "Needs review",
+    done: "Done",
+  };
+
   async function moveTaskToLane(taskId: string, laneId: TaskLaneId) {
     const task = tasks.find((item) => item.id === taskId);
     if (!task) return;
-
-    if (laneId === "todo") {
-      await patchTask(taskId, { status: "todo" });
-      return;
+    const newStatus = laneToStatus[laneId];
+    setOptimisticStatus((prev) => ({ ...prev, [taskId]: newStatus }));
+    toast.success(`"${task.title}" moved to ${laneLabel[laneId]}`);
+    try {
+      await patchTask(taskId, { status: newStatus });
+    } catch {
+      toast.error(`Failed to move "${task.title}". Please try again.`);
+    } finally {
+      setOptimisticStatus((prev) => {
+        const next = { ...prev };
+        delete next[taskId];
+        return next;
+      });
     }
-    if (laneId === "in_progress") {
-      await patchTask(taskId, { status: "in_progress" });
-      return;
-    }
-    if (laneId === "needs_review") {
-      await patchTask(taskId, { status: "needs_review" });
-      return;
-    }
-    await patchTask(taskId, { status: "done" });
   }
 
-  const selectedTask = selectedTaskId ? tasks.find((item) => item.id === selectedTaskId) ?? null : null;
+  const selectedTask = selectedTaskId ? tasksWithOptimistic.find((item) => item.id === selectedTaskId) ?? null : null;
 
   return (
     <div className="space-y-4">

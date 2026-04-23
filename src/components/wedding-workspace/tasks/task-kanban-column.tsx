@@ -119,7 +119,7 @@ export function TaskKanbanColumn({
                 onDragEnd={onDragEndTask}
                 className={`group cursor-pointer rounded-2xl border border-border/60 bg-card p-4 shadow-sm transition-all hover:border-border hover:shadow-md ${
                   draggingTaskId === task.id ? "scale-95 opacity-40" : ""
-                } ${busyTaskId === task.id ? "animate-pulse" : ""}`}
+                }`}
               >
                 {/* title */}
                 <p className="mb-1.5 text-sm font-semibold leading-snug text-foreground">{task.title}</p>
