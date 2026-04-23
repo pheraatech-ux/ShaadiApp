@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
-import { Plus, Sparkles, UserPlus } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 import { ThemeToggle } from "@/components/app-dashboard/dashboard/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
@@ -21,8 +21,6 @@ export function WorkspaceTopbar() {
   const base = getWorkspaceBasePath(weddingId, appRoot);
   const section = getWorkspaceSection(pathname, weddingId, appRoot);
 
-  const onTeam = pathname.startsWith(`${base}/team`);
-  const onVendors = pathname.startsWith(`${base}/vendors`);
   const onAiReport = pathname.startsWith(`${base}/ai-report`);
 
   return (
@@ -40,35 +38,6 @@ export function WorkspaceTopbar() {
         {section.label}
       </Link>
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-        <Link
-          href={`${base}/vendors`}
-          className={cn(
-            buttonVariants({
-              variant: "outline",
-              size: "sm",
-              className: cn("h-9 rounded-xl", onVendors && "border-foreground/30 bg-muted/50"),
-            }),
-          )}
-        >
-          <Plus />
-          Add vendor
-        </Link>
-        <Link
-          href={onTeam ? `${base}/team?invite=1` : `${base}/team`}
-          className={cn(
-            buttonVariants({
-              variant: "outline",
-              size: "sm",
-              className: cn(
-                "h-9 rounded-xl",
-                onTeam && "border-foreground/40 bg-muted/60 ring-1 ring-foreground/20",
-              ),
-            }),
-          )}
-        >
-          <UserPlus />
-          Invite team
-        </Link>
         <Link
           href={`${base}/ai-report`}
           className={cn(

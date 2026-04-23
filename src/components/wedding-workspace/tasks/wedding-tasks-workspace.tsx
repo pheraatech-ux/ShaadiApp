@@ -8,9 +8,10 @@ import { Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { NewTaskDialog } from "@/components/wedding-workspace/tasks/new-task-dialog";
-import { TaskDetailDialog } from "@/components/wedding-workspace/tasks/task-detail-dialog";
+import { TaskDetailPanel } from "@/components/wedding-workspace/tasks/task-detail-panel";
 import { TaskKanbanColumn, type TaskLaneId } from "@/components/wedding-workspace/tasks/task-kanban-column";
 import { TaskKpiCards } from "@/components/wedding-workspace/tasks/task-kpi-cards";
+import { TaskMemberStatsCards } from "@/components/wedding-workspace/tasks/task-member-stats-cards";
 import type { WeddingTasksBoardStatus, WeddingTasksBoardViewModel } from "@/components/wedding-workspace/tasks/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +40,6 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dragOverLaneId, setDragOverLaneId] = useState<TaskLaneId | null>(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
-  const [taskDetailOpen, setTaskDetailOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<TopFilter>("all");
   const [assigneeFilter, setAssigneeFilter] = useState("all");
@@ -176,6 +176,24 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
 
   const selectedTask = selectedTaskId ? tasksWithOptimistic.find((item) => item.id === selectedTaskId) ?? null : null;
 
+  if (selectedTask) {
+    return (
+      <div className="-mx-4 -my-5 flex h-[calc(100svh-4rem)] flex-col overflow-hidden sm:-mx-6 sm:-my-6">
+        <TaskDetailPanel
+          weddingSlug={view.weddingSlug}
+          task={selectedTask}
+          members={view.members}
+          onBack={() => setSelectedTaskId(null)}
+          onTaskUpdated={() => { void invalidateTasks(); }}
+          onTaskDeleted={() => {
+            setSelectedTaskId(null);
+            void invalidateTasks();
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <section className="rounded-xl border border-border/70 bg-card px-4 py-3">
@@ -224,6 +242,13 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
         dueThisWeek={summary.dueThisWeek}
         flagged={summary.flagged}
       />
+
+      {!scopedBoard && viewMode === "super-admin" && view.memberSummaries.length > 0 && (
+        <TaskMemberStatsCards
+          members={view.memberSummaries}
+          currentUserId={view.currentUserId}
+        />
+      )}
 
       <section className="space-y-3 rounded-xl border border-border/70 bg-card p-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -321,10 +346,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
           onDragLeaveLane={(lane) => {
             setDragOverLaneId((current) => (current === lane ? null : current));
           }}
-          onTaskClick={(taskId) => {
-            setSelectedTaskId(taskId);
-            setTaskDetailOpen(true);
-          }}
+          onTaskClick={setSelectedTaskId}
         />
         <TaskKanbanColumn
           laneId="in_progress"
@@ -350,10 +372,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
           onDragLeaveLane={(lane) => {
             setDragOverLaneId((current) => (current === lane ? null : current));
           }}
-          onTaskClick={(taskId) => {
-            setSelectedTaskId(taskId);
-            setTaskDetailOpen(true);
-          }}
+          onTaskClick={setSelectedTaskId}
         />
         <TaskKanbanColumn
           laneId="needs_review"
@@ -379,10 +398,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
           onDragLeaveLane={(lane) => {
             setDragOverLaneId((current) => (current === lane ? null : current));
           }}
-          onTaskClick={(taskId) => {
-            setSelectedTaskId(taskId);
-            setTaskDetailOpen(true);
-          }}
+          onTaskClick={setSelectedTaskId}
         />
         <TaskKanbanColumn
           laneId="done"
@@ -408,10 +424,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
           onDragLeaveLane={(lane) => {
             setDragOverLaneId((current) => (current === lane ? null : current));
           }}
-          onTaskClick={(taskId) => {
-            setSelectedTaskId(taskId);
-            setTaskDetailOpen(true);
-          }}
+          onTaskClick={setSelectedTaskId}
         />
       </section>
 
@@ -423,18 +436,6 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
         members={view.members}
         events={view.events}
         onTaskCreated={() => { void invalidateTasks(); }}
-      />
-      <TaskDetailDialog
-        weddingSlug={view.weddingSlug}
-        task={selectedTask}
-        members={view.members}
-        open={taskDetailOpen}
-        onOpenChange={setTaskDetailOpen}
-        onTaskUpdated={() => { void invalidateTasks(); }}
-        onTaskDeleted={() => {
-          setSelectedTaskId(null);
-          void invalidateTasks();
-        }}
       />
     </div>
   );
