@@ -218,27 +218,8 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
         </div>
       </section>
 
-      {/* KPI cards — shares top border with header bottom */}
-      <TaskKpiCards
-        total={summary.total}
-        completed={summary.completed}
-        overdue={summary.overdue}
-        dueThisWeek={summary.dueThisWeek}
-        flagged={summary.flagged}
-      />
-
-      {/* Member stats */}
-      {!scopedBoard && viewMode === "super-admin" && view.memberSummaries.length > 0 && (
-        <div className="py-4">
-          <TaskMemberStatsCards
-            members={view.memberSummaries}
-            currentUserId={view.currentUserId}
-          />
-        </div>
-      )}
-
       {/* Filter bar — single row */}
-      <section className="-mx-4 border-b border-border/60 px-4 py-2.5 sm:-mx-6 sm:px-6">
+      <section className="-mx-4 px-4 py-2.5 sm:-mx-6 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             {[
@@ -295,6 +276,25 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
           </div>
         </div>
       </section>
+
+      {/* KPI cards */}
+      <TaskKpiCards
+        total={summary.total}
+        completed={summary.completed}
+        overdue={summary.overdue}
+        dueThisWeek={summary.dueThisWeek}
+        flagged={summary.flagged}
+      />
+
+      {/* Member stats */}
+      {!scopedBoard && viewMode === "super-admin" && view.memberSummaries.length > 0 && (
+        <div className="py-4">
+          <TaskMemberStatsCards
+            members={view.memberSummaries}
+            currentUserId={view.currentUserId}
+          />
+        </div>
+      )}
 
       <section className="mt-4 flex divide-x divide-dashed divide-border/50 overflow-x-auto">
         <TaskKanbanColumn

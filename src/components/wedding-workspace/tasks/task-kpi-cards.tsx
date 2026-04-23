@@ -16,7 +16,7 @@ export function TaskKpiCards({ total, completed, overdue, dueThisWeek, flagged }
   ];
 
   return (
-    <section className="-mx-4 grid grid-cols-2 border-b border-border/60 sm:-mx-6 lg:grid-cols-5">
+    <section className="-mx-4 grid grid-cols-2 border-y border-border/60 sm:-mx-6 lg:grid-cols-5">
       {cards.map((card, i) => (
         <article
           key={card.id}
