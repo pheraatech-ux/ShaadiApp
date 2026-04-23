@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import type { WeddingMessageItem } from "@/components/wedding-workspace/messages/types";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -18,6 +20,12 @@ function formatMessageTimestamp(value: string) {
 }
 
 export function MessagesThread({ messages }: MessagesThreadProps) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   if (!messages.length) {
     return (
       <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-dashed border-border/70 bg-muted/20 px-4 text-center">
@@ -56,6 +64,7 @@ export function MessagesThread({ messages }: MessagesThreadProps) {
           </div>
         </div>
       ))}
+      <div ref={bottomRef} />
     </div>
   );
 }

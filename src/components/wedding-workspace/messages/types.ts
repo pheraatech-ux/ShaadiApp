@@ -7,6 +7,7 @@ export type WeddingMessageItem = {
   authorLabel: string;
   authorInitials: string;
   isCurrentUser: boolean;
+  isPending?: boolean;
 };
 
 export type WeddingMessageParticipant = {
@@ -20,6 +21,7 @@ export type WeddingMessageParticipant = {
 };
 
 export type WeddingMessagesWorkspaceViewModel = {
+  weddingId: string;
   weddingSlug: string;
   coupleName: string;
   currentUserId: string;

@@ -5,14 +5,15 @@ import { getWeddingMessagesWorkspaceViewBySlug } from "@/lib/data/app-data";
 
 type WeddingWorkspaceMessagesPageProps = {
   params: Promise<{ weddingId: string }>;
+  searchParams: Promise<{ thread?: string }>;
 };
 
-export default async function WeddingWorkspaceMessagesPage({ params }: WeddingWorkspaceMessagesPageProps) {
-  const { weddingId } = await params;
+export default async function WeddingWorkspaceMessagesPage({ params, searchParams }: WeddingWorkspaceMessagesPageProps) {
+  const [{ weddingId }, resolvedSearch] = await Promise.all([params, searchParams]);
   const view = await getWeddingMessagesWorkspaceViewBySlug(weddingId);
   if (!view) {
     notFound();
   }
 
-  return <WeddingMessagesWorkspace view={view} />;
+  return <WeddingMessagesWorkspace view={view} initialThreadId={resolvedSearch.thread} />;
 }

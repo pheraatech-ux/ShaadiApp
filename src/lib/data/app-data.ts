@@ -2022,6 +2022,7 @@ export const getWeddingMessagesWorkspaceViewBySlug = cache(
     const defaultThreadId = threads.find((thread) => thread.isDefault)?.id ?? fallbackThreadIds[0] ?? null;
 
     return {
+      weddingId: wedding.id,
       weddingSlug: weddingSlug,
       coupleName: wedding.couple_name,
       currentUserId: planner.userId,

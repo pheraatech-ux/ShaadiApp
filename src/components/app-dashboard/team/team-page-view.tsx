@@ -69,6 +69,18 @@ export function TeamPageView({ view }: TeamPageViewProps) {
         members={view.members}
         currentUserId={view.currentUserId}
         onInviteClick={() => setInviteOpen(true)}
+        onMessageMember={async (memberId) => {
+          const response = await fetch(`/api/team/employees/${memberId}/message`, {
+            method: "POST",
+            credentials: "include",
+          });
+          const data = (await response.json().catch(() => ({}))) as { error?: string; threadId?: string; weddingSlug?: string };
+          if (!response.ok || !data.threadId || !data.weddingSlug) {
+            toast.error(data.error ?? "Unable to start conversation.");
+            return;
+          }
+          router.push(`/app/weddings/${data.weddingSlug}/messages?thread=${data.threadId}`);
+        }}
         onCopyInviteLink={async (memberId) => {
           try {
             await handleInviteLink(memberId, "copy");

@@ -91,12 +91,20 @@ export async function POST(
           return NextResponse.json({ error: "You are not a member of this thread." }, { status: 403 });
         }
 
-        ({ error: insertError } = await supabase.from("messages").insert({
-          wedding_id: wedding.id,
-          thread_id: targetThreadId,
-          body: payload.primary.trim(),
-          author_user_id: user.id,
-        }));
+        const { data: newMessage, error: msgInsertError } = await supabase
+          .from("messages")
+          .insert({
+            wedding_id: wedding.id,
+            thread_id: targetThreadId,
+            body: payload.primary.trim(),
+            author_user_id: user.id,
+          })
+          .select("id, created_at")
+          .single();
+        insertError = msgInsertError;
+        if (!msgInsertError && newMessage) {
+          return NextResponse.json({ ok: true, message: { id: newMessage.id, createdAt: newMessage.created_at } }, { status: 201 });
+        }
         break;
       case "document":
         ({ error: insertError } = await supabase.from("documents").insert({

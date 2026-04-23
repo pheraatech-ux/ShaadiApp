@@ -43,6 +43,7 @@ type TeamMembersTableProps = {
   onCopyInviteLink?: (memberId: string) => Promise<void>;
   onGenerateNewInviteLink?: (memberId: string) => Promise<void>;
   onDeleteMember?: (memberId: string) => Promise<void>;
+  onMessageMember?: (memberId: string) => Promise<void>;
 };
 
 const statusClassName: Record<TeamMemberSummary["status"], string> = {
@@ -62,9 +63,11 @@ export function TeamMembersTable({
   onCopyInviteLink,
   onGenerateNewInviteLink,
   onDeleteMember,
+  onMessageMember,
 }: TeamMembersTableProps) {
   const router = useRouter();
   const [busyAction, setBusyAction] = useState<{ memberId: string; action: "copy" | "new-link" } | null>(null);
+  const [busyMessageId, setBusyMessageId] = useState<string | null>(null);
   const [busyDeleteId, setBusyDeleteId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TeamMemberSummary | null>(null);
 
@@ -264,6 +267,25 @@ export function TeamMembersTable({
                             <Button size="sm" variant="outline" className="h-7 rounded-md px-2 text-xs">
                               Remind
                             </Button>
+                            {onMessageMember && !memberIsCurrentUser(member, currentUserId) && member.linkedUserId ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 rounded-md px-2 text-xs"
+                                disabled={busyMessageId === member.id}
+                                onClick={async (event) => {
+                                  event.stopPropagation();
+                                  setBusyMessageId(member.id);
+                                  try {
+                                    await onMessageMember(member.id);
+                                  } finally {
+                                    setBusyMessageId(null);
+                                  }
+                                }}
+                              >
+                                {busyMessageId === member.id ? "Opening…" : "Message"}
+                              </Button>
+                            ) : null}
                             {member.deletable ? (
                               <Button
                                 type="button"
