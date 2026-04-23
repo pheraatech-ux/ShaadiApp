@@ -64,6 +64,11 @@ const PRIORITY_PILL: Record<string, string> = {
 const STATUSES: WeddingTasksBoardStatus[] = ["todo", "in_progress", "needs_review", "done"];
 const PRIORITIES: WeddingTaskPriority[] = ["low", "medium", "high"];
 const PRIORITY_LABELS: Record<WeddingTaskPriority, string> = { low: "Low", medium: "Medium", high: "High" };
+const PRIORITY_TEXT: Record<string, string> = {
+  high: "text-rose-400",
+  medium: "text-amber-400",
+  low: "text-emerald-400",
+};
 
 type ReminderChannel = "internal" | "whatsapp" | "both";
 
@@ -191,20 +196,20 @@ export function TaskDetailPanel({
     }
   }, [reminderOpen, primaryAssigneeLabel, task.title]);
 
-  // load comments
-  useEffect(() => {
-    let cancelled = false;
-    setLoadingComments(true);
-    fetch(`/api/weddings/${weddingSlug}/tasks/${task.id}/comments`, { credentials: "include" })
-      .then(async (r) => {
-        if (!r.ok) throw new Error();
-        return r.json() as Promise<{ comments: WeddingTaskComment[] }>;
-      })
-      .then((d) => { if (!cancelled) setComments(d.comments); })
-      .catch(() => { if (!cancelled) setComments([]); })
-      .finally(() => { if (!cancelled) setLoadingComments(false); });
-    return () => { cancelled = true; };
-  }, [task.id, weddingSlug]);
+  // TODO: re-enable comment fetching — temporarily disabled to reduce server load
+  // useEffect(() => {
+  //   let cancelled = false;
+  //   setLoadingComments(true);
+  //   fetch(`/api/weddings/${weddingSlug}/tasks/${task.id}/comments`, { credentials: "include" })
+  //     .then(async (r) => {
+  //       if (!r.ok) throw new Error();
+  //       return r.json() as Promise<{ comments: WeddingTaskComment[] }>;
+  //     })
+  //     .then((d) => { if (!cancelled) setComments(d.comments); })
+  //     .catch(() => { if (!cancelled) setComments([]); })
+  //     .finally(() => { if (!cancelled) setLoadingComments(false); });
+  //   return () => { cancelled = true; };
+  // }, [task.id, weddingSlug]);
 
   // derived
   const due = dueMeta(dueDate);
@@ -484,7 +489,7 @@ export function TaskDetailPanel({
           </div>
 
           {/* 4 stat blocks */}
-          <div className="-mx-6 mb-6 grid grid-cols-2 border-y border-border/60 sm:grid-cols-4">
+          <div className="-mx-6 grid grid-cols-2 border-y border-border/60 sm:grid-cols-4">
             {/* Due Date */}
             <div className="flex flex-col items-center justify-center border-r border-border/60 px-4 py-4 text-center">
               <span className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
@@ -547,7 +552,7 @@ export function TaskDetailPanel({
                 </Select>
               ) : (
                 <>
-                  <span className="text-[15px] font-bold text-foreground">{PRIORITY_LABELS[priority] ?? priority}</span>
+                  <span className={`text-[15px] font-bold ${PRIORITY_TEXT[priority] ?? "text-foreground"}`}>{PRIORITY_LABELS[priority] ?? priority}</span>
                   <span className="mt-0.5 text-[11px] text-muted-foreground">Task level</span>
                 </>
               )}
@@ -563,7 +568,7 @@ export function TaskDetailPanel({
           </div>
 
           {/* Status tab bar */}
-          <div className="mb-6 flex overflow-hidden rounded-xl border border-border/60 bg-muted/20">
+          <div className="mb-6 mt-3 flex overflow-hidden rounded-xl border border-border/60">
             {STATUSES.map((s, i) => {
               const active = status === s;
               return (
@@ -579,8 +584,7 @@ export function TaskDetailPanel({
                     "flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-all",
                     i > 0 ? "border-l border-border/60" : "",
                     active ? STATUS_TAB_ACTIVE[s] : "cursor-pointer text-muted-foreground hover:bg-muted/40 hover:text-foreground",
-                  ]
-                    .join(" ")}
+                  ].join(" ")}
                 >
                   {active && <span className="size-1.5 shrink-0 rounded-full bg-current" />}
                   {STATUS_LABELS[s]}
