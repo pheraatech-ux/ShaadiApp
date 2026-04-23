@@ -18,6 +18,7 @@ export type WeddingMessageParticipant = {
   status: "active" | "invited";
   messageCount: number;
   lastMessageAt: string | null;
+  email: string | null;
 };
 
 export type WeddingMessagesWorkspaceViewModel = {

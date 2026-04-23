@@ -15,7 +15,7 @@ import type {
   WeddingTasksBoardTask,
   WeddingTasksBoardViewModel,
 } from "@/components/wedding-workspace/tasks/types";
-import type { WeddingMessagesWorkspaceViewModel } from "@/components/wedding-workspace/messages/types";
+import type { WeddingMessageParticipant, WeddingMessagesWorkspaceViewModel } from "@/components/wedding-workspace/messages/types";
 import type { WeddingVendorsWorkspaceViewModel } from "@/components/wedding-workspace/vendors/types";
 import type { WeddingWorkspaceViewModel } from "@/components/wedding-workspace/overview/types";
 import { buildTimeOfDayGreeting } from "@/lib/planner-display";
@@ -1940,18 +1940,7 @@ export const getWeddingMessagesWorkspaceViewBySlug = cache(
       };
     });
 
-    const participantById = new Map<
-      string,
-      {
-        id: string;
-        label: string;
-        initials: string;
-        isCurrentUser: boolean;
-        status: "active" | "invited";
-        messageCount: number;
-        lastMessageAt: string | null;
-      }
-    >();
+    const participantById = new Map<string, WeddingMessageParticipant>();
 
     for (const member of members) {
       if (!member.user_id) continue;
@@ -1965,6 +1954,7 @@ export const getWeddingMessagesWorkspaceViewBySlug = cache(
         status: member.status === "active" ? "active" : "invited",
         messageCount: 0,
         lastMessageAt: null,
+        email: member.invited_email ?? null,
       });
     }
 
@@ -1978,6 +1968,7 @@ export const getWeddingMessagesWorkspaceViewBySlug = cache(
         status: "active" as const,
         messageCount: 0,
         lastMessageAt: null,
+        email: null,
       };
       current.messageCount += 1;
       current.lastMessageAt = message.createdAt;

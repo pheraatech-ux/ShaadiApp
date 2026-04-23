@@ -90,12 +90,23 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
     );
   }, [serverMessages, optimisticMessages, realMessageIds]);
 
-  // Derive the latest message timestamp per thread from live messages so the list
-  // re-sorts in real time (WhatsApp-style bubble-to-top) without waiting for a page refresh
+  // Derive the latest message per thread for sorting + preview (pure in-memory, no extra calls)
   const threadLastActivity = useMemo(() => {
     const map = new Map<string, string>();
     for (const msg of allMessages) {
       map.set(msg.threadId, msg.createdAt);
+    }
+    return map;
+  }, [allMessages]);
+
+  const threadLastMessage = useMemo(() => {
+    const map = new Map<string, { authorLabel: string; body: string; isCurrentUser: boolean }>();
+    for (const msg of allMessages) {
+      map.set(msg.threadId, {
+        authorLabel: msg.authorLabel,
+        body: msg.body,
+        isCurrentUser: msg.isCurrentUser,
+      });
     }
     return map;
   }, [allMessages]);
@@ -184,9 +195,10 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
             New
           </Button>
         </div>
-        <div className="min-h-0 flex-1 overflow-hidden p-3">
+        <div className="min-h-0 flex-1 overflow-hidden">
           <MessagesConversationList
             threads={filteredThreads}
+            threadLastMessage={threadLastMessage}
             search={search}
             onSearchChange={setSearch}
             selectedThreadId={activeThreadId}
@@ -199,7 +211,7 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
         {activeThread && (
           <div className="flex h-[58px] shrink-0 items-center border-b border-border/70 bg-card px-4">
-            <MessagesThreadHeader thread={activeThread} currentUserId={view.currentUserId} />
+            <MessagesThreadHeader thread={activeThread} currentUserId={view.currentUserId} participants={view.participants} />
           </div>
         )}
         <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
