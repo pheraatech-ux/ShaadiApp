@@ -5,14 +5,10 @@ import { useRouter } from "next/navigation";
 import { LayoutGrid, List, Plus, Search } from "lucide-react";
 
 import { VendorCard } from "@/components/wedding-workspace/vendors/vendor-card";
-import { VendorListView } from "@/components/wedding-workspace/vendors/vendor-list-view";
+import { VendorDetailPanel } from "@/components/wedding-workspace/vendors/vendor-detail-panel";
 import { VendorFormDialog } from "@/components/wedding-workspace/vendors/vendor-form-dialog";
-import { VendorInviteDialog } from "@/components/wedding-workspace/vendors/vendor-invite-dialog";
-import type {
-  VendorsViewMode,
-  WeddingVendorRecord,
-  WeddingVendorsWorkspaceViewModel,
-} from "@/components/wedding-workspace/vendors/types";
+import { VendorListView } from "@/components/wedding-workspace/vendors/vendor-list-view";
+import type { VendorsViewMode, WeddingVendorsWorkspaceViewModel } from "@/components/wedding-workspace/vendors/types";
 import { formatInrFromPaise } from "@/components/wedding-workspace/vendors/vendor-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,10 +34,8 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [formMode, setFormMode] = useState<"create" | "edit">("create");
-  const [selectedVendor, setSelectedVendor] = useState<WeddingVendorRecord | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [inviteOpen, setInviteOpen] = useState(false);
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<VendorsViewMode>("cards");
 
   const filteredVendors = useMemo(() => {
@@ -87,34 +81,6 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
     router.refresh();
   }
 
-  async function updateVendor(values: {
-    category: string;
-    name: string;
-    phone: string;
-    email: string;
-    instagramHandle: string;
-    quotedPriceRupees: string;
-    advancePaidRupees: string;
-    notes: string;
-    isConfirmed: boolean;
-  }) {
-    if (!selectedVendor) return;
-    const response = await fetch(`/api/weddings/${view.weddingSlug}/vendors`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        vendorId: selectedVendor.id,
-        ...values,
-      }),
-    });
-    const payload = (await response.json().catch(() => ({}))) as { error?: string };
-    if (!response.ok) {
-      throw new Error(payload.error || "Unable to update vendor.");
-    }
-    router.refresh();
-  }
-
   async function deleteVendor(vendorId: string) {
     const response = await fetch(`/api/weddings/${view.weddingSlug}/vendors`, {
       method: "DELETE",
@@ -146,6 +112,23 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
     router.refresh();
   }
 
+  const selectedVendor = selectedVendorId ? view.vendors.find((v) => v.id === selectedVendorId) ?? null : null;
+
+  if (selectedVendor) {
+    return (
+      <div className="-mx-4 -my-5 flex h-[calc(100svh-4rem)] flex-col overflow-hidden sm:-mx-6 sm:-my-6">
+        <VendorDetailPanel
+          weddingSlug={view.weddingSlug}
+          vendor={selectedVendor}
+          onBack={() => setSelectedVendorId(null)}
+          onVendorUpdated={() => router.refresh()}
+          onVendorDeleted={() => { setSelectedVendorId(null); router.refresh(); }}
+          onSendInvite={sendInvite}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col">
       {/* Header */}
@@ -159,11 +142,7 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
           <Button
             type="button"
             className="h-9 rounded-xl bg-emerald-600 text-white hover:bg-emerald-600/90"
-            onClick={() => {
-              setSelectedVendor(null);
-              setFormMode("create");
-              setFormOpen(true);
-            }}
+            onClick={() => setFormOpen(true)}
           >
             <Plus className="size-4" />
             Add vendor
@@ -281,16 +260,7 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
             <VendorCard
               key={vendor.id}
               vendor={vendor}
-              onDelete={deleteVendor}
-              onEdit={(nextVendor) => {
-                setSelectedVendor(nextVendor);
-                setFormMode("edit");
-                setFormOpen(true);
-              }}
-              onInvite={(nextVendor) => {
-                setSelectedVendor(nextVendor);
-                setInviteOpen(true);
-              }}
+              onOpen={(v) => setSelectedVendorId(v.id)}
             />
           ))}
         </div>
@@ -298,34 +268,18 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
         <div className="mt-4">
           <VendorListView
             vendors={filteredVendors}
-            onEdit={(nextVendor) => {
-              setSelectedVendor(nextVendor);
-              setFormMode("edit");
-              setFormOpen(true);
-            }}
-            onInvite={(nextVendor) => {
-              setSelectedVendor(nextVendor);
-              setInviteOpen(true);
-            }}
+            onOpen={(v) => setSelectedVendorId(v.id)}
           />
         </div>
       )}
 
       <VendorFormDialog
-        key={`${formOpen}-${formMode}-${selectedVendor?.id ?? "new"}`}
+        key={`${formOpen}-create`}
         open={formOpen}
         onOpenChange={setFormOpen}
-        mode={formMode}
-        vendor={selectedVendor}
-        onSubmit={formMode === "create" ? createVendor : updateVendor}
-      />
-      <VendorInviteDialog
-        open={inviteOpen}
-        onOpenChange={setInviteOpen}
-        weddingLabel={view.coupleName}
-        weddingSlug={view.weddingSlug}
-        vendor={selectedVendor}
-        onSendInvite={sendInvite}
+        mode="create"
+        vendor={null}
+        onSubmit={createVendor}
       />
     </div>
   );

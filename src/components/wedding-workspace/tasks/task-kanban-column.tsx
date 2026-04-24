@@ -71,7 +71,7 @@ export function TaskKanbanColumn({
 
   return (
     <section
-      className={`min-w-[260px] flex-1 space-y-3 px-5 transition-all first:pl-0 last:pr-0 ${
+      className={`min-w-[260px] flex-1 space-y-3 px-3 transition-all first:pl-0 last:pr-0 ${
         laneDragActive ? "rounded-2xl bg-primary/[0.03]" : ""
       }`}
       onDragOver={(event) => event.preventDefault()}
