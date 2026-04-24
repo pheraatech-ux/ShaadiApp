@@ -20,6 +20,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -260,20 +261,20 @@ function DocumentRow({ doc, onDelete }: { doc: WeddingDocumentRecord; onDelete?:
       </article>
 
       {/* Delete confirmation */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => { if (!open) setDeleteDialogOpen(false); }}>
+        <AlertDialogContent size="sm">
           <AlertDialogHeader>
+            <AlertDialogMedia>
+              <Trash2 className="text-destructive" aria-hidden />
+            </AlertDialogMedia>
             <AlertDialogTitle>Delete document?</AlertDialogTitle>
             <AlertDialogDescription>
-              <span className="font-medium text-foreground">&ldquo;{doc.title}&rdquo;</span> will be permanently removed. This cannot be undone.
+              <strong>{doc.title}</strong> will be permanently removed. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-white hover:bg-destructive/90"
-              onClick={() => onDelete?.(doc.id)}
-            >
+            <AlertDialogAction variant="destructive" onClick={() => onDelete?.(doc.id)}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

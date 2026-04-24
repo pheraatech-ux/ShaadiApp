@@ -218,6 +218,15 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
         </div>
       </section>
 
+      {/* KPI cards */}
+      <TaskKpiCards
+        total={summary.total}
+        completed={summary.completed}
+        overdue={summary.overdue}
+        dueThisWeek={summary.dueThisWeek}
+        flagged={summary.flagged}
+      />
+
       {/* Filter bar — single row */}
       <section className="-mx-4 px-4 py-2.5 sm:-mx-6 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -233,10 +242,10 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
                 key={filter.id}
                 type="button"
                 onClick={() => setActiveFilter(filter.id as TopFilter)}
-                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
                   activeFilter === filter.id
-                    ? "bg-foreground text-background"
-                    : "border border-border/70 bg-background text-muted-foreground hover:text-foreground"
+                    ? "border-transparent bg-foreground text-background"
+                    : "border-border/70 bg-background text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {filter.label}
@@ -249,8 +258,14 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
               <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search tasks..." className="h-8 pl-8 text-xs" />
             </div>
             <Select value={assigneeFilter} onValueChange={(value) => { if (!value) return; setAssigneeFilter(value); }}>
-              <SelectTrigger className="h-8 w-[120px] rounded-xl text-xs">
-                <SelectValue />
+              <SelectTrigger className="h-8 w-[140px] rounded-xl text-xs">
+                <SelectValue>
+                  {assigneeFilter === "all"
+                    ? "All assignees"
+                    : assigneeFilter === "unassigned"
+                    ? "Unassigned"
+                    : (view.members.find((m) => m.id === assigneeFilter)?.label ?? assigneeFilter)}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All assignees</SelectItem>
@@ -263,8 +278,10 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
               </SelectContent>
             </Select>
             <Select value={priorityFilter} onValueChange={(value) => { if (!value) return; setPriorityFilter(value); }}>
-              <SelectTrigger className="h-8 w-[120px] rounded-xl text-xs">
-                <SelectValue />
+              <SelectTrigger className="h-8 w-[110px] rounded-xl text-xs">
+                <SelectValue>
+                  {{ all: "All priority", high: "High", medium: "Medium", low: "Low" }[priorityFilter] ?? "All priority"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All priority</SelectItem>
@@ -276,15 +293,6 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
           </div>
         </div>
       </section>
-
-      {/* KPI cards */}
-      <TaskKpiCards
-        total={summary.total}
-        completed={summary.completed}
-        overdue={summary.overdue}
-        dueThisWeek={summary.dueThisWeek}
-        flagged={summary.flagged}
-      />
 
       {/* Member stats */}
       {!scopedBoard && viewMode === "super-admin" && view.memberSummaries.length > 0 && (

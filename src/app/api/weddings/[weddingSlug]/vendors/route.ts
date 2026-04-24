@@ -110,6 +110,37 @@ export async function POST(
   }
 }
 
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ weddingSlug: string }> },
+) {
+  try {
+    const { weddingSlug } = await context.params;
+    const { vendorId } = (await request.json()) as { vendorId?: string };
+    if (!vendorId) {
+      return NextResponse.json({ error: "Vendor id is required." }, { status: 400 });
+    }
+
+    const lookup = await getWeddingBySlug(request, weddingSlug);
+    if ("error" in lookup) return lookup.error;
+    const { supabase, weddingId } = lookup;
+
+    const { error } = await supabase
+      .from("vendors")
+      .delete()
+      .eq("id", vendorId)
+      .eq("wedding_id", weddingId);
+
+    if (error) {
+      return NextResponse.json({ error: error.message || "Unable to delete vendor." }, { status: 400 });
+    }
+
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch {
+    return NextResponse.json({ error: "Unable to delete vendor." }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ weddingSlug: string }> },

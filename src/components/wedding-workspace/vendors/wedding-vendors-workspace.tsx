@@ -18,6 +18,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 type WeddingVendorsWorkspaceProps = {
@@ -108,6 +115,20 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
     router.refresh();
   }
 
+  async function deleteVendor(vendorId: string) {
+    const response = await fetch(`/api/weddings/${view.weddingSlug}/vendors`, {
+      method: "DELETE",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vendorId }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    if (!response.ok) {
+      throw new Error(payload.error || "Unable to delete vendor.");
+    }
+    router.refresh();
+  }
+
   async function sendInvite(vendorId: string) {
     const response = await fetch(`/api/weddings/${view.weddingSlug}/vendors`, {
       method: "PATCH",
@@ -126,78 +147,59 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
   }
 
   return (
-    <div className="space-y-4">
-      <Card className="border-border/70">
-        <CardContent className="space-y-4 p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="space-y-1">
-              <h1 className="text-2xl font-semibold tracking-tight">Vendors - {view.coupleName}</h1>
-              <p className="text-sm text-muted-foreground">
-                Keep shortlist, booking and portal invites in one place.
-              </p>
-            </div>
-            <Button
-              type="button"
-              className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-600/90"
-              onClick={() => {
-                setSelectedVendor(null);
-                setFormMode("create");
-                setFormOpen(true);
-              }}
-            >
-              <Plus className="size-4" />
-              Add vendor
-            </Button>
+    <div className="flex flex-col">
+      {/* Header */}
+      <section className="-mx-4 border-b border-border/60 px-4 pb-4 sm:-mx-6 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Vendors — {view.coupleName}</h1>
+            <Badge variant="outline">{formatInrFromPaise(view.summary.totalQuotedPaise)} quoted</Badge>
+            <Badge variant="outline">{formatInrFromPaise(view.summary.totalAdvancePaise)} paid</Badge>
           </div>
+          <Button
+            type="button"
+            className="h-9 rounded-xl bg-emerald-600 text-white hover:bg-emerald-600/90"
+            onClick={() => {
+              setSelectedVendor(null);
+              setFormMode("create");
+              setFormOpen(true);
+            }}
+          >
+            <Plus className="size-4" />
+            Add vendor
+          </Button>
+        </div>
+      </section>
 
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              { id: "confirmed", label: "Confirmed", value: view.summary.confirmed, tone: "text-emerald-300" },
-              { id: "shortlisted", label: "Shortlisted", value: view.summary.shortlisted, tone: "text-foreground" },
-              { id: "invite-sent", label: "Invite sent", value: view.summary.inviteSent, tone: "text-violet-300" },
-              { id: "pending-join", label: "Pending join", value: view.summary.pendingJoin, tone: "text-amber-300" },
-            ].map((item) => (
-              <div key={item.id} className="rounded-xl border border-border/70 bg-muted/15 p-3">
-                <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">{item.label}</p>
-                <p className={cn("mt-1 text-2xl font-semibold", item.tone)}>{item.value}</p>
-              </div>
-            ))}
-          </div>
+      {/* Stat cards — bleed */}
+      <section className="-mx-4 grid grid-cols-2 border-b border-border/60 sm:-mx-6 lg:grid-cols-4">
+        {[
+          { id: "confirmed", label: "Confirmed", value: view.summary.confirmed, color: "text-emerald-400", helper: "Booked & locked in" },
+          { id: "shortlisted", label: "Shortlisted", value: view.summary.shortlisted, color: "text-foreground", helper: `of ${view.summary.total} total` },
+          { id: "invite-sent", label: "Invite sent", value: view.summary.inviteSent, color: "text-violet-400", helper: "Portal access sent" },
+          { id: "pending-join", label: "Pending join", value: view.summary.pendingJoin, color: "text-amber-400", helper: "Awaiting acceptance" },
+        ].map((card, i) => (
+          <article
+            key={card.id}
+            className={cn(
+              "flex flex-col items-center justify-center px-4 py-4 text-center",
+              i < 3 ? "border-r border-border/60" : "",
+              i >= 2 ? "border-t border-border/60 lg:border-t-0" : "",
+            )}
+          >
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{card.label}</p>
+            <p className={cn("text-2xl font-bold tabular-nums", card.color)}>{card.value}</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">{card.helper}</p>
+          </article>
+        ))}
+      </section>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">Quoted total {formatInrFromPaise(view.summary.totalQuotedPaise)}</Badge>
-            <Badge variant="outline">Advance paid {formatInrFromPaise(view.summary.totalAdvancePaise)}</Badge>
-            <Badge variant="outline">{view.summary.total} vendors</Badge>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70">
-        <CardContent className="space-y-3 p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            {[
-              { id: "all", label: "All vendors" },
-              ...view.quickCategories.map((category) => ({ id: category, label: category })),
-            ].map((category) => (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => setCategoryFilter(category.id)}
-                className={cn(
-                  "rounded-lg border px-2.5 py-1 text-xs font-medium",
-                  categoryFilter === category.id
-                    ? "border-emerald-500/70 bg-emerald-500/10 text-emerald-300"
-                    : "border-border/70 bg-muted/20 text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {category.label}
-              </button>
-            ))}
-          </div>
-
+      {/* Filter bar — single row */}
+      <section className="-mx-4 px-4 py-2.5 sm:-mx-6 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             {[
-              { id: "all", label: "All" },
+              { id: "all", label: `All (${view.summary.total})` },
               { id: "shortlisted", label: "Shortlisted" },
               { id: "confirmed", label: "Confirmed" },
               { id: "invited", label: "Invite sent" },
@@ -208,28 +210,40 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
                 type="button"
                 onClick={() => setStatusFilter(item.id as StatusFilter)}
                 className={cn(
-                  "rounded-lg border px-2.5 py-1 text-xs font-medium",
+                  "rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
                   statusFilter === item.id
-                    ? "border-violet-500/70 bg-violet-500/10 text-violet-300"
-                    : "border-border/70 bg-muted/20 text-muted-foreground hover:text-foreground",
+                    ? "border-transparent bg-foreground text-background"
+                    : "border-border/70 bg-background text-muted-foreground hover:text-foreground",
                 )}
               >
                 {item.label}
               </button>
             ))}
           </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative w-full sm:max-w-md">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <div className="flex items-center gap-2">
+            <div className="relative w-[260px]">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search vendor, category, phone or Instagram..."
-                className="pl-9"
+                placeholder="Search vendors..."
+                className="h-8 pl-8 text-xs"
               />
             </div>
-            <div className="flex items-center gap-1 self-end rounded-lg border border-border/70 p-1 sm:self-auto">
+            <Select value={categoryFilter} onValueChange={(value) => { if (!value) return; setCategoryFilter(value); }}>
+              <SelectTrigger className="h-8 w-[140px] rounded-xl text-xs">
+                <SelectValue>
+                  {categoryFilter === "all" ? "All categories" : categoryFilter}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All categories</SelectItem>
+                {view.quickCategories.map((category) => (
+                  <SelectItem key={category} value={category}>{category}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-1">
               <Button
                 type="button"
                 variant={viewMode === "cards" ? "secondary" : "ghost"}
@@ -252,21 +266,22 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {filteredVendors.length === 0 ? (
-        <Card className="border-dashed">
+        <Card className="mt-4 border-dashed">
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
             No vendors match your filters yet.
           </CardContent>
         </Card>
       ) : viewMode === "cards" ? (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {filteredVendors.map((vendor) => (
             <VendorCard
               key={vendor.id}
               vendor={vendor}
+              onDelete={deleteVendor}
               onEdit={(nextVendor) => {
                 setSelectedVendor(nextVendor);
                 setFormMode("edit");
@@ -280,18 +295,20 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
           ))}
         </div>
       ) : (
-        <VendorListView
-          vendors={filteredVendors}
-          onEdit={(nextVendor) => {
-            setSelectedVendor(nextVendor);
-            setFormMode("edit");
-            setFormOpen(true);
-          }}
-          onInvite={(nextVendor) => {
-            setSelectedVendor(nextVendor);
-            setInviteOpen(true);
-          }}
-        />
+        <div className="mt-4">
+          <VendorListView
+            vendors={filteredVendors}
+            onEdit={(nextVendor) => {
+              setSelectedVendor(nextVendor);
+              setFormMode("edit");
+              setFormOpen(true);
+            }}
+            onInvite={(nextVendor) => {
+              setSelectedVendor(nextVendor);
+              setInviteOpen(true);
+            }}
+          />
+        </div>
       )}
 
       <VendorFormDialog
