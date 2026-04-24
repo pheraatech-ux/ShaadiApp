@@ -2300,3 +2300,94 @@ export const getBudgetPortfolioView = cache(async (): Promise<BudgetPortfolioVie
     weddingRows: weddingRows.sort((a, b) => b.spentPaise - a.spentPaise),
   };
 });
+
+// ---------------------------------------------------------------------------
+// Documents workspace
+// ---------------------------------------------------------------------------
+
+import type { WeddingDocumentsWorkspaceViewModel, WeddingDocumentRecord } from "@/components/wedding-workspace/documents/types";
+
+type DocumentDbRow = {
+  id: string;
+  wedding_id: string;
+  title: string;
+  file_url: string | null;
+  created_by_user_id: string | null;
+  created_at: string;
+  category: string;
+  description: string | null;
+  file_name: string | null;
+  file_size_bytes: number | null;
+  file_type: string | null;
+  profiles: { first_name: string | null; last_name: string | null } | null;
+};
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${bytes} B`;
+}
+
+function toFileType(ext: string | null): WeddingDocumentRecord["fileType"] {
+  switch (ext?.toLowerCase()) {
+    case "pdf": return "pdf";
+    case "doc":
+    case "docx": return "docx";
+    case "xls":
+    case "xlsx": return "xlsx";
+    default: return "other";
+  }
+}
+
+function toCategory(raw: string): WeddingDocumentRecord["category"] {
+  if (raw === "Client Contracts" || raw === "Vendor Contracts" || raw === "Employee Contracts") return raw;
+  return "Other";
+}
+
+export const getWeddingDocumentsViewBySlug = cache(
+  async (weddingSlug: string): Promise<WeddingDocumentsWorkspaceViewModel | null> => {
+    const planner = await getPlannerContext();
+    const weddings = await getAccessibleWeddings(planner.userId);
+    const wedding = weddings.find((w) => w.slug === weddingSlug);
+    if (!wedding) return null;
+
+    const supabase = await createSupabaseServerClient();
+    const { data: rows } = await supabase
+      .from("documents")
+      .select("id, wedding_id, title, file_url, created_by_user_id, created_at, category, description, file_name, file_size_bytes, file_type, profiles(first_name, last_name)")
+      .eq("wedding_id", wedding.id)
+      .order("created_at", { ascending: false })
+      .returns<DocumentDbRow[]>();
+
+    const documents: WeddingDocumentRecord[] = (rows ?? []).map((row) => {
+      const fullName = row.profiles
+        ? [row.profiles.first_name, row.profiles.last_name].filter(Boolean).join(" ") || "Team member"
+        : "Team member";
+      const initials = fullName.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
+      return {
+        id: row.id,
+        title: row.title,
+        description: row.description ?? undefined,
+        fileUrl: row.file_url,
+        filePath: row.file_url ?? undefined,
+        category: toCategory(row.category),
+        uploadedBy: fullName,
+        uploaderRole: "Planner",
+        uploaderInitials: initials,
+        createdAt: row.created_at,
+        fileName: row.file_name ?? undefined,
+        fileSize: row.file_size_bytes ? formatBytes(row.file_size_bytes) : undefined,
+        fileType: toFileType(row.file_type),
+      };
+    });
+
+    const counts = {
+      all: documents.length,
+      client: documents.filter((d) => d.category === "Client Contracts").length,
+      vendor: documents.filter((d) => d.category === "Vendor Contracts").length,
+      employee: documents.filter((d) => d.category === "Employee Contracts").length,
+    };
+
+    return { weddingId: wedding.id, weddingSlug: wedding.slug, documents, counts };
+  }
+);
