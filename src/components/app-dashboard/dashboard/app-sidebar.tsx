@@ -65,7 +65,7 @@ export function AppSidebar({
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="min-h-[63px] shrink-0 justify-center gap-0 border-b border-sidebar-border/60 p-0 px-2 py-3 sm:px-3">
+      <SidebarHeader id="onborda-sidebar-header" className="min-h-[63px] shrink-0 justify-center gap-0 border-b border-sidebar-border/60 p-0 px-2 py-3 sm:px-3">
         <div className="flex h-[39px] w-full min-w-0 items-center justify-center rounded-xl border border-sidebar-border/70 bg-sidebar-accent/60 px-3 py-0 group-data-[collapsible=icon]:px-1">
           <p className="truncate text-sm font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
             ShaadiOS
@@ -81,9 +81,22 @@ export function AppSidebar({
               {sidebarItems.map((item) => {
                 const active = isPathActive(item.href);
                 const Icon = item.icon;
+                const tourId = item.label === "Dashboard"
+                  ? "onborda-nav-dashboard"
+                  : item.label === "All Weddings"
+                  ? "onborda-nav-weddings"
+                  : item.label === "Tasks"
+                  ? "onborda-nav-tasks"
+                  : item.label === "Messages"
+                  ? "onborda-nav-messages"
+                  : item.label === "Budget"
+                  ? "onborda-nav-budget"
+                  : item.label === "Teams"
+                  ? "onborda-nav-teams"
+                  : undefined;
 
                 return (
-                  <SidebarMenuItem key={item.href}>
+                  <SidebarMenuItem key={item.href} id={tourId}>
                     <SidebarMenuButton
                       render={<Link href={item.href} />}
                       isActive={active}

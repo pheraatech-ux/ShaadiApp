@@ -7,22 +7,25 @@ import {
 } from "@/components/app-dashboard/dashboard/dashboard-skeletons";
 import { DashboardTopbarLive } from "@/components/app-dashboard/dashboard/dashboard-topbar-live";
 import { SidebarLive } from "@/components/app-dashboard/dashboard/sidebar-live";
+import { TourWrapper } from "@/components/onboarding/tour-wrapper";
 
 export default function MainAppShellLayout({ children }: { children: ReactNode }) {
   return (
-    <DashboardShell
-      sidebar={
-        <Suspense fallback={<SidebarChromeSkeleton />}>
-          <SidebarLive />
-        </Suspense>
-      }
-      topbar={
-        <Suspense fallback={<DashboardTopbarSkeleton />}>
-          <DashboardTopbarLive />
-        </Suspense>
-      }
-    >
-      {children}
-    </DashboardShell>
+    <TourWrapper>
+      <DashboardShell
+        sidebar={
+          <Suspense fallback={<SidebarChromeSkeleton />}>
+            <SidebarLive />
+          </Suspense>
+        }
+        topbar={
+          <Suspense fallback={<DashboardTopbarSkeleton />}>
+            <DashboardTopbarLive />
+          </Suspense>
+        }
+      >
+        {children}
+      </DashboardShell>
+    </TourWrapper>
   );
 }
