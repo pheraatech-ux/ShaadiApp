@@ -62,13 +62,24 @@ async function validateMembersBelogToWedding(
   userIds: string[],
 ) {
   if (userIds.length === 0) return true;
-  const { data: members } = await supabase
-    .from("wedding_members")
-    .select("user_id")
-    .eq("wedding_id", weddingId)
-    .in("user_id", userIds)
-    .eq("status", "active");
-  const validIds = new Set((members ?? []).map((m) => m.user_id));
+  const [{ data: members }, { data: vendors }] = await Promise.all([
+    supabase
+      .from("wedding_members")
+      .select("user_id")
+      .eq("wedding_id", weddingId)
+      .in("user_id", userIds)
+      .eq("status", "active"),
+    (supabase as any)
+      .from("vendors")
+      .select("user_id")
+      .eq("wedding_id", weddingId)
+      .eq("invite_status", "active")
+      .in("user_id", userIds),
+  ]);
+  const validIds = new Set([
+    ...(members ?? []).map((m: { user_id: string | null }) => m.user_id).filter((id: string | null): id is string => id != null),
+    ...(vendors ?? []).map((v: { user_id: string | null }) => v.user_id).filter((id: string | null): id is string => id != null),
+  ]);
   return userIds.every((id) => validIds.has(id));
 }
 

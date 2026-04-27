@@ -12,6 +12,7 @@ type PostBody = {
   fileName?: string;
   fileSizeBytes?: number;
   fileType?: string;
+  vendorId?: string;
 };
 
 const VALID_CATEGORIES = new Set(["Client Contracts", "Vendor Contracts", "Employee Contracts", "Other"]);
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!wedding) return NextResponse.json({ error: "Wedding not found." }, { status: 404 });
 
   const body: PostBody = await request.json();
-  const { title, category, description, filePath, fileName, fileSizeBytes, fileType } = body;
+  const { title, category, description, filePath, fileName, fileSizeBytes, fileType, vendorId } = body;
 
   if (!title?.trim()) return NextResponse.json({ error: "title is required." }, { status: 400 });
   if (!filePath) return NextResponse.json({ error: "filePath is required." }, { status: 400 });
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       file_name: fileName ?? null,
       file_size_bytes: fileSizeBytes ?? null,
       file_type: fileType ?? null,
+      vendor_id: vendorId ?? null,
     } as never)
     .select("id, title, category, description, file_url, file_name, file_size_bytes, file_type, created_at, created_by_user_id")
     .single();

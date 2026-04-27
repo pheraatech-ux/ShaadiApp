@@ -1563,7 +1563,7 @@ export const getWeddingTasksBoardViewBySlug = cache(
       .eq("wedding_id", wedding.id)
       .order("created_at", { ascending: false });
 
-    const [{ data: taskRows }, { data: memberRows }, { data: eventRows }, { data: commentRows }] = await Promise.all([
+    const [{ data: taskRows }, { data: memberRows }, { data: eventRows }, { data: commentRows }, { data: vendorRows }] = await Promise.all([
       persona === "employee"
         ? tasksBaseQuery.or(`assignee_user_ids.cs.{${planner.userId}},assignee_user_id.eq.${planner.userId},raised_by_user_id.eq.${planner.userId}`)
         : tasksBaseQuery,
@@ -1581,6 +1581,12 @@ export const getWeddingTasksBoardViewBySlug = cache(
         .from("task_comments")
         .select("task_id")
         .eq("wedding_id", wedding.id),
+      (supabase as any)
+        .from("vendors")
+        .select("user_id, name")
+        .eq("wedding_id", wedding.id)
+        .eq("invite_status", "active")
+        .not("user_id", "is", null),
     ]);
 
     const activeMembers = (memberRows ?? []) as WeddingMemberRow[];
@@ -1652,6 +1658,20 @@ export const getWeddingTasksBoardViewBySlug = cache(
         label: profileNameById.get(assigneeId) || memberDisplayById.get(assigneeId) || "Archived member",
         role: "viewer",
         isCurrentUser: assigneeId === planner.userId,
+      });
+    }
+
+    type VendorRow = { user_id: string; name: string };
+    for (const vendor of (vendorRows ?? []) as VendorRow[]) {
+      if (!vendor.user_id) continue;
+      if (memberOptions.some((m) => m.id === vendor.user_id)) continue;
+      const label = vendor.name || "Vendor";
+      memberOptions.push({
+        id: vendor.user_id,
+        label,
+        role: "viewer",
+        isCurrentUser: vendor.user_id === planner.userId,
+        isVendor: true,
       });
     }
 
@@ -1776,7 +1796,7 @@ export const getWeddingVendorsWorkspaceViewBySlug = cache(
     const { data: vendorRows, error } = await supabase
       .from("vendors")
       .select(
-        "id, name, category, phone, email, instagram_handle, quoted_price_paise, advance_paid_paise, status, notes, invite_status, invited_at, created_at",
+        "id, name, category, phone, email, instagram_handle, quoted_price_paise, advance_paid_paise, status, notes, invite_status, invited_at, created_at, user_id",
       )
       .eq("wedding_id", wedding.id)
       .order("created_at", { ascending: false });
@@ -1797,6 +1817,7 @@ export const getWeddingVendorsWorkspaceViewBySlug = cache(
       inviteStatus: normalizeInviteStatus(vendor.invite_status),
       inviteSentAt: vendor.invited_at,
       createdAt: vendor.created_at,
+      userId: vendor.user_id ?? null,
     }));
 
     const summary = {
@@ -1816,6 +1837,7 @@ export const getWeddingVendorsWorkspaceViewBySlug = cache(
     }
 
     return {
+      weddingId: wedding.id,
       weddingSlug,
       coupleName: wedding.couple_name,
       summary,

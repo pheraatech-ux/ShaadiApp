@@ -17,11 +17,13 @@ export type WeddingVendorRecord = {
   inviteStatus: VendorInviteStatus;
   inviteSentAt: string | null;
   createdAt: string;
+  userId: string | null;
 };
 
 export type VendorsViewMode = "cards" | "list";
 
 export type WeddingVendorsWorkspaceViewModel = {
+  weddingId: string;
   weddingSlug: string;
   coupleName: string;
   summary: {

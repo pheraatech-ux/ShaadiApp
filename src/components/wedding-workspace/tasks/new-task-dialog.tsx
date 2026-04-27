@@ -1,9 +1,17 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { Check } from "lucide-react";
+import { Store } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
 import {
   Dialog,
   DialogContent,
@@ -240,45 +248,52 @@ export function NewTaskDialog({
                   {currentUserLabel} (me)
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
-                  Assign to
-                  {assigneeUserIds.length > 0 && (
-                    <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                      {assigneeUserIds.length}
-                    </span>
-                  )}
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {members.map((member) => {
-                    const selected = assigneeUserIds.includes(member.id);
-                    return (
-                      <button
-                        key={member.id}
-                        type="button"
-                        onClick={() =>
-                          setAssigneeUserIds((current) =>
-                            current.includes(member.id)
-                              ? current.filter((id) => id !== member.id)
-                              : [...current, member.id],
-                          )
-                        }
-                        className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
-                          selected
-                            ? "border-primary/60 bg-primary/15 text-primary"
-                            : "border-border/70 bg-background text-muted-foreground hover:border-border hover:text-foreground"
-                        }`}
-                      >
-                        {selected && <Check className="size-3" />}
-                        {member.isCurrentUser ? `${member.label} (you)` : member.label}
-                        <span className="text-muted-foreground/60">· {roleLabel(member.role)}</span>
-                      </button>
-                    );
-                  })}
-                  {members.length === 0 && (
-                    <p className="text-xs text-muted-foreground">No active members on this wedding yet.</p>
-                  )}
-                </div>
+              <div className="space-y-1.5">
+                <label className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Assign to</label>
+                <Combobox
+                  multiple
+                  value={assigneeUserIds}
+                  onValueChange={(val) => setAssigneeUserIds(val as string[])}
+                >
+                  <ComboboxInput
+                    placeholder={assigneeUserIds.length === 0 ? "Search team & vendors…" : `${assigneeUserIds.length} member${assigneeUserIds.length > 1 ? "s" : ""} selected`}
+                    showTrigger
+                    className="h-11 rounded-xl border-border/70 bg-muted/40"
+                  />
+                  <ComboboxContent align="start">
+                    <ComboboxEmpty>No members found.</ComboboxEmpty>
+                    <ComboboxList>
+                      {members.map((member) => (
+                        <ComboboxItem key={member.id} value={member.id}>
+                          {member.isVendor && <Store className="size-3.5 text-muted-foreground/60" />}
+                          <span>{member.isCurrentUser ? `${member.label} (you)` : member.label}</span>
+                          <span className="ml-auto text-[11px] text-muted-foreground/50">
+                            {member.isVendor ? "Vendor" : roleLabel(member.role)}
+                          </span>
+                        </ComboboxItem>
+                      ))}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
+                {assigneeUserIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {assigneeUserIds.map((id) => {
+                      const m = members.find((mb) => mb.id === id);
+                      return (
+                        <span key={id} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
+                          {m ? (m.isCurrentUser ? `${m.label} (you)` : m.label) : id}
+                          <button
+                            type="button"
+                            onClick={() => setAssigneeUserIds((prev) => prev.filter((x) => x !== id))}
+                            className="ml-0.5 text-muted-foreground hover:text-foreground"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 

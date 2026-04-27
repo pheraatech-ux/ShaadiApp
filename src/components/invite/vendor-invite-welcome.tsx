@@ -41,7 +41,7 @@ export function VendorInviteWelcome({ firstName, vendorName, weddingCoupleName }
 
         <div className="mt-10 w-full">
           <Link
-            href="/app/vendor-portal"
+            href="/vendor/home"
             className={cn(
               "inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl",
               "bg-violet-600 text-[15px] font-bold text-white shadow-sm",

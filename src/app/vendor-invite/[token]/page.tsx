@@ -29,7 +29,7 @@ function getInviteStateCopy(state: InviteClaimResult) {
         title: "Vendor invite accepted",
         description: "You now have access to the wedding vendor portal.",
         ctaLabel: "Go to vendor portal",
-        ctaHref: "/app/vendor-portal",
+        ctaHref: "/vendor/home",
       };
     case "identity_mismatch":
       return {
@@ -57,7 +57,7 @@ function getInviteStateCopy(state: InviteClaimResult) {
         title: "Invite already used",
         description: "This invite link has already been claimed. If you need access, ask your planner for a new link.",
         ctaLabel: "Go to vendor portal",
-        ctaHref: "/app/vendor-portal",
+        ctaHref: "/vendor/home",
       };
     default:
       return {

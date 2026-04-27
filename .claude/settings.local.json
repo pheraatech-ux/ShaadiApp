@@ -22,7 +22,9 @@
       "Bash(grep -E \"\\\\.\\(sql|ts|js\\)$\")",
       "Bash(mkdir -p \"C:/Users/sandy/Downloads/ShaadiApp/src/app/api/weddings/[weddingSlug]/vendors/[vendorId]/invite-link\")",
       "Bash(mkdir -p \"C:/Users/sandy/Downloads/ShaadiApp/src/app/vendor-invite/[token]/signup\")",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(mkdir -p \"C:/Users/sandy/Downloads/ShaadiApp/src/app/\\(vendor\\)/vendor/tasks/[taskId]\")",
+      "Bash(mkdir -p \"C:/Users/sandy/Downloads/ShaadiApp/src/app/api/vendor/tasks/[taskId]/comments\")"
     ]
   },
   "enableAllProjectMcpServers": true,

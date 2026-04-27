@@ -101,6 +101,7 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
     return (
       <div className="-mx-4 -my-5 flex h-[calc(100svh-4rem)] flex-col overflow-hidden sm:-mx-6 sm:-my-6">
         <VendorDetailPanel
+          weddingId={view.weddingId}
           weddingSlug={view.weddingSlug}
           vendor={selectedVendor}
           onBack={() => setSelectedVendorId(null)}

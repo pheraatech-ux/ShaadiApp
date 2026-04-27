@@ -9,6 +9,7 @@ export type WeddingTasksBoardMemberOption = {
   label: string;
   role: Database["public"]["Enums"]["wedding_member_role"];
   isCurrentUser: boolean;
+  isVendor?: boolean;
 };
 
 export type WeddingTasksBoardTask = {
