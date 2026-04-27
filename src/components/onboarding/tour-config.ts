@@ -1,4 +1,9 @@
-import type { Tour } from "onborda";
+import type { Step } from "onborda";
+
+interface Tour {
+  tour: string;
+  steps: Step[];
+}
 
 export const MAIN_TOUR_NAME = "main";
 
