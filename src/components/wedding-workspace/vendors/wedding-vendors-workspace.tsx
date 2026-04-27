@@ -52,7 +52,7 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
       if (statusFilter === "shortlisted" && vendor.status !== "pending") return false;
       if (statusFilter === "confirmed" && vendor.status !== "confirmed") return false;
       if (statusFilter === "declined" && vendor.status !== "declined") return false;
-      if (statusFilter === "invited" && vendor.inviteStatus === "not_sent") return false;
+      if (statusFilter === "invited" && vendor.inviteStatus === "not_invited") return false;
       return true;
     });
   }, [categoryFilter, search, statusFilter, view.vendors]);
@@ -95,23 +95,6 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
     router.refresh();
   }
 
-  async function sendInvite(vendorId: string) {
-    const response = await fetch(`/api/weddings/${view.weddingSlug}/vendors`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        vendorId,
-        markInviteSent: true,
-      }),
-    });
-    const payload = (await response.json().catch(() => ({}))) as { error?: string };
-    if (!response.ok) {
-      throw new Error(payload.error || "Unable to send invite.");
-    }
-    router.refresh();
-  }
-
   const selectedVendor = selectedVendorId ? view.vendors.find((v) => v.id === selectedVendorId) ?? null : null;
 
   if (selectedVendor) {
@@ -123,7 +106,6 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
           onBack={() => setSelectedVendorId(null)}
           onVendorUpdated={() => router.refresh()}
           onVendorDeleted={() => { setSelectedVendorId(null); router.refresh(); }}
-          onSendInvite={sendInvite}
         />
       </div>
     );

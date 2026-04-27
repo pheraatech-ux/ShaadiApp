@@ -1,7 +1,7 @@
 import type { Database } from "@/types/database";
 
 export type VendorStatus = Database["public"]["Enums"]["vendor_status"];
-export type VendorInviteStatus = "not_sent" | "sent" | "joined";
+export type VendorInviteStatus = "not_invited" | "invited" | "active";
 
 export type WeddingVendorRecord = {
   id: string;

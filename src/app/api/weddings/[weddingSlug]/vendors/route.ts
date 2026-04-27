@@ -19,7 +19,6 @@ type CreateVendorPayload = {
 
 type UpdateVendorPayload = CreateVendorPayload & {
   vendorId?: string;
-  markInviteSent?: boolean;
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -180,10 +179,6 @@ export async function PATCH(
     if (payload.notes !== undefined) updates.notes = normalizeText(payload.notes);
     const statusUpdate = resolveStatus(payload.isConfirmed);
     if (statusUpdate) updates.status = statusUpdate;
-    if (payload.markInviteSent) {
-      updates.whatsapp_invite_status = "sent";
-      updates.whatsapp_invited_at = new Date().toISOString();
-    }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: "No updates provided." }, { status: 400 });

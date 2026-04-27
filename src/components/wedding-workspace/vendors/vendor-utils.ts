@@ -47,7 +47,7 @@ export function vendorStatusLabel(status: VendorStatus) {
 }
 
 export function inviteStatusLabel(status: VendorInviteStatus) {
-  if (status === "joined") return "Invite sent · joined";
-  if (status === "sent") return "Invite sent · pending join";
+  if (status === "active") return "Portal joined";
+  if (status === "invited") return "Invite pending";
   return "Not invited";
 }

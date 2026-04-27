@@ -48,7 +48,6 @@ type VendorDetailPanelProps = {
   onBack: () => void;
   onVendorUpdated: () => void;
   onVendorDeleted: () => void;
-  onSendInvite: (vendorId: string) => Promise<void>;
 };
 
 // ── Component ──────────────────────────────────────────────
@@ -59,7 +58,6 @@ export function VendorDetailPanel({
   onBack,
   onVendorUpdated,
   onVendorDeleted,
-  onSendInvite,
 }: VendorDetailPanelProps) {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -78,7 +76,9 @@ export function VendorDetailPanel({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [inviting, setInviting] = useState(false);
+  const [copyingLink, setCopyingLink] = useState(false);
+  const [generatingLink, setGeneratingLink] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // sync from prop when not editing
   useEffect(() => {
@@ -152,12 +152,40 @@ export function VendorDetailPanel({
     }
   }
 
-  async function handleSendInvite() {
-    setInviting(true);
+  async function fetchInviteLink(regenerate: boolean) {
+    const res = await fetch(`/api/weddings/${weddingSlug}/vendors/${vendor.id}/invite-link`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ regenerate }),
+    });
+    if (!res.ok) throw new Error("Unable to generate invite link.");
+    const data = (await res.json()) as { inviteUrl: string };
+    await navigator.clipboard.writeText(data.inviteUrl);
+    onVendorUpdated();
+  }
+
+  async function handleCopyLink() {
+    setCopyingLink(true);
+    setLinkCopied(false);
     try {
-      await onSendInvite(vendor.id);
+      await fetchInviteLink(false);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
     } finally {
-      setInviting(false);
+      setCopyingLink(false);
+    }
+  }
+
+  async function handleNewLink() {
+    setGeneratingLink(true);
+    setLinkCopied(false);
+    try {
+      await fetchInviteLink(true);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } finally {
+      setGeneratingLink(false);
     }
   }
 
@@ -457,16 +485,32 @@ export function VendorDetailPanel({
 
           {/* Actions */}
           <div className="px-5 py-5">
-            <p className={SECTION_LABEL}>Actions</p>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-9 w-full rounded-xl"
-              onClick={() => void handleSendInvite()}
-              disabled={inviting}
-            >
-              {inviting ? "Sending…" : vendor.inviteStatus === "not_sent" ? "Send portal invite" : "Resend invite"}
-            </Button>
+            <p className={SECTION_LABEL}>Portal Invite</p>
+            <div className="space-y-2">
+              {linkCopied && (
+                <p className="text-center text-[11px] font-medium text-emerald-400">Link copied!</p>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 w-full rounded-xl"
+                onClick={() => void handleCopyLink()}
+                disabled={copyingLink || generatingLink}
+              >
+                {copyingLink ? "Copying…" : "Copy invite link"}
+              </Button>
+              {vendor.inviteStatus !== "not_invited" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 w-full rounded-xl text-amber-400 border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-400"
+                  onClick={() => void handleNewLink()}
+                  disabled={copyingLink || generatingLink}
+                >
+                  {generatingLink ? "Generating…" : "New link"}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>

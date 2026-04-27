@@ -268,9 +268,9 @@ async function getEmployeeRecentActivityItems(weddingIds: string[]): Promise<Rec
   });
 }
 
-function normalizeInviteStatus(value: string | null | undefined): "not_sent" | "sent" | "joined" {
-  if (value === "sent" || value === "joined") return value;
-  return "not_sent";
+function normalizeInviteStatus(value: string | null | undefined): "not_invited" | "invited" | "active" {
+  if (value === "invited" || value === "active") return value;
+  return "not_invited";
 }
 
 function safeSlugPart(value: string) {
@@ -1776,7 +1776,7 @@ export const getWeddingVendorsWorkspaceViewBySlug = cache(
     const { data: vendorRows, error } = await supabase
       .from("vendors")
       .select(
-        "id, name, category, phone, email, instagram_handle, quoted_price_paise, advance_paid_paise, status, notes, whatsapp_invite_status, whatsapp_invited_at, created_at",
+        "id, name, category, phone, email, instagram_handle, quoted_price_paise, advance_paid_paise, status, notes, invite_status, invited_at, created_at",
       )
       .eq("wedding_id", wedding.id)
       .order("created_at", { ascending: false });
@@ -1794,8 +1794,8 @@ export const getWeddingVendorsWorkspaceViewBySlug = cache(
       advancePaidPaise: vendor.advance_paid_paise ?? 0,
       status: vendor.status,
       notes: vendor.notes,
-      inviteStatus: normalizeInviteStatus(vendor.whatsapp_invite_status),
-      inviteSentAt: vendor.whatsapp_invited_at,
+      inviteStatus: normalizeInviteStatus(vendor.invite_status),
+      inviteSentAt: vendor.invited_at,
       createdAt: vendor.created_at,
     }));
 
@@ -1804,8 +1804,8 @@ export const getWeddingVendorsWorkspaceViewBySlug = cache(
       confirmed: vendors.filter((vendor) => vendor.status === "confirmed").length,
       shortlisted: vendors.filter((vendor) => vendor.status === "pending").length,
       declined: vendors.filter((vendor) => vendor.status === "declined").length,
-      inviteSent: vendors.filter((vendor) => vendor.inviteStatus !== "not_sent").length,
-      pendingJoin: vendors.filter((vendor) => vendor.inviteStatus === "sent").length,
+      inviteSent: vendors.filter((vendor) => vendor.inviteStatus !== "not_invited").length,
+      pendingJoin: vendors.filter((vendor) => vendor.inviteStatus === "invited").length,
       totalQuotedPaise: vendors.reduce((sum, vendor) => sum + vendor.quotedPricePaise, 0),
       totalAdvancePaise: vendors.reduce((sum, vendor) => sum + vendor.advancePaidPaise, 0),
     };
