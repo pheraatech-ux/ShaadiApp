@@ -51,7 +51,14 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     const persona = resolvePersonaFromUser(user);
 
-    if (persona === "employee") {
+    if (persona === "vendor") {
+      if (pathname.startsWith("/app")) {
+        const redirectUrl = request.nextUrl.clone();
+        redirectUrl.pathname = "/vendor/home";
+        redirectUrl.search = "";
+        return NextResponse.redirect(redirectUrl);
+      }
+    } else if (persona === "employee") {
       const onPlannerAppSurface =
         pathname === "/app" ||
         (pathname.startsWith("/app/") &&
@@ -74,7 +81,9 @@ export async function updateSession(request: NextRequest) {
 
     if (isAuthRoute) {
       const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = persona === "employee" ? "/app/employee/dashboard" : "/app/dashboard";
+      if (persona === "vendor") redirectUrl.pathname = "/vendor/home";
+      else if (persona === "employee") redirectUrl.pathname = "/app/employee/dashboard";
+      else redirectUrl.pathname = "/app/dashboard";
       redirectUrl.search = "";
       return NextResponse.redirect(redirectUrl);
     }

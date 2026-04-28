@@ -6,8 +6,12 @@ import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 export default async function AppIndexPage() {
   const { persona, userId } = await getCurrentPersona();
 
+  if (persona === "vendor") redirect("/vendor/home");
+  if (persona === "employee") redirect("/app/employee/dashboard");
+
+  // Backfill: vendors who claimed their invite before JWT persona was introduced
+  // won't have app_metadata set yet. Detect them via DB, write the persona, then redirect.
   if (userId) {
-    // Check if user is an active vendor — redirect to vendor portal
     const admin = getSupabaseAdminClient();
     const { data: vendorRow } = await admin
       .from("vendors")
@@ -16,11 +20,11 @@ export default async function AppIndexPage() {
       .eq("invite_status", "active")
       .limit(1)
       .maybeSingle();
-    if (vendorRow) redirect("/vendor/home");
+    if (vendorRow) {
+      await admin.auth.admin.updateUserById(userId, { app_metadata: { persona: "vendor" } });
+      redirect("/vendor/home");
+    }
   }
 
-  if (persona === "employee") {
-    redirect("/app/employee/dashboard");
-  }
   redirect("/app/dashboard");
 }

@@ -149,6 +149,15 @@ export default async function VendorInvitePage({ params }: VendorInvitePageProps
   }
 
   if (claimState === "accepted") {
+    // Write vendor persona into JWT app_metadata so the middleware can route
+    // them directly to /vendor/home on future logins without a DB round-trip.
+    // Guard: don't overwrite an employee persona if the user has one.
+    if (user.app_metadata?.persona !== "employee") {
+      await admin.auth.admin.updateUserById(user.id, {
+        app_metadata: { persona: "vendor" },
+      });
+    }
+
     const welcome = await getVendorInviteWelcomeContext(safeToken, user.id, user.email ?? null);
     if (welcome) {
       return (

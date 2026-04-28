@@ -3,15 +3,16 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
-/** Planner = firm owner or any user without a linked company_employees row as staff. */
-export type AppPersona = "planner" | "employee";
+export type AppPersona = "planner" | "employee" | "vendor";
 
 /**
- * Reads persona from the JWT app_metadata claim (written by the DB trigger on company_employees).
+ * Reads persona from the JWT app_metadata claim.
  * No DB round-trip — use this wherever the User object is already available.
  */
 export function resolvePersonaFromUser(user: User | null): AppPersona {
-  if (user?.app_metadata?.persona === "employee") return "employee";
+  const persona = user?.app_metadata?.persona;
+  if (persona === "employee") return "employee";
+  if (persona === "vendor") return "vendor";
   return "planner";
 }
 

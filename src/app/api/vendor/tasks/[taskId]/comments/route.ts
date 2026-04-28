@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { verifyActiveVendorForWedding } from "@/lib/vendor/auth";
 
 type RouteContext = { params: Promise<{ taskId: string }> };
 
@@ -29,14 +30,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Task not found." }, { status: 404 });
   }
 
-  const { data: vendor } = await admin
-    .from("vendors")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("wedding_id", task.wedding_id)
-    .eq("invite_status", "active")
-    .maybeSingle();
-
+  const vendor = await verifyActiveVendorForWedding(admin, user.id, task.wedding_id);
   if (!vendor) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
 
   const { data: comment, error } = await admin

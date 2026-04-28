@@ -26,7 +26,7 @@ export const getVendorPortalContext = cache(async (): Promise<VendorPortalContex
   const admin = getSupabaseAdminClient();
   const { data: vendor } = await admin
     .from("vendors")
-    .select("id, name, category, wedding_id, invite_status")
+    .select("id, name, category, invite_status, weddings(id, slug, couple_name, wedding_date, creator_id)")
     .eq("user_id", user.id)
     .eq("invite_status", "active")
     .order("created_at", { ascending: false })
@@ -35,11 +35,13 @@ export const getVendorPortalContext = cache(async (): Promise<VendorPortalContex
 
   if (!vendor) return null;
 
-  const { data: wedding } = await admin
-    .from("weddings")
-    .select("id, slug, couple_name, wedding_date, creator_id")
-    .eq("id", vendor.wedding_id)
-    .maybeSingle();
+  const wedding = vendor.weddings as {
+    id: string;
+    slug: string;
+    couple_name: string;
+    wedding_date: string | null;
+    creator_id: string;
+  } | null;
 
   if (!wedding) return null;
 

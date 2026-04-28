@@ -66,6 +66,7 @@ export function VendorInviteSignupForm({ token, inviterName, vendorName, wedding
           first_name: firstName || null,
           last_name: lastName || null,
           phone: phone || null,
+          role: "vendor",
         },
       },
     });

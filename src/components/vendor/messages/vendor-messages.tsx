@@ -18,7 +18,7 @@ type MessageItem = {
 };
 
 type VendorMessagesProps = {
-  threadId: string;
+  threadId: string | null;
   plannerName: string;
   plannerInitials: string;
   messages: MessageItem[];
@@ -32,8 +32,9 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { day: "numeric", month: "short" });
 }
 
-export function VendorMessages({ threadId, plannerName, plannerInitials, messages: initialMessages }: VendorMessagesProps) {
+export function VendorMessages({ threadId: initialThreadId, plannerName, plannerInitials, messages: initialMessages }: VendorMessagesProps) {
   const router = useRouter();
+  const [threadId, setThreadId] = useState<string | null>(initialThreadId);
   const [messages, setMessages] = useState<MessageItem[]>(initialMessages);
   const [body, setBody] = useState("");
   const [sending, startTransition] = useTransition();
@@ -50,10 +51,11 @@ export function VendorMessages({ threadId, plannerName, plannerInitials, message
       const res = await fetch("/api/vendor/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: trimmed, threadId }),
+        body: JSON.stringify({ body: trimmed, ...(threadId ? { threadId } : {}) }),
       });
       if (res.ok) {
-        const data = (await res.json()) as { message: { id: string; body: string; created_at: string } };
+        const data = (await res.json()) as { threadId: string; message: { id: string; body: string; created_at: string } };
+        if (!threadId) setThreadId(data.threadId);
         setMessages((prev) => [
           ...prev,
           {
