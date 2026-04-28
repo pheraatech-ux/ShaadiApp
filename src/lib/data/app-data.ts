@@ -1020,6 +1020,7 @@ export const getWeddingWorkspaceBySlug = cache(
       timelineEvents: events.map((event) => ({
         id: event.id,
         title: event.title,
+        eventDate: event.event_date ?? null,
         dateLabel: formatDateLabel(event.event_date),
         tags: event.culture_label ? [event.culture_label] : [],
         daysLeftLabel: `${daysUntil(event.event_date)} days`,

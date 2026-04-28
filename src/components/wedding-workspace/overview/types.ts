@@ -14,6 +14,8 @@ export type WorkspaceKpi = {
 export type WorkspaceTimelineEvent = {
   id: string;
   title: string;
+  /** Raw ISO date string (YYYY-MM-DD) for tab filtering and edit form. */
+  eventDate: string | null;
   dateLabel: string;
   tags: string[];
   daysLeftLabel: string;
