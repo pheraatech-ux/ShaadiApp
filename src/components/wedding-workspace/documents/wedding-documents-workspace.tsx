@@ -108,7 +108,7 @@ export function WeddingDocumentsWorkspace({ viewData }: WeddingDocumentsWorkspac
         </p>
         <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
           <Info className="size-3.5" />
-          <span>Upload limit: 1GB per file</span>
+          <span>Upload limit: 10MB per file</span>
         </div>
       </div>
 

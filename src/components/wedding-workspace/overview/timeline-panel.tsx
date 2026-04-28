@@ -114,6 +114,15 @@ export function TimelinePanel({ workspace }: TimelinePanelProps) {
             <Filter className="size-3" />
             Filter
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={openAdd}
+            className="h-7 gap-1 px-2 text-xs text-primary hover:text-primary"
+          >
+            <Plus className="size-3.5" />
+            Add
+          </Button>
         </div>
       </header>
 
@@ -230,18 +239,6 @@ export function TimelinePanel({ workspace }: TimelinePanelProps) {
         )}
       </div>
 
-      {/* Footer — add event */}
-      <footer className="border-t border-border/70 px-4 py-2.5">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={openAdd}
-          className="h-7 gap-1 px-1 text-xs text-primary hover:text-primary"
-        >
-          <Plus className="size-3.5" />
-          Add event
-        </Button>
-      </footer>
 
       <EventSheet
         weddingSlug={workspace.id}

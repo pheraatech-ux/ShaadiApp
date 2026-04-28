@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ArrowRight, AlertTriangle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +7,11 @@ import { cn } from "@/lib/utils";
 
 type TasksForWeddingPanelProps = {
   tasks: WeddingTasksBoardTask[];
+  onTaskClick?: (task: WeddingTasksBoardTask) => void;
+  /** Link to the full tasks tab — shows "Show all tasks" button when provided. */
+  tasksHref?: string;
+  /** Total number of tasks (before the top-3 slice) — shown in the "Show all" label. */
+  totalCount?: number;
 };
 
 function formatDueDate(iso: string): string {
@@ -23,13 +29,22 @@ function getStatusConfig(task: WeddingTasksBoardTask): StatusConfig {
   return { label: "PENDING", className: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30" };
 }
 
-export function TasksForWeddingPanel({ tasks }: TasksForWeddingPanelProps) {
+export function TasksForWeddingPanel({ tasks, onTaskClick, tasksHref, totalCount }: TasksForWeddingPanelProps) {
   return (
     <section className="rounded-xl border border-border/70 bg-card">
-      <header className="border-b border-border/70 px-4 py-3">
+      <header className="flex items-center justify-between border-b border-border/70 px-4 py-3">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Tasks for this wedding
         </h2>
+        {tasksHref && (
+          <Link
+            href={tasksHref}
+            className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {totalCount && totalCount > tasks.length ? `Show all ${totalCount} tasks` : "Show all tasks"}
+            <ArrowRight className="size-3" />
+          </Link>
+        )}
       </header>
 
       {tasks.length === 0 ? (
@@ -51,7 +66,14 @@ export function TasksForWeddingPanel({ tasks }: TasksForWeddingPanelProps) {
               return (
                 <div
                   key={task.id}
-                  className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 px-4 py-3"
+                  className={cn(
+                    "grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 px-4 py-3",
+                    onTaskClick && "cursor-pointer transition-colors hover:bg-muted/40",
+                  )}
+                  onClick={() => onTaskClick?.(task)}
+                  role={onTaskClick ? "button" : undefined}
+                  tabIndex={onTaskClick ? 0 : undefined}
+                  onKeyDown={onTaskClick ? (e) => { if (e.key === "Enter" || e.key === " ") onTaskClick(task); } : undefined}
                 >
                   <span className="truncate text-sm font-medium text-foreground">{task.title}</span>
 
@@ -84,13 +106,12 @@ export function TasksForWeddingPanel({ tasks }: TasksForWeddingPanelProps) {
                     </Badge>
                   </span>
 
-                  <button
-                    type="button"
+                  <span
                     className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    aria-label={`View task: ${task.title}`}
+                    aria-hidden="true"
                   >
                     <ArrowRight className="size-3.5" />
-                  </button>
+                  </span>
                 </div>
               );
             })}

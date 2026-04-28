@@ -25,6 +25,9 @@ export default async function EmployeeWeddingWorkspacePage({ params }: EmployeeW
       hideWorkspaceSetup
       hideVendors
       assignedTasks={assignedTasks}
+      weddingSlug={tasksBoard?.weddingSlug}
+      members={tasksBoard?.members}
+      tasksHref={`/app/employee/weddings/${weddingId}/tasks`}
     />
   );
 }
