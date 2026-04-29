@@ -678,6 +678,16 @@ When asked about missing events or ceremonies, compare what's listed above again
     // Persist all new turns (user message + any tool loops + final assistant) to DB
     if (sessionId) {
       await saveMessages(supabase, sessionId, anthropicMessages.slice(priorLength));
+
+      // Auto-title the session from the first user message (fire-and-forget)
+      if (priorLength === 0 && userText) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase.from("ai_chat_sessions") as any)
+          .update({ title: userText.slice(0, 60).trim() })
+          .eq("id", sessionId)
+          .is("title", null)
+          .then(() => {});
+      }
     }
 
     const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === "text");
