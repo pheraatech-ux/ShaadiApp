@@ -1,35 +1,29 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { MessageSquare, X } from "lucide-react";
+
+import { vendorsQueryKey } from "@/components/wedding-workspace/vendors/use-vendors-query";
 
 type WeddingChatWidgetProps = {
   weddingSlug: string;
 };
 
-function ChatPanel({ weddingSlug }: WeddingChatWidgetProps) {
+type ChatPanelProps = {
+  weddingSlug: string;
+  sessionId: string | null;
+};
+
+function ChatPanel({ weddingSlug, sessionId }: ChatPanelProps) {
   const ref = useRef<HTMLElement>(null);
   const [ready, setReady] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     let cancelled = false;
 
     async function init() {
-      // Create a new chat session — this is what lets us persist full tool
-      // results in the DB so follow-up messages have real context to work from
-      let sessionId: string | undefined;
-      try {
-        const res = await fetch(`/api/weddings/${weddingSlug}/chat/session`, {
-          method: "POST",
-        });
-        if (res.ok) {
-          const data = (await res.json()) as { sessionId: string };
-          sessionId = data.sessionId;
-        }
-      } catch {
-        // Session creation failed — chat still works, just without DB persistence
-      }
-
       await import("deep-chat");
       if (cancelled) return;
 
@@ -41,6 +35,15 @@ function ChatPanel({ weddingSlug }: WeddingChatWidgetProps) {
         method: "POST",
         ...(sessionId ? { additionalBodyProps: { sessionId } } : {}),
       };
+
+      (el as any).responseInterceptor = (response: { text?: string; actionsPerformed?: string[] }) => {
+        const actions = response?.actionsPerformed ?? [];
+        if (actions.includes("vendors")) {
+          queryClient.invalidateQueries({ queryKey: vendorsQueryKey(weddingSlug) });
+        }
+        return response;
+      };
+
       (el as any).introMessage = {
         text: "Hi! Ask me anything about this wedding — missing vendors, traditions, tasks, budget, or cultural rituals. I'm here to help!",
       };
@@ -71,7 +74,7 @@ function ChatPanel({ weddingSlug }: WeddingChatWidgetProps) {
 
     init();
     return () => { cancelled = true; };
-  }, [weddingSlug]);
+  }, [weddingSlug, sessionId, queryClient]);
 
   return (
     <div style={{ height: "471px", width: "380px", position: "relative" }}>
@@ -91,6 +94,22 @@ function ChatPanel({ weddingSlug }: WeddingChatWidgetProps) {
 
 export function WeddingChatWidget({ weddingSlug }: WeddingChatWidgetProps) {
   const [open, setOpen] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const sessionInitiated = useRef(false);
+
+  // Create session once on mount — persists across open/close so a single
+  // conversation thread is maintained for the entire page visit.
+  useEffect(() => {
+    if (sessionInitiated.current) return;
+    sessionInitiated.current = true;
+
+    fetch(`/api/weddings/${weddingSlug}/chat/session`, { method: "POST" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { sessionId: string } | null) => {
+        if (data?.sessionId) setSessionId(data.sessionId);
+      })
+      .catch(() => {});
+  }, [weddingSlug]);
 
   return (
     <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
@@ -113,7 +132,7 @@ export function WeddingChatWidget({ weddingSlug }: WeddingChatWidgetProps) {
             </button>
           </div>
           <div className="overflow-hidden" style={{ height: 471 }}>
-            <ChatPanel weddingSlug={weddingSlug} />
+            <ChatPanel weddingSlug={weddingSlug} sessionId={sessionId} />
           </div>
         </div>
       )}

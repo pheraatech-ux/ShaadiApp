@@ -10,6 +10,8 @@ export type WeddingVendorRecord = {
   phone: string | null;
   email: string | null;
   instagramHandle: string | null;
+  websiteUrl: string | null;
+  address: string | null;
   quotedPricePaise: number;
   advancePaidPaise: number;
   status: VendorStatus;

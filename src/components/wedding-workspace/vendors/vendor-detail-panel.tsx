@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, AtSign, Lock, Mail, Phone, Trash2, Unlock } from "lucide-react";
+import { ArrowLeft, AtSign, Globe, Lock, Mail, MapPin, Phone, Trash2, Unlock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +103,8 @@ export function VendorDetailPanel({
   const [phone, setPhone] = useState(vendor.phone ?? "");
   const [email, setEmail] = useState(vendor.email ?? "");
   const [instagram, setInstagram] = useState(vendor.instagramHandle ?? "");
+  const [websiteUrl, setWebsiteUrl] = useState(vendor.websiteUrl ?? "");
+  const [address, setAddress] = useState(vendor.address ?? "");
   const [quotedRupees, setQuotedRupees] = useState(paiseToRupees(vendor.quotedPricePaise));
   const [advanceRupees, setAdvanceRupees] = useState(paiseToRupees(vendor.advancePaidPaise));
   const [isConfirmed, setIsConfirmed] = useState(vendor.status === "confirmed");
@@ -122,6 +124,8 @@ export function VendorDetailPanel({
     setPhone(vendor.phone ?? "");
     setEmail(vendor.email ?? "");
     setInstagram(vendor.instagramHandle ?? "");
+    setWebsiteUrl(vendor.websiteUrl ?? "");
+    setAddress(vendor.address ?? "");
     setQuotedRupees(paiseToRupees(vendor.quotedPricePaise));
     setAdvanceRupees(paiseToRupees(vendor.advancePaidPaise));
     setIsConfirmed(vendor.status === "confirmed");
@@ -131,6 +135,7 @@ export function VendorDetailPanel({
   function discardEdits() {
     setName(vendor.name); setCategory(vendor.category); setPhone(vendor.phone ?? "");
     setEmail(vendor.email ?? ""); setInstagram(vendor.instagramHandle ?? "");
+    setWebsiteUrl(vendor.websiteUrl ?? ""); setAddress(vendor.address ?? "");
     setQuotedRupees(paiseToRupees(vendor.quotedPricePaise));
     setAdvanceRupees(paiseToRupees(vendor.advancePaidPaise));
     setIsConfirmed(vendor.status === "confirmed"); setNotes(vendor.notes ?? "");
@@ -146,6 +151,7 @@ export function VendorDetailPanel({
         body: JSON.stringify({
           vendorId: vendor.id, name: name.trim(), category: category.trim(),
           phone: phone.trim(), email: email.trim(), instagramHandle: instagram.trim(),
+          websiteUrl: websiteUrl.trim(), address: address.trim(),
           quotedPriceRupees: quotedRupees, advancePaidRupees: advanceRupees,
           isConfirmed, notes: notes.trim(),
         }),
@@ -348,12 +354,16 @@ export function VendorDetailPanel({
                   <div className="space-y-2">
                     <div className="flex items-center gap-2.5"><Phone className="size-3.5 shrink-0 text-muted-foreground" /><Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" className="h-8 rounded-xl border-border/70 bg-muted/20 text-sm" /></div>
                     <div className="flex items-center gap-2.5"><Mail className="size-3.5 shrink-0 text-muted-foreground" /><Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" type="email" className="h-8 rounded-xl border-border/70 bg-muted/20 text-sm" /></div>
+                    <div className="flex items-center gap-2.5"><Globe className="size-3.5 shrink-0 text-muted-foreground" /><Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="Website URL" className="h-8 rounded-xl border-border/70 bg-muted/20 text-sm" /></div>
+                    <div className="flex items-center gap-2.5"><MapPin className="size-3.5 shrink-0 text-muted-foreground" /><Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" className="h-8 rounded-xl border-border/70 bg-muted/20 text-sm" /></div>
                     <div className="flex items-center gap-2.5"><AtSign className="size-3.5 shrink-0 text-muted-foreground" /><Input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="Instagram handle" className="h-8 rounded-xl border-border/70 bg-muted/20 text-sm" /></div>
                   </div>
                 ) : (
                   <div className="space-y-2 text-sm">
                     <p className="flex items-center gap-2 text-muted-foreground"><Phone className="size-3.5 shrink-0" />{vendor.phone ? <a href={`tel:${vendor.phone}`} className="hover:text-foreground">{vendor.phone}</a> : <span className="italic text-muted-foreground/50">not added</span>}</p>
                     <p className="flex items-center gap-2 text-muted-foreground"><Mail className="size-3.5 shrink-0" />{vendor.email ? <a href={`mailto:${vendor.email}`} className="hover:text-foreground">{vendor.email}</a> : <span className="italic text-muted-foreground/50">not added</span>}</p>
+                    <p className="flex items-center gap-2 text-muted-foreground"><Globe className="size-3.5 shrink-0" />{vendor.websiteUrl ? <a href={vendor.websiteUrl} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">{vendor.websiteUrl}</a> : <span className="italic text-muted-foreground/50">not added</span>}</p>
+                    <p className="flex items-center gap-2 text-muted-foreground"><MapPin className="size-3.5 shrink-0" />{vendor.address ? <span>{vendor.address}</span> : <span className="italic text-muted-foreground/50">not added</span>}</p>
                     <p className="flex items-center gap-2 text-muted-foreground"><AtSign className="size-3.5 shrink-0" />{vendor.instagramHandle ? <span>{vendor.instagramHandle}</span> : <span className="italic text-muted-foreground/50">not added</span>}</p>
                   </div>
                 )}

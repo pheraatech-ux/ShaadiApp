@@ -1797,7 +1797,7 @@ export const getWeddingVendorsWorkspaceViewBySlug = cache(
     const { data: vendorRows, error } = await supabase
       .from("vendors")
       .select(
-        "id, name, category, phone, email, instagram_handle, quoted_price_paise, advance_paid_paise, status, notes, invite_status, invited_at, created_at, user_id",
+        "id, name, category, phone, email, instagram_handle, website_url, address, quoted_price_paise, advance_paid_paise, status, notes, invite_status, invited_at, created_at, user_id",
       )
       .eq("wedding_id", wedding.id)
       .order("created_at", { ascending: false });
@@ -1811,6 +1811,8 @@ export const getWeddingVendorsWorkspaceViewBySlug = cache(
       phone: vendor.phone,
       email: vendor.email,
       instagramHandle: vendor.instagram_handle,
+      websiteUrl: vendor.website_url ?? null,
+      address: vendor.address ?? null,
       quotedPricePaise: vendor.quoted_price_paise ?? 0,
       advancePaidPaise: vendor.advance_paid_paise ?? 0,
       status: vendor.status,

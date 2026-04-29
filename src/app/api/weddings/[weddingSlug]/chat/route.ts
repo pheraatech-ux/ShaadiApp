@@ -111,7 +111,7 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "add_vendor",
     description:
-      "Add a vendor to this wedding's vendor directory. Use this after finding vendors via search when the user asks to save, add, or keep a vendor. Tell the user which vendor you are adding before calling this tool.",
+      "Add a vendor to this wedding's vendor directory. Use this after finding vendors via search when the user asks to save, add, or keep a vendor. Before calling this tool, make sure you have contact details (phone, email, or website) — if you don't have them, run search_vendors_web first to find them. Tell the user which vendor you are adding.",
     input_schema: {
       type: "object",
       properties: {
@@ -119,10 +119,31 @@ const TOOLS: Anthropic.Tool[] = [
         category: { type: "string", description: "e.g. 'Dhol Player', 'Photographer', 'Caterer', 'Decorator'" },
         phone: { type: "string", description: "Phone number if available" },
         email: { type: "string", description: "Email address if available" },
-        instagram_handle: { type: "string", description: "Instagram handle if available (without @)" },
+        website_url: { type: "string", description: "Website URL if available" },
+        address: { type: "string", description: "Physical address if available" },
         notes: { type: "string", description: "Pricing, specialties, or any other useful details from the search results" },
       },
       required: ["name", "category"],
+    },
+  },
+  {
+    name: "update_vendor",
+    description:
+      "Update an existing vendor in this wedding's vendor directory. Use this when the user asks to edit, change, or update a vendor's details. Only include fields the user wants to change — omit everything else.",
+    input_schema: {
+      type: "object",
+      properties: {
+        vendor_id: { type: "string", description: "The ID of the vendor to update — match by name from the VENDORS list" },
+        name: { type: "string", description: "New vendor name (optional)" },
+        category: { type: "string", description: "New category (optional)" },
+        phone: { type: "string", description: "New phone number (optional)" },
+        email: { type: "string", description: "New email address (optional)" },
+        website_url: { type: "string", description: "New website URL (optional)" },
+        address: { type: "string", description: "New address (optional)" },
+        notes: { type: "string", description: "New notes (optional)" },
+        is_confirmed: { type: "boolean", description: "Set to true to confirm the vendor, false to revert to pending (optional)" },
+      },
+      required: ["vendor_id"],
     },
   },
   {
@@ -149,14 +170,14 @@ async function loadSessionMessages(
   supabase: ReturnType<typeof createSupabaseRouteHandlerClient>,
   sessionId: string,
 ): Promise<Anthropic.MessageParam[]> {
+  // Order by seq descending so we can LIMIT to the last N messages, then reverse
   const { data } = await supabase
     .from("ai_chat_messages")
     .select("role, content")
     .eq("session_id", sessionId)
-    .order("created_at", { ascending: false })
+    .order("seq", { ascending: false })
     .limit(SESSION_WINDOW);
 
-  // Reversed to ascending order after limiting
   return (data ?? []).reverse().map((row) => ({
     role: row.role as "user" | "assistant",
     content: row.content as Anthropic.MessageParam["content"],
@@ -169,11 +190,23 @@ async function saveMessages(
   messages: Anthropic.MessageParam[],
 ): Promise<void> {
   if (messages.length === 0) return;
+
+  // Get current max seq so new messages are appended in strict order
+  const { data: maxRow } = await supabase
+    .from("ai_chat_messages")
+    .select("seq")
+    .eq("session_id", sessionId)
+    .order("seq", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const startSeq = (maxRow?.seq ?? -1) + 1;
+
   await supabase.from("ai_chat_messages").insert(
-    messages.map((m) => ({
+    messages.map((m, i) => ({
       session_id: sessionId,
       role: m.role,
-      // Cast to Json — the JSONB column accepts any serialisable value
+      seq: startSeq + i,
       content: m.content as unknown as import("@/types/database").Json,
     })),
   );
@@ -333,7 +366,8 @@ async function executeTool(
       category: string;
       phone?: string;
       email?: string;
-      instagram_handle?: string;
+      website_url?: string;
+      address?: string;
       notes?: string;
     };
 
@@ -343,13 +377,60 @@ async function executeTool(
       category: input.category.trim(),
       phone: input.phone?.trim() || null,
       email: input.email?.trim() || null,
-      instagram_handle: input.instagram_handle?.trim() || null,
+      website_url: input.website_url?.trim() || null,
+      address: input.address?.trim() || null,
       notes: input.notes?.trim() || null,
       status: "pending",
     });
 
     if (error) return JSON.stringify({ success: false, error: error.message });
-    return JSON.stringify({ success: true, name: input.name });
+    return JSON.stringify({ success: true, name: input.name, action: "vendors" });
+  }
+
+  if (toolName === "update_vendor") {
+    const input = toolInput as {
+      vendor_id: string;
+      name?: string;
+      category?: string;
+      phone?: string;
+      email?: string;
+      website_url?: string;
+      address?: string;
+      notes?: string;
+      is_confirmed?: boolean;
+    };
+
+    const updates: {
+      name?: string;
+      category?: string;
+      phone?: string | null;
+      email?: string | null;
+      website_url?: string | null;
+      address?: string | null;
+      notes?: string | null;
+      status?: "pending" | "confirmed" | "declined";
+    } = {};
+    if (input.name !== undefined) updates.name = input.name.trim() || "Vendor";
+    if (input.category !== undefined) updates.category = input.category.trim() || "Other";
+    if (input.phone !== undefined) updates.phone = input.phone.trim() || null;
+    if (input.email !== undefined) updates.email = input.email.trim() || null;
+    if (input.website_url !== undefined) updates.website_url = input.website_url.trim() || null;
+    if (input.address !== undefined) updates.address = input.address.trim() || null;
+    if (input.notes !== undefined) updates.notes = input.notes.trim() || null;
+    if (input.is_confirmed !== undefined) updates.status = input.is_confirmed ? "confirmed" : "pending";
+
+    if (Object.keys(updates).length === 0) {
+      return JSON.stringify({ success: false, error: "No fields to update." });
+    }
+
+    const { error } = await supabase
+      .from("vendors")
+      .update(updates)
+      .eq("id", input.vendor_id)
+      .eq("wedding_id", weddingId);
+
+    if (error) return JSON.stringify({ success: false, error: error.message });
+    return JSON.stringify({ success: true, action: "vendors" });
   }
 
   if (toolName === "search_vendors_web") {
@@ -495,7 +576,7 @@ TASKS (${summary.tasks.length}):
 ${summary.tasks.slice(0, 20).map((t) => `- [id:${t.id}] [${t.status}] ${t.title}${t.due_date ? ` (due ${t.due_date})` : ""}`).join("\n") || "None yet"}
 
 VENDORS (${summary.vendors.length}):
-${summary.vendors.slice(0, 20).map((v) => `- [${v.status}] ${v.name} (${v.category})`).join("\n") || "None yet"}
+${summary.vendors.slice(0, 20).map((v) => `- [id:${v.id}] [${v.status}] ${v.name} (${v.category})`).join("\n") || "None yet"}
 
 BUDGET: ${formatINR(budgetTotal)} allocated, ${formatINR(budgetSpent)} spent, ${formatINR(budgetTotal - budgetSpent)} remaining
 DOCUMENTS: ${summary.documents.length} uploaded
@@ -506,12 +587,13 @@ ${members.length > 0
   ? members.map((m) => `- ${m.name} [user_id: ${m.userId}]${m.role ? ` (${m.role})` : ""}`).join("\n")
   : "None yet"}
 
-You have six actions available:
+You have seven actions available:
 - **create_task**: Adds a task to the wedding workspace. Before calling it, tell the user what you are creating. Resolve team member names to user IDs from the TEAM MEMBERS list.
 - **update_task**: Edits an existing task. Match the task by name from the TASKS list and use its id. Only send fields the user wants to change.
 - **create_event**: Adds an event or ceremony to the timeline. Confirm the title and date — if no date was given, ask for it first. Use the wedding's cultures for culture_label when relevant.
 - **update_event**: Edits an existing event. Match by name from the EVENTS/CEREMONIES list and use its id. Only send fields the user wants to change.
-- **add_vendor**: Saves a vendor to the wedding directory. Use this when the user asks to add or save a vendor found in search results. Extract details from the tool_result blocks in your history — don't ask the user to repeat them.
+- **add_vendor**: Saves a vendor to the wedding directory. **Before saving, always ensure you have at least one contact detail (phone, email, or website). If contact details are missing, first call search_vendors_web to find them, then add the vendor.** Extract all details from the tool_result blocks in your history — don't ask the user to repeat them.
+- **update_vendor**: Edits an existing vendor. Match by name from the VENDORS list and use its id. Only send fields the user wants to change.
 - **search_vendors_web**: Searches the web for vendors or services. Tell the user what you are searching for before calling.
 
 **Important — conversation continuity:** The full message history is available to you above, including the raw results of any previous searches. If the user asks a follow-up question about results already discussed (e.g. "find contact details for the top 2" after you listed dhol players), use the exact names and data from those prior tool results — do not run a new search from scratch. Only call search_vendors_web when genuinely new information is needed. When doing a targeted follow-up search, use the specific vendor name from the prior result in the query.
@@ -548,6 +630,9 @@ When asked about missing events or ceremonies, compare what's listed above again
       messages: anthropicMessages,
     });
 
+    // Track which resource types were mutated so the client can invalidate queries
+    const actionsPerformed = new Set<string>();
+
     // Agentic loop: execute tools until Claude reaches end_turn
     while (response.stop_reason === "tool_use") {
       const assistantContent = response.content;
@@ -556,17 +641,23 @@ When asked about missing events or ceremonies, compare what's listed above again
       );
 
       const toolResults = await Promise.all(
-        toolUseBlocks.map(async (block) => ({
-          type: "tool_result" as const,
-          tool_use_id: block.id,
-          content: await executeTool(
+        toolUseBlocks.map(async (block) => {
+          const resultJson = await executeTool(
             block.name,
             block.input as Record<string, unknown>,
             supabase,
             summary.wedding.id,
             user.id,
-          ),
-        })),
+          );
+          // Extract action tag from tool result if present
+          try {
+            const parsed = JSON.parse(resultJson) as { action?: string; success?: boolean };
+            if (parsed.success && parsed.action) actionsPerformed.add(parsed.action);
+          } catch {
+            // ignore parse errors
+          }
+          return { type: "tool_result" as const, tool_use_id: block.id, content: resultJson };
+        }),
       );
 
       anthropicMessages.push({ role: "assistant", content: assistantContent });
@@ -591,7 +682,7 @@ When asked about missing events or ceremonies, compare what's listed above again
 
     const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === "text");
     const text = textBlock?.text ?? "";
-    return NextResponse.json({ text });
+    return NextResponse.json({ text, actionsPerformed: [...actionsPerformed] });
   } catch (err) {
     const message = err instanceof Error ? err.message : "AI request failed.";
     return NextResponse.json({ error: message }, { status: 500 });

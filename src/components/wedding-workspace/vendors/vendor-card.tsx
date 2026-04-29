@@ -1,4 +1,4 @@
-import { AtSign, Mail, Phone } from "lucide-react";
+import { Globe, Mail, Phone } from "lucide-react";
 
 import type { WeddingVendorRecord } from "@/components/wedding-workspace/vendors/types";
 import { formatInrFromPaise, inviteStatusLabel, vendorStatusLabel } from "@/components/wedding-workspace/vendors/vendor-utils";
@@ -54,9 +54,9 @@ export function VendorCard({ vendor, onOpen }: VendorCardProps) {
               : <span className="italic text-muted-foreground/50">not added</span>}
           </p>
           <p className="flex min-w-0 items-center gap-1.5 truncate">
-            <AtSign className="size-3.5 shrink-0" />
-            {vendor.instagramHandle
-              ? vendor.instagramHandle
+            <Globe className="size-3.5 shrink-0" />
+            {vendor.websiteUrl
+              ? <a href={vendor.websiteUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="min-w-0 truncate underline-offset-2 hover:underline">{vendor.websiteUrl.replace(/^https?:\/\//, "")}</a>
               : <span className="italic text-muted-foreground/50">not added</span>}
           </p>
         </div>

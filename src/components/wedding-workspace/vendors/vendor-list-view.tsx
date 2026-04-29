@@ -1,6 +1,6 @@
 "use client";
 
-import { AtSign, ChevronRight, Mail, Phone } from "lucide-react";
+import { ChevronRight, Mail, Phone } from "lucide-react";
 
 import type { WeddingVendorRecord } from "@/components/wedding-workspace/vendors/types";
 import {
@@ -47,11 +47,6 @@ export function VendorListView({ vendors, onOpen }: VendorListViewProps) {
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-foreground">{vendor.name}</p>
               <p className="truncate text-xs text-muted-foreground">{vendor.category}</p>
-              {vendor.instagramHandle ? (
-                <p className="mt-1 flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
-                <AtSign className="size-3 shrink-0" />{vendor.instagramHandle}
-              </p>
-              ) : null}
             </div>
 
             <div>

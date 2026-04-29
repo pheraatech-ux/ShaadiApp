@@ -20,6 +20,7 @@ export type Database = {
           created_at: string
           id: string
           role: string
+          seq: number
           session_id: string
         }
         Insert: {
@@ -27,6 +28,7 @@ export type Database = {
           created_at?: string
           id?: string
           role: string
+          seq?: number
           session_id: string
         }
         Update: {
@@ -34,6 +36,7 @@ export type Database = {
           created_at?: string
           id?: string
           role?: string
+          seq?: number
           session_id?: string
         }
         Relationships: [
@@ -721,6 +724,7 @@ export type Database = {
       }
       vendors: {
         Row: {
+          address: string | null
           advance_paid_paise: number
           category: string
           created_at: string
@@ -735,11 +739,13 @@ export type Database = {
           quoted_price_paise: number
           status: Database["public"]["Enums"]["vendor_status"]
           user_id: string | null
+          website_url: string | null
           wedding_id: string
           whatsapp_invite_status: string
           whatsapp_invited_at: string | null
         }
         Insert: {
+          address?: string | null
           advance_paid_paise?: number
           category?: string
           created_at?: string
@@ -754,11 +760,13 @@ export type Database = {
           quoted_price_paise?: number
           status?: Database["public"]["Enums"]["vendor_status"]
           user_id?: string | null
+          website_url?: string | null
           wedding_id: string
           whatsapp_invite_status?: string
           whatsapp_invited_at?: string | null
         }
         Update: {
+          address?: string | null
           advance_paid_paise?: number
           category?: string
           created_at?: string
@@ -773,6 +781,7 @@ export type Database = {
           quoted_price_paise?: number
           status?: Database["public"]["Enums"]["vendor_status"]
           user_id?: string | null
+          website_url?: string | null
           wedding_id?: string
           whatsapp_invite_status?: string
           whatsapp_invited_at?: string | null

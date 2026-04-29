@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { LayoutGrid, List, Plus, Search } from "lucide-react";
 
 import { VendorCard } from "@/components/wedding-workspace/vendors/vendor-card";
@@ -9,6 +9,7 @@ import { VendorDetailPanel } from "@/components/wedding-workspace/vendors/vendor
 import { VendorFormDialog } from "@/components/wedding-workspace/vendors/vendor-form-dialog";
 import { VendorListView } from "@/components/wedding-workspace/vendors/vendor-list-view";
 import type { VendorsViewMode, WeddingVendorsWorkspaceViewModel } from "@/components/wedding-workspace/vendors/types";
+import { useVendorsQuery, vendorsQueryKey } from "@/components/wedding-workspace/vendors/use-vendors-query";
 import { formatInrFromPaise } from "@/components/wedding-workspace/vendors/vendor-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,7 @@ type WeddingVendorsWorkspaceProps = {
 type StatusFilter = "all" | "shortlisted" | "confirmed" | "declined" | "invited";
 
 export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -38,9 +39,27 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<VendorsViewMode>("cards");
 
+  const { data: vendors } = useVendorsQuery(view.weddingSlug, view.vendors);
+
+  const summary = useMemo(() => ({
+    total: vendors.length,
+    confirmed: vendors.filter((v) => v.status === "confirmed").length,
+    shortlisted: vendors.filter((v) => v.status === "pending").length,
+    declined: vendors.filter((v) => v.status === "declined").length,
+    inviteSent: vendors.filter((v) => v.inviteStatus !== "not_invited").length,
+    pendingJoin: vendors.filter((v) => v.inviteStatus === "invited").length,
+    totalQuotedPaise: vendors.reduce((s, v) => s + v.quotedPricePaise, 0),
+    totalAdvancePaise: vendors.reduce((s, v) => s + v.advancePaidPaise, 0),
+  }), [vendors]);
+
+  const quickCategories = useMemo(
+    () => [...new Set(vendors.map((v) => v.category))].sort(),
+    [vendors],
+  );
+
   const filteredVendors = useMemo(() => {
     const normalizedQuery = search.trim().toLowerCase();
-    return view.vendors.filter((vendor) => {
+    return vendors.filter((vendor) => {
       const matchesQuery =
         normalizedQuery.length === 0 ||
         vendor.name.toLowerCase().includes(normalizedQuery) ||
@@ -55,7 +74,7 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
       if (statusFilter === "invited" && vendor.inviteStatus === "not_invited") return false;
       return true;
     });
-  }, [categoryFilter, search, statusFilter, view.vendors]);
+  }, [categoryFilter, search, statusFilter, vendors]);
 
   async function createVendor(values: {
     category: string;
@@ -78,7 +97,7 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
     if (!response.ok) {
       throw new Error(payload.error || "Unable to create vendor.");
     }
-    router.refresh();
+    await queryClient.invalidateQueries({ queryKey: vendorsQueryKey(view.weddingSlug) });
   }
 
   async function deleteVendor(vendorId: string) {
@@ -92,10 +111,10 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
     if (!response.ok) {
       throw new Error(payload.error || "Unable to delete vendor.");
     }
-    router.refresh();
+    await queryClient.invalidateQueries({ queryKey: vendorsQueryKey(view.weddingSlug) });
   }
 
-  const selectedVendor = selectedVendorId ? view.vendors.find((v) => v.id === selectedVendorId) ?? null : null;
+  const selectedVendor = selectedVendorId ? vendors.find((v) => v.id === selectedVendorId) ?? null : null;
 
   if (selectedVendor) {
     return (
@@ -105,8 +124,8 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
           weddingSlug={view.weddingSlug}
           vendor={selectedVendor}
           onBack={() => setSelectedVendorId(null)}
-          onVendorUpdated={() => router.refresh()}
-          onVendorDeleted={() => { setSelectedVendorId(null); router.refresh(); }}
+          onVendorUpdated={() => queryClient.invalidateQueries({ queryKey: vendorsQueryKey(view.weddingSlug) })}
+          onVendorDeleted={() => { setSelectedVendorId(null); queryClient.invalidateQueries({ queryKey: vendorsQueryKey(view.weddingSlug) }); }}
         />
       </div>
     );
@@ -119,8 +138,8 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">Vendors — {view.coupleName}</h1>
-            <Badge variant="outline">{formatInrFromPaise(view.summary.totalQuotedPaise)} quoted</Badge>
-            <Badge variant="outline">{formatInrFromPaise(view.summary.totalAdvancePaise)} paid</Badge>
+            <Badge variant="outline">{formatInrFromPaise(summary.totalQuotedPaise)} quoted</Badge>
+            <Badge variant="outline">{formatInrFromPaise(summary.totalAdvancePaise)} paid</Badge>
           </div>
           <Button
             type="button"
@@ -136,10 +155,10 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
       {/* Stat cards — bleed */}
       <section className="-mx-4 grid grid-cols-2 border-b border-border/60 sm:-mx-6 lg:grid-cols-4">
         {[
-          { id: "confirmed", label: "Confirmed", value: view.summary.confirmed, color: "text-emerald-400", helper: "Booked & locked in" },
-          { id: "shortlisted", label: "Shortlisted", value: view.summary.shortlisted, color: "text-foreground", helper: `of ${view.summary.total} total` },
-          { id: "invite-sent", label: "Invite sent", value: view.summary.inviteSent, color: "text-violet-400", helper: "Portal access sent" },
-          { id: "pending-join", label: "Pending join", value: view.summary.pendingJoin, color: "text-amber-400", helper: "Awaiting acceptance" },
+          { id: "confirmed", label: "Confirmed", value: summary.confirmed, color: "text-emerald-400", helper: "Booked & locked in" },
+          { id: "shortlisted", label: "Shortlisted", value: summary.shortlisted, color: "text-foreground", helper: `of ${summary.total} total` },
+          { id: "invite-sent", label: "Invite sent", value: summary.inviteSent, color: "text-violet-400", helper: "Portal access sent" },
+          { id: "pending-join", label: "Pending join", value: summary.pendingJoin, color: "text-amber-400", helper: "Awaiting acceptance" },
         ].map((card, i) => (
           <article
             key={card.id}
@@ -161,7 +180,7 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             {[
-              { id: "all", label: `All (${view.summary.total})` },
+              { id: "all", label: `All (${summary.total})` },
               { id: "shortlisted", label: "Shortlisted" },
               { id: "confirmed", label: "Confirmed" },
               { id: "invited", label: "Invite sent" },
@@ -200,7 +219,7 @@ export function WeddingVendorsWorkspace({ view }: WeddingVendorsWorkspaceProps) 
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All categories</SelectItem>
-                {view.quickCategories.map((category) => (
+                {quickCategories.map((category) => (
                   <SelectItem key={category} value={category}>{category}</SelectItem>
                 ))}
               </SelectContent>

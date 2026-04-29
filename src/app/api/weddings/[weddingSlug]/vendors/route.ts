@@ -11,6 +11,8 @@ type CreateVendorPayload = {
   phone?: string;
   email?: string;
   instagramHandle?: string;
+  websiteUrl?: string;
+  address?: string;
   quotedPriceRupees?: string;
   advancePaidRupees?: string;
   notes?: string;
@@ -67,6 +69,49 @@ function validateEmail(email?: string) {
   return EMAIL_PATTERN.test(trimmed);
 }
 
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ weddingSlug: string }> },
+) {
+  try {
+    const { weddingSlug } = await context.params;
+    const lookup = await getWeddingBySlug(request, weddingSlug);
+    if ("error" in lookup) return lookup.error;
+    const { supabase, weddingId } = lookup;
+
+    const { data, error } = await supabase
+      .from("vendors")
+      .select("id, name, category, phone, email, instagram_handle, website_url, address, quoted_price_paise, advance_paid_paise, status, notes, invite_status, invited_at, created_at, user_id")
+      .eq("wedding_id", weddingId)
+      .order("created_at", { ascending: false });
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+    const vendors = (data ?? []).map((v) => ({
+      id: v.id,
+      name: v.name,
+      category: v.category,
+      phone: v.phone ?? null,
+      email: v.email ?? null,
+      instagramHandle: v.instagram_handle ?? null,
+      websiteUrl: v.website_url ?? null,
+      address: v.address ?? null,
+      quotedPricePaise: v.quoted_price_paise ?? 0,
+      advancePaidPaise: v.advance_paid_paise ?? 0,
+      status: v.status,
+      notes: v.notes ?? null,
+      inviteStatus: (v.invite_status === "active" ? "active" : v.invite_status === "invited" ? "invited" : "not_invited") as "not_invited" | "invited" | "active",
+      inviteSentAt: v.invited_at ?? null,
+      createdAt: v.created_at,
+      userId: v.user_id ?? null,
+    }));
+
+    return NextResponse.json({ vendors });
+  } catch {
+    return NextResponse.json({ error: "Unable to fetch vendors." }, { status: 500 });
+  }
+}
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ weddingSlug: string }> },
@@ -93,6 +138,8 @@ export async function POST(
       phone: normalizeText(payload.phone),
       email: normalizeText(payload.email),
       instagram_handle: normalizeText(payload.instagramHandle),
+      website_url: normalizeText(payload.websiteUrl),
+      address: normalizeText(payload.address),
       quoted_price_paise: safeRupeesToPaise(payload.quotedPriceRupees),
       advance_paid_paise: safeRupeesToPaise(payload.advancePaidRupees),
       notes: normalizeText(payload.notes),
@@ -174,6 +221,8 @@ export async function PATCH(
     if (payload.phone !== undefined) updates.phone = normalizeText(payload.phone);
     if (payload.email !== undefined) updates.email = normalizeText(payload.email);
     if (payload.instagramHandle !== undefined) updates.instagram_handle = normalizeText(payload.instagramHandle);
+    if (payload.websiteUrl !== undefined) updates.website_url = normalizeText(payload.websiteUrl);
+    if (payload.address !== undefined) updates.address = normalizeText(payload.address);
     if (payload.quotedPriceRupees !== undefined) updates.quoted_price_paise = safeRupeesToPaise(payload.quotedPriceRupees);
     if (payload.advancePaidRupees !== undefined) updates.advance_paid_paise = safeRupeesToPaise(payload.advancePaidRupees);
     if (payload.notes !== undefined) updates.notes = normalizeText(payload.notes);
