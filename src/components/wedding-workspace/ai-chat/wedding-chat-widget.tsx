@@ -66,18 +66,26 @@ function ChatPanel({ weddingSlug, sessionId, onFirstMessageSent }: ChatPanelProp
         url: `/api/weddings/${weddingSlug}/chat`,
         method: "POST",
         additionalBodyProps: { sessionId },
+        stream: true,
       };
 
+      // With streaming, responseInterceptor is called for every SSE chunk.
+      // We use it only to pick up the final metadata event (no text, has actionsPerformed).
       (el as any).responseInterceptor = (response: { text?: string; actionsPerformed?: string[] }) => {
         const actions = response?.actionsPerformed ?? [];
         if (actions.includes("vendors")) {
           queryClient.invalidateQueries({ queryKey: vendorsQueryKey(weddingSlug) });
         }
-        if (isFirstReply) {
+        return response;
+      };
+
+      // onMessage fires once when the full streaming message is complete.
+      // Use it to refresh the session list (title was set server-side during this turn).
+      (el as any).onMessage = (body: { message: { role?: string }; isHistory: boolean }) => {
+        if (!body.isHistory && body.message.role === "ai" && isFirstReply) {
           isFirstReply = false;
           onFirstMessageSentRef.current();
         }
-        return response;
       };
 
       (el as any).messageStyles = {

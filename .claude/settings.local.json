@@ -25,7 +25,9 @@
       "Bash(echo \"EXIT:$?\")",
       "Bash(mkdir -p \"C:/Users/sandy/Downloads/ShaadiApp/src/app/\\(vendor\\)/vendor/tasks/[taskId]\")",
       "Bash(mkdir -p \"C:/Users/sandy/Downloads/ShaadiApp/src/app/api/vendor/tasks/[taskId]/comments\")",
-      "Bash(npx supabase *)"
+      "Bash(npx supabase *)",
+      "Bash(node -e \"console.log\\(require\\('@anthropic-ai/sdk/package.json'\\).version\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d['version']\\)\")"
     ]
   },
   "enableAllProjectMcpServers": true,

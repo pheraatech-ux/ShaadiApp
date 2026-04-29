@@ -7,8 +7,12 @@ import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
 function extractText(content: unknown): string | null {
   if (typeof content === "string") return content.trim() || null;
   if (Array.isArray(content)) {
-    const block = (content as { type: string; text?: string }[]).find((b) => b.type === "text");
-    return block?.text?.trim() || null;
+    const text = (content as { type: string; text?: string }[])
+      .filter((b) => b.type === "text")
+      .map((b) => b.text ?? "")
+      .join("")
+      .trim();
+    return text || null;
   }
   return null;
 }

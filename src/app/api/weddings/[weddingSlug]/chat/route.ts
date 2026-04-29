@@ -8,6 +8,12 @@ type DeepChatMessage = { role: string; text: string };
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+const WEB_SEARCH_TOOL: Anthropic.WebSearchTool20250305 = {
+  type: "web_search_20250305",
+  name: "web_search",
+  max_uses: 5,
+};
+
 const TOOLS: Anthropic.Tool[] = [
   {
     name: "create_task",
@@ -144,22 +150,6 @@ const TOOLS: Anthropic.Tool[] = [
         is_confirmed: { type: "boolean", description: "Set to true to confirm the vendor, false to revert to pending (optional)" },
       },
       required: ["vendor_id"],
-    },
-  },
-  {
-    name: "search_vendors_web",
-    description:
-      "Search the web for wedding vendors — photographers, caterers, decorators, mehendi artists, DJs, florists, etc. Use when the user asks to find, search, or discover vendors or services. Always tell the user you are searching before calling this tool.",
-    input_schema: {
-      type: "object",
-      properties: {
-        query: {
-          type: "string",
-          description:
-            "Specific search query including category, location, and budget if mentioned — e.g. 'wedding photographers in Mumbai under 1 lakh rupees'",
-        },
-      },
-      required: ["query"],
     },
   },
 ];
@@ -433,42 +423,6 @@ async function executeTool(
     return JSON.stringify({ success: true, action: "vendors" });
   }
 
-  if (toolName === "search_vendors_web") {
-    const { query } = toolInput as { query: string };
-
-    if (!process.env.TAVILY_API_KEY) {
-      return JSON.stringify({ error: "Web search is not configured." });
-    }
-
-    const res = await fetch("https://api.tavily.com/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        api_key: process.env.TAVILY_API_KEY,
-        query,
-        search_depth: "basic",
-        max_results: 5,
-        include_answer: true,
-      }),
-    });
-
-    if (!res.ok) return JSON.stringify({ error: "Search failed. Please try again." });
-
-    const data = (await res.json()) as {
-      answer?: string;
-      results?: { title: string; url: string; content?: string }[];
-    };
-
-    return JSON.stringify({
-      answer: data.answer ?? null,
-      results: (data.results ?? []).map((r) => ({
-        title: r.title,
-        url: r.url,
-        snippet: r.content?.slice(0, 400),
-      })),
-    });
-  }
-
   return JSON.stringify({ error: `Unknown tool: ${toolName}` });
 }
 
@@ -592,11 +546,11 @@ You have seven actions available:
 - **update_task**: Edits an existing task. Match the task by name from the TASKS list and use its id. Only send fields the user wants to change.
 - **create_event**: Adds an event or ceremony to the timeline. Confirm the title and date — if no date was given, ask for it first. Use the wedding's cultures for culture_label when relevant.
 - **update_event**: Edits an existing event. Match by name from the EVENTS/CEREMONIES list and use its id. Only send fields the user wants to change.
-- **add_vendor**: Saves a vendor to the wedding directory. **Before saving, always ensure you have at least one contact detail (phone, email, or website). If contact details are missing, first call search_vendors_web to find them, then add the vendor.** Extract all details from the tool_result blocks in your history — don't ask the user to repeat them.
+- **add_vendor**: Saves a vendor to the wedding directory. **Before saving, always ensure you have at least one contact detail (phone, email, or website). If contact details are missing, first use web_search to find them, then add the vendor.** Extract all details from prior search results in your history — don't ask the user to repeat them.
 - **update_vendor**: Edits an existing vendor. Match by name from the VENDORS list and use its id. Only send fields the user wants to change.
-- **search_vendors_web**: Searches the web for vendors or services. Tell the user what you are searching for before calling.
+- **web_search**: Searches the web for real-time information — vendor contacts, prices, services, availability, reviews. Tell the user what you are searching for before calling. Use specific queries including category, city, and budget when relevant.
 
-**Important — conversation continuity:** The full message history is available to you above, including the raw results of any previous searches. If the user asks a follow-up question about results already discussed (e.g. "find contact details for the top 2" after you listed dhol players), use the exact names and data from those prior tool results — do not run a new search from scratch. Only call search_vendors_web when genuinely new information is needed. When doing a targeted follow-up search, use the specific vendor name from the prior result in the query.
+**Important — conversation continuity:** The full message history is available to you above, including the raw results of any previous searches. If the user asks a follow-up question about results already discussed (e.g. "find contact details for the top 2" after you listed dhol players), use the exact names and data from those prior search results — do not run a new search from scratch. Only call web_search when genuinely new information is needed.
 
 When asked about missing events or ceremonies, compare what's listed above against the typical ceremonies for a ${summary.wedding.cultures?.join(" and ") || "traditional"} wedding and identify gaps. Be specific about what's present and what's missing. Be helpful, warm, and concise. Use markdown for formatting when useful — but never use # headings; use **bold** for section titles instead.`;
 
@@ -621,80 +575,108 @@ When asked about missing events or ceremonies, compare what's listed above again
     content: [{ type: "text", text: userText }],
   });
 
-  try {
-    let response = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
-      system: systemPrompt,
-      tools: TOOLS,
-      messages: anthropicMessages,
-    });
+  const allTools = [...TOOLS, WEB_SEARCH_TOOL];
+  const encoder = new TextEncoder();
 
-    // Track which resource types were mutated so the client can invalidate queries
-    const actionsPerformed = new Set<string>();
+  const sseStream = new ReadableStream({
+    async start(controller) {
+      const send = (data: Record<string, unknown>) =>
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
 
-    // Agentic loop: execute tools until Claude reaches end_turn
-    while (response.stop_reason === "tool_use") {
-      const assistantContent = response.content;
-      const toolUseBlocks = assistantContent.filter(
-        (b): b is Anthropic.ToolUseBlock => b.type === "tool_use",
-      );
+      const actionsPerformed = new Set<string>();
+      let currentMessages = [...anthropicMessages];
 
-      const toolResults = await Promise.all(
-        toolUseBlocks.map(async (block) => {
-          const resultJson = await executeTool(
-            block.name,
-            block.input as Record<string, unknown>,
-            supabase,
-            summary.wedding.id,
-            user.id,
-          );
-          // Extract action tag from tool result if present
-          try {
-            const parsed = JSON.parse(resultJson) as { action?: string; success?: boolean };
-            if (parsed.success && parsed.action) actionsPerformed.add(parsed.action);
-          } catch {
-            // ignore parse errors
+      try {
+        // Agentic loop with streaming. Each iteration opens one Anthropic stream.
+        // - pause_turn: web_search server tool ran mid-turn; append and loop again.
+        // - tool_use:   our custom tools; execute them, append results, loop again.
+        // - end_turn:   done — save to DB, send final metadata event, close stream.
+        while (true) {
+          const stream = anthropic.messages.stream({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 1024,
+            system: systemPrompt,
+            tools: allTools,
+            messages: currentMessages,
+          });
+
+          // Forward text deltas to the client as they arrive.
+          for await (const event of stream) {
+            if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+              send({ text: event.delta.text });
+            }
           }
-          return { type: "tool_result" as const, tool_use_id: block.id, content: resultJson };
-        }),
-      );
 
-      anthropicMessages.push({ role: "assistant", content: assistantContent });
-      anthropicMessages.push({ role: "user", content: toolResults });
+          const finalMsg = await stream.finalMessage();
+          const assistantContent = finalMsg.content;
 
-      response = await anthropic.messages.create({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 1024,
-        system: systemPrompt,
-        tools: TOOLS,
-        messages: anthropicMessages,
-      });
-    }
+          if (finalMsg.stop_reason === "pause_turn") {
+            currentMessages = [...currentMessages, { role: "assistant", content: assistantContent }];
+            continue;
+          }
 
-    // Push final assistant response so it gets persisted too
-    anthropicMessages.push({ role: "assistant", content: response.content });
+          if (finalMsg.stop_reason === "tool_use") {
+            const toolUseBlocks = assistantContent.filter(
+              (b): b is Anthropic.ToolUseBlock => b.type === "tool_use",
+            );
+            const toolResults = await Promise.all(
+              toolUseBlocks.map(async (block) => {
+                const resultJson = await executeTool(
+                  block.name,
+                  block.input as Record<string, unknown>,
+                  supabase,
+                  summary.wedding.id,
+                  user.id,
+                );
+                try {
+                  const parsed = JSON.parse(resultJson) as { action?: string; success?: boolean };
+                  if (parsed.success && parsed.action) actionsPerformed.add(parsed.action);
+                } catch {}
+                return { type: "tool_result" as const, tool_use_id: block.id, content: resultJson };
+              }),
+            );
+            currentMessages = [
+              ...currentMessages,
+              { role: "assistant", content: assistantContent },
+              { role: "user", content: toolResults },
+            ];
+            continue;
+          }
 
-    // Persist all new turns (user message + any tool loops + final assistant) to DB
-    if (sessionId) {
-      await saveMessages(supabase, sessionId, anthropicMessages.slice(priorLength));
+          // end_turn (or max_tokens / stop_sequence)
+          currentMessages = [...currentMessages, { role: "assistant", content: assistantContent }];
 
-      // Auto-title the session from the first user message (fire-and-forget)
-      if (priorLength === 0 && userText) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase.from("ai_chat_sessions") as any)
-          .update({ title: userText.slice(0, 60).trim() })
-          .eq("id", sessionId)
-          .is("title", null)
-          .then(() => {});
+          if (sessionId) {
+            await saveMessages(supabase, sessionId, currentMessages.slice(priorLength));
+            if (priorLength === 0 && userText) {
+              supabase
+                .from("ai_chat_sessions")
+                .update({ title: userText.slice(0, 60).trim() })
+                .eq("id", sessionId)
+                .is("title", null)
+                .then(() => {});
+            }
+          }
+
+          // Final event carries metadata (no visible text); client uses it to
+          // trigger query invalidation and session-list refresh.
+          send({ actionsPerformed: [...actionsPerformed] });
+          break;
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "AI request failed.";
+        send({ error: message });
+      } finally {
+        controller.close();
       }
-    }
+    },
+  });
 
-    const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === "text");
-    const text = textBlock?.text ?? "";
-    return NextResponse.json({ text, actionsPerformed: [...actionsPerformed] });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "AI request failed.";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+  return new Response(sseStream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+    },
+  });
 }
