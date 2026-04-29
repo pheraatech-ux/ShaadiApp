@@ -4,19 +4,42 @@ import { useEffect, useRef, useState } from "react";
 import { MessageSquare, X } from "lucide-react";
 
 type WeddingChatWidgetProps = {
-  weddingId: string;
+  weddingSlug: string;
 };
 
-function ChatPanel({ weddingId }: WeddingChatWidgetProps) {
+function ChatPanel({ weddingSlug }: WeddingChatWidgetProps) {
   const ref = useRef<HTMLElement>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    import("deep-chat").then(() => {
+    let cancelled = false;
+
+    async function init() {
+      // Create a new chat session — this is what lets us persist full tool
+      // results in the DB so follow-up messages have real context to work from
+      let sessionId: string | undefined;
+      try {
+        const res = await fetch(`/api/weddings/${weddingSlug}/chat/session`, {
+          method: "POST",
+        });
+        if (res.ok) {
+          const data = (await res.json()) as { sessionId: string };
+          sessionId = data.sessionId;
+        }
+      } catch {
+        // Session creation failed — chat still works, just without DB persistence
+      }
+
+      await import("deep-chat");
+      if (cancelled) return;
+
       const el = ref.current;
       if (!el) return;
+
       (el as any).connect = {
-        url: `/api/weddings/${weddingId}/chat`,
+        url: `/api/weddings/${weddingSlug}/chat`,
         method: "POST",
+        ...(sessionId ? { additionalBodyProps: { sessionId } } : {}),
       };
       (el as any).introMessage = {
         text: "Hi! Ask me anything about this wedding — missing vendors, traditions, tasks, budget, or cultural rituals. I'm here to help!",
@@ -42,16 +65,31 @@ function ChatPanel({ weddingId }: WeddingChatWidgetProps) {
           text: { color: "var(--foreground)" },
         },
       };
-    });
-  }, [weddingId]);
+
+      if (!cancelled) setReady(true);
+    }
+
+    init();
+    return () => { cancelled = true; };
+  }, [weddingSlug]);
 
   return (
-    // @ts-expect-error deep-chat is a web component
-    <deep-chat ref={ref} style={{ height: "471px", width: "380px", display: "block" }} />
+    <div style={{ height: "471px", width: "380px", position: "relative" }}>
+      {!ready && (
+        <div
+          style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+          className="text-sm text-muted-foreground"
+        >
+          Connecting…
+        </div>
+      )}
+      {/* @ts-expect-error deep-chat is a web component */}
+      <deep-chat ref={ref} style={{ height: "471px", width: "380px", display: "block" }} />
+    </div>
   );
 }
 
-export function WeddingChatWidget({ weddingId }: WeddingChatWidgetProps) {
+export function WeddingChatWidget({ weddingSlug }: WeddingChatWidgetProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -75,7 +113,7 @@ export function WeddingChatWidget({ weddingId }: WeddingChatWidgetProps) {
             </button>
           </div>
           <div className="overflow-hidden" style={{ height: 471 }}>
-            <ChatPanel weddingId={weddingId} />
+            <ChatPanel weddingSlug={weddingSlug} />
           </div>
         </div>
       )}

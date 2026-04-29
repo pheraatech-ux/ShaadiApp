@@ -33,7 +33,7 @@ export default async function WeddingWorkspaceLayout({ children, params }: Weddi
       >
         {children}
       </DashboardShell>
-      <WeddingChatWidget weddingId={weddingId} />
+      <WeddingChatWidget weddingSlug={weddingId} />
     </>
   );
 }
