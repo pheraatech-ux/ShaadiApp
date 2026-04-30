@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Clock, MessageSquare, Plus, X } from "lucide-react";
+import { ArrowLeft, Clock, MessageSquare, Plus, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 
 import { vendorsQueryKey } from "@/components/wedding-workspace/vendors/use-vendors-query";
 
@@ -168,6 +169,7 @@ export function WeddingChatWidget({ weddingSlug }: { weddingSlug: string }) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const fetchSessions = useCallback(async (): Promise<{
     activeSession: Session | null;
@@ -238,6 +240,24 @@ export function WeddingChatWidget({ weddingSlug }: { weddingSlug: string }) {
   const handleSessionSelect = (id: string) => {
     setActiveSessionId(id);
     setView("chat");
+  };
+
+  const handleDeleteSession = (id: string) => {
+    const removed = sessions.find((s) => s.id === id);
+    setSessions((prev) => prev.filter((s) => s.id !== id));
+    if (activeSessionId === id) setActiveSessionId(null);
+    setConfirmDeleteId(null);
+    toast.success("Chat deleted");
+
+    fetch(`/api/weddings/${weddingSlug}/chat/session/${id}`, { method: "DELETE" }).then((res) => {
+      if (!res.ok) {
+        if (removed) setSessions((prev) => [removed, ...prev].sort((a, b) => b.updated_at.localeCompare(a.updated_at)));
+        toast.error("Could not delete chat");
+      }
+    }).catch(() => {
+      if (removed) setSessions((prev) => [removed, ...prev].sort((a, b) => b.updated_at.localeCompare(a.updated_at)));
+      toast.error("Could not delete chat");
+    });
   };
 
   // Called after the AI responds to the first message — fetches updated session
@@ -318,18 +338,48 @@ export function WeddingChatWidget({ weddingSlug }: { weddingSlug: string }) {
                 <p className="px-4 py-6 text-center text-sm text-muted-foreground">No previous chats.</p>
               ) : (
                 sessions.map((session) => (
-                  <button
+                  <div
                     key={session.id}
-                    onClick={() => handleSessionSelect(session.id)}
-                    className={`flex flex-col items-start border-b border-border/40 px-4 py-3 text-left transition-colors hover:bg-muted ${
+                    className={`group flex items-center border-b border-border/40 transition-colors hover:bg-muted ${
                       session.id === activeSessionId ? "bg-muted/60" : ""
                     }`}
                   >
-                    <p className="w-full truncate text-sm font-medium text-foreground">
-                      {session.title ?? "New conversation"}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{formatDate(session.updated_at)}</p>
-                  </button>
+                    <button
+                      onClick={() => handleSessionSelect(session.id)}
+                      className="flex min-w-0 flex-1 flex-col items-start px-4 py-3 text-left"
+                    >
+                      <p className="w-full truncate text-sm font-medium text-foreground">
+                        {session.title ?? "New conversation"}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{formatDate(session.updated_at)}</p>
+                    </button>
+
+                    {confirmDeleteId === session.id ? (
+                      <div className="flex shrink-0 items-center gap-1 pr-3">
+                        <span className="text-xs text-muted-foreground">Delete?</span>
+                        <button
+                          onClick={() => handleDeleteSession(session.id)}
+                          className="rounded px-1.5 py-0.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted"
+                        >
+                          No
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(session.id); }}
+                        className="mr-3 shrink-0 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-red-500 group-hover:opacity-100"
+                        aria-label="Delete chat"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
                 ))
               )}
             </div>
