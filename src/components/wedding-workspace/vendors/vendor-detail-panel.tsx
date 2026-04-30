@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, AtSign, Globe, Lock, Mail, MapPin, Phone, Trash2, Unlock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+} from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { VendorPaymentsTab } from "@/components/wedding-workspace/vendors/tabs/vendor-payments-tab";
@@ -17,6 +24,7 @@ import {
   formatInrFromPaise,
   inviteStatusLabel,
   vendorStatusLabel,
+  VENDOR_CATEGORY_OPTIONS,
 } from "@/components/wedding-workspace/vendors/vendor-utils";
 import { cn } from "@/lib/utils";
 
@@ -405,7 +413,24 @@ export function VendorDetailPanel({
               {isEditing && (
                 <div className="px-5 py-5">
                   <p className={SECTION_LABEL}>Category</p>
-                  <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Photography" className="h-8 rounded-xl border-border/70 bg-muted/20 text-sm" />
+                  <Combobox
+                    value={category}
+                    onValueChange={(val) => setCategory(val as string)}
+                  >
+                    <ComboboxTrigger className="flex h-8 w-full items-center justify-between rounded-xl border border-border/70 bg-muted/20 px-3 text-xs">
+                      {(() => { const opt = VENDOR_CATEGORY_OPTIONS.find((o) => o.value === category); return opt ? <span>{opt.icon} {opt.label}</span> : <span className="text-muted-foreground">{category || "Select a category…"}</span>; })()}
+                    </ComboboxTrigger>
+                    <ComboboxContent className="min-w-0">
+                      <ComboboxList>
+                        {VENDOR_CATEGORY_OPTIONS.map((option) => (
+                          <ComboboxItem key={option.value} value={option.value}>
+                            <span>{option.icon}</span>
+                            <span>{option.label}</span>
+                          </ComboboxItem>
+                        ))}
+                      </ComboboxList>
+                    </ComboboxContent>
+                  </Combobox>
                 </div>
               )}
 

@@ -1,15 +1,21 @@
 import type { VendorInviteStatus, VendorStatus } from "@/components/wedding-workspace/vendors/types";
 
 export const VENDOR_CATEGORY_OPTIONS = [
-  { value: "Photo", label: "Photo", icon: "📸" },
-  { value: "Caterer", label: "Caterer", icon: "🍽️" },
+  { value: "Venue", label: "Venue", icon: "🏛️" },
+  { value: "Catering", label: "Catering", icon: "🍽️" },
+  { value: "Photography/Videography", label: "Photography/Videography", icon: "📸" },
   { value: "Decor", label: "Decor", icon: "🌸" },
-  { value: "Music", label: "Music", icon: "🎵" },
   { value: "Mehendi", label: "Mehendi", icon: "🌿" },
+  { value: "Makeup/Hair", label: "Makeup/Hair", icon: "💄" },
+  { value: "Music & DJ", label: "Music & DJ", icon: "🎵" },
   { value: "Priest", label: "Priest", icon: "🙏" },
-  { value: "Makeup", label: "Makeup", icon: "💄" },
-  { value: "Other", label: "Other", icon: "…" },
+  { value: "Transportation", label: "Transportation", icon: "🚗" },
+  { value: "Clothing", label: "Clothing", icon: "👗" },
+  { value: "Jewellery", label: "Jewellery", icon: "💍" },
+  { value: "Others", label: "Others", icon: "…" },
 ] as const;
+
+export type VendorCategory = (typeof VENDOR_CATEGORY_OPTIONS)[number]["value"];
 
 export function formatInrFromPaise(value: number) {
   const rupees = Math.max(0, value) / 100;

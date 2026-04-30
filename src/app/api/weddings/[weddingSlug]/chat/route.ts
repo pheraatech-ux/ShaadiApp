@@ -122,7 +122,7 @@ const TOOLS: Anthropic.Tool[] = [
       type: "object",
       properties: {
         name: { type: "string", description: "Vendor or business name" },
-        category: { type: "string", description: "e.g. 'Dhol Player', 'Photographer', 'Caterer', 'Decorator'" },
+        category: { type: "string", description: "Must be one of the fixed categories: Venue, Catering, Photography/Videography, Decor, Mehendi, Makeup/Hair, Music & DJ, Priest, Transportation, Clothing, Jewellery, Others. If none fits exactly, use 'Others'." },
         phone: { type: "string", description: "Phone number if available" },
         email: { type: "string", description: "Email address if available" },
         website_url: { type: "string", description: "Website URL if available" },
@@ -141,7 +141,7 @@ const TOOLS: Anthropic.Tool[] = [
       properties: {
         vendor_id: { type: "string", description: "The ID of the vendor to update — match by name from the VENDORS list" },
         name: { type: "string", description: "New vendor name (optional)" },
-        category: { type: "string", description: "New category (optional)" },
+        category: { type: "string", description: "New category (optional). Must be one of: Venue, Catering, Photography/Videography, Decor, Mehendi, Makeup/Hair, Music & DJ, Priest, Transportation, Clothing, Jewellery, Others." },
         phone: { type: "string", description: "New phone number (optional)" },
         email: { type: "string", description: "New email address (optional)" },
         website_url: { type: "string", description: "New website URL (optional)" },

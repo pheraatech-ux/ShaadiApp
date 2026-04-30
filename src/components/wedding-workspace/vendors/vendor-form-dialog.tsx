@@ -5,6 +5,13 @@ import { useMemo, useState } from "react";
 import type { WeddingVendorRecord } from "@/components/wedding-workspace/vendors/types";
 import { VENDOR_CATEGORY_OPTIONS, normalizeInstagram } from "@/components/wedding-workspace/vendors/vendor-utils";
 import { Button } from "@/components/ui/button";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+} from "@/components/ui/combobox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -33,7 +40,7 @@ type VendorFormDialogProps = {
 
 function buildInitialValues(vendor?: WeddingVendorRecord | null): VendorFormValues {
   return {
-    category: vendor?.category || "Photo",
+    category: vendor?.category || "",
     name: vendor?.name || "",
     phone: vendor?.phone || "",
     email: vendor?.email || "",
@@ -94,25 +101,26 @@ export function VendorFormDialog({ open, onOpenChange, mode, vendor, onSubmit }:
           <div className="space-y-5">
           <div className="space-y-2">
             <p className="text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">Category</p>
-            <div className="grid gap-2 sm:grid-cols-4">
-              {VENDOR_CATEGORY_OPTIONS.map((option) => {
-                const active = values.category === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={cn(
-                      "rounded-xl border px-2 py-2.5 text-left transition-colors",
-                      active ? "border-emerald-500 bg-emerald-500/10" : "border-border/70 bg-muted/10 hover:bg-muted/30",
-                    )}
-                    onClick={() => patchValue("category", option.value)}
-                  >
-                    <p className="text-base">{option.icon}</p>
-                    <p className="mt-0.5 text-xs font-medium">{option.label}</p>
-                  </button>
-                );
-              })}
-            </div>
+            <Combobox
+              value={values.category}
+              onValueChange={(val) => patchValue("category", val as string)}
+            >
+              <ComboboxTrigger className="flex h-10 w-full items-center justify-between rounded-xl border border-border/70 bg-muted/20 px-3 text-sm">
+                {values.category
+                  ? (() => { const opt = VENDOR_CATEGORY_OPTIONS.find((o) => o.value === values.category); return opt ? <span>{opt.icon} {opt.label}</span> : <span>{values.category}</span>; })()
+                  : <span className="text-muted-foreground">Select a category…</span>}
+              </ComboboxTrigger>
+              <ComboboxContent className="min-w-0">
+                <ComboboxList>
+                  {VENDOR_CATEGORY_OPTIONS.map((option) => (
+                    <ComboboxItem key={option.value} value={option.value}>
+                      <span>{option.icon}</span>
+                      <span>{option.label}</span>
+                    </ComboboxItem>
+                  ))}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
           </div>
 
           <div className="space-y-2">
