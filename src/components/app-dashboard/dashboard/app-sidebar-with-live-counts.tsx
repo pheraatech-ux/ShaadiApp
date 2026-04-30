@@ -56,7 +56,6 @@ export function AppSidebarWithLiveCounts({
     const channel = supabase
       .channel("sidebar-counts-invalidation")
       .on("postgres_changes", { event: "*", schema: "public", table: "tasks", filter }, invalidate)
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter }, invalidate)
       .on("postgres_changes", { event: "*", schema: "public", table: "wedding_members", filter }, invalidate)
       .subscribe();
     return () => { void supabase.removeChannel(channel); };

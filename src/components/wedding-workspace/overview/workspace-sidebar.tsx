@@ -97,7 +97,6 @@ export function WorkspaceSidebar({
       label: "Messages",
       hrefSuffix: "/messages",
       icon: Mail,
-      badge: { text: String(badgeCounts.messageCount), tone: "red" },
     },
     ...(!hideBudgetTab ? [{ id: "budget", label: "Budget", hrefSuffix: "/budget", icon: FileText } as NavItem] : []),
     { id: "documents", label: "Documents", hrefSuffix: "/documents", icon: File },

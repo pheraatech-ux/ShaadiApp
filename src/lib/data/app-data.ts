@@ -35,14 +35,12 @@ export type WorkspaceSidebarBadgeCounts = {
   memberCap: number;
   vendorPendingCount: number;
   taskOverdueCount: number;
-  messageCount: number;
 };
 
 export type AppSidebarCounts = {
   weddings: number;
   team: number;
   tasksOverdue: number;
-  messages: number;
 };
 
 export type CreateWeddingInput = {
@@ -428,12 +426,11 @@ export const getAppSidebarCounts = cache(async (): Promise<AppSidebarCounts> => 
       weddings: 0,
       team: 0,
       tasksOverdue: 0,
-      messages: 0,
     };
   }
   const supabase = await createSupabaseServerClient();
   const today = new Date().toISOString().slice(0, 10);
-  const [{ count: overdueCount }, { data: memberRows }, { count: messageCount }] = await Promise.all([
+  const [{ count: overdueCount }, { data: memberRows }] = await Promise.all([
     supabase
       .from("tasks")
       .select("*", { head: true, count: "exact" })
@@ -447,11 +444,6 @@ export const getAppSidebarCounts = cache(async (): Promise<AppSidebarCounts> => 
       .in("wedding_id", weddingIds)
       .eq("status", "active")
       .not("user_id", "is", null),
-    supabase
-      .from("messages")
-      .select("*", { head: true, count: "exact" })
-      .in("wedding_id", weddingIds)
-      .neq("author_user_id", planner.userId),
   ]);
   const memberSet = new Set((memberRows ?? []).map((row) => row.user_id).filter(Boolean));
 
@@ -459,7 +451,6 @@ export const getAppSidebarCounts = cache(async (): Promise<AppSidebarCounts> => 
     weddings: weddings.length,
     team: memberSet.size,
     tasksOverdue: overdueCount ?? 0,
-    messages: messageCount ?? 0,
   };
 });
 
@@ -1060,7 +1051,7 @@ export const getWorkspaceSidebarCounts = cache(
     const weddings = await getAccessibleWeddings(planner.userId);
     const wedding = weddings.find((row) => row.slug === weddingSlug);
     if (!wedding) {
-      return { teamCount: 0, memberCap: 3, vendorPendingCount: 0, taskOverdueCount: 0, messageCount: 0 };
+      return { teamCount: 0, memberCap: 3, vendorPendingCount: 0, taskOverdueCount: 0 };
     }
 
     const supabase = await createSupabaseServerClient();
@@ -1071,7 +1062,7 @@ export const getWorkspaceSidebarCounts = cache(
       .select("status, due_date, assignee_user_id, raised_by_user_id")
       .eq("wedding_id", wedding.id);
 
-    const [{ count: teamCount }, { count: vendorPendingCount }, { data: tasks }, { count: messageCount }] =
+    const [{ count: teamCount }, { count: vendorPendingCount }, { data: tasks }] =
       await Promise.all([
         supabase
           .from("wedding_members")
@@ -1086,10 +1077,6 @@ export const getWorkspaceSidebarCounts = cache(
         persona === "employee"
           ? tasksBaseQuery.or(`assignee_user_ids.cs.{${planner.userId}},assignee_user_id.eq.${planner.userId},raised_by_user_id.eq.${planner.userId}`)
           : tasksBaseQuery,
-        supabase
-          .from("messages")
-          .select("*", { head: true, count: "exact" })
-          .eq("wedding_id", wedding.id),
       ]);
 
     const taskRows = (tasks ?? []) as {
@@ -1110,7 +1097,6 @@ export const getWorkspaceSidebarCounts = cache(
       memberCap: 3,
       vendorPendingCount: vendorPendingCount ?? 0,
       taskOverdueCount,
-      messageCount: messageCount ?? 0,
     };
   },
 );
