@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SendHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,10 @@ export function MessagesComposer({ threadId, onSend }: MessagesComposerProps) {
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (threadId) textareaRef.current?.focus();
+  }, [threadId]);
 
   function autoResize() {
     const el = textareaRef.current;

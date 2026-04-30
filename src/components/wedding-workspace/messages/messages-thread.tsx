@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 
 type MessagesThreadProps = {
   messages: WeddingMessageItem[];
+  newMsgCutoff: string | null;
 };
 
 function formatMessageTimestamp(value: string) {
@@ -19,7 +20,7 @@ function formatMessageTimestamp(value: string) {
   });
 }
 
-export function MessagesThread({ messages }: MessagesThreadProps) {
+export function MessagesThread({ messages, newMsgCutoff }: MessagesThreadProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,11 +37,22 @@ export function MessagesThread({ messages }: MessagesThreadProps) {
     );
   }
 
+  const firstNewIdx = newMsgCutoff
+    ? messages.findIndex((m) => m.createdAt >= newMsgCutoff)
+    : -1;
+
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-1">
-      {messages.map((message) => (
+      {messages.map((message, idx) => (
+        <div key={message.id}>
+          {idx === firstNewIdx && (
+            <div className="mb-4 flex items-center gap-3">
+              <div className="h-px flex-1 bg-emerald-500/40" />
+              <span className="shrink-0 text-xs font-medium text-emerald-600">New messages</span>
+              <div className="h-px flex-1 bg-emerald-500/40" />
+            </div>
+          )}
         <div
-          key={message.id}
           className={cn("flex items-end gap-2", message.isCurrentUser ? "justify-end" : "justify-start")}
         >
           {!message.isCurrentUser ? (
@@ -62,6 +74,7 @@ export function MessagesThread({ messages }: MessagesThreadProps) {
             </div>
             <p className="text-xs text-muted-foreground">{formatMessageTimestamp(message.createdAt)}</p>
           </div>
+        </div>
         </div>
       ))}
       <div ref={bottomRef} />

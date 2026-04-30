@@ -450,7 +450,8 @@ export const getAppSidebarCounts = cache(async (): Promise<AppSidebarCounts> => 
     supabase
       .from("messages")
       .select("*", { head: true, count: "exact" })
-      .in("wedding_id", weddingIds),
+      .in("wedding_id", weddingIds)
+      .neq("author_user_id", planner.userId),
   ]);
   const memberSet = new Set((memberRows ?? []).map((row) => row.user_id).filter(Boolean));
 

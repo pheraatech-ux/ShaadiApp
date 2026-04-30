@@ -10,6 +10,7 @@ type LastMessage = { authorLabel: string; body: string; isCurrentUser: boolean }
 type MessagesConversationListProps = {
   threads: WeddingMessagesWorkspaceViewModel["threads"];
   threadLastMessage: Map<string, LastMessage>;
+  newThreadIds: Set<string>;
   search: string;
   onSearchChange: (value: string) => void;
   selectedThreadId: string | null;
@@ -56,6 +57,7 @@ function avatarColor(title: string) {
 export function MessagesConversationList({
   threads,
   threadLastMessage,
+  newThreadIds,
   search,
   onSearchChange,
   selectedThreadId,
@@ -80,6 +82,7 @@ export function MessagesConversationList({
             ? `${lastMsg.isCurrentUser ? "You" : firstName(lastMsg.authorLabel)}: ${lastMsg.body}`
             : null;
           const isSelected = selectedThreadId === thread.id;
+          const hasNew = newThreadIds.has(thread.id);
 
           return (
             <button
@@ -91,20 +94,25 @@ export function MessagesConversationList({
                 isSelected ? "bg-emerald-500/10 text-foreground" : "hover:bg-muted/40",
               )}
             >
-              <Avatar size="default" className="shrink-0">
-                <AvatarFallback className={avatarColor(thread.title)}>
-                  {getInitials(thread.title)}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative shrink-0">
+                <Avatar size="default">
+                  <AvatarFallback className={avatarColor(thread.title)}>
+                    {getInitials(thread.title)}
+                  </AvatarFallback>
+                </Avatar>
+                {hasNew && (
+                  <span className="absolute -right-0.5 -top-0.5 size-3 rounded-full border-2 border-card bg-emerald-500" />
+                )}
+              </div>
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
-                  <p className="truncate text-base font-semibold">{thread.title}</p>
+                  <p className={cn("truncate text-base", hasNew ? "font-bold" : "font-semibold")}>{thread.title}</p>
                   {timestamp && (
-                    <span className="shrink-0 text-xs text-muted-foreground">{timestamp}</span>
+                    <span className={cn("shrink-0 text-xs", hasNew ? "font-medium text-emerald-600" : "text-muted-foreground")}>{timestamp}</span>
                   )}
                 </div>
-                <p className="mt-1 truncate text-sm text-muted-foreground">
+                <p className={cn("mt-1 truncate text-sm", hasNew ? "font-medium text-foreground" : "text-muted-foreground")}>
                   {preview ?? "No messages yet"}
                 </p>
               </div>

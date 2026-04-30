@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -39,6 +39,10 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
   const [threadDialogOpen, setThreadDialogOpen] = useState(false);
   const [optimisticThreads, setOptimisticThreads] = useState<WeddingMessagesWorkspaceViewModel["threads"]>([]);
   const [optimisticMessages, setOptimisticMessages] = useState<WeddingMessageItem[]>([]);
+  const [newThreadIds, setNewThreadIds] = useState<Set<string>>(new Set());
+  const [newMsgCutoffs, setNewMsgCutoffs] = useState<Map<string, string>>(new Map());
+
+  const activeThreadIdRef = useRef<string | null>(null);
 
   // Supabase Realtime: when another user sends a message, invalidate the TanStack Query cache
   // — same pattern as tasks kanban, instant update without a full page refresh
@@ -55,9 +59,19 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
           filter: `wedding_id=eq.${view.weddingId}`,
         },
         (payload) => {
-          const raw = payload.new as { author_user_id?: string };
-          if (raw.author_user_id !== view.currentUserId) {
-            void invalidateMessages();
+          const raw = payload.new as { author_user_id?: string; thread_id?: string; created_at?: string };
+          if (raw.author_user_id === view.currentUserId) return;
+          void invalidateMessages();
+          const tid = raw.thread_id;
+          if (!tid) return;
+          if (tid !== activeThreadIdRef.current) {
+            setNewThreadIds((prev) => new Set([...prev, tid]));
+            setNewMsgCutoffs((prev) => {
+              if (prev.has(tid)) return prev;
+              const next = new Map(prev);
+              next.set(tid, raw.created_at ?? new Date().toISOString());
+              return next;
+            });
           }
         },
       )
@@ -79,6 +93,7 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
   const threadById = useMemo(() => new Map(allThreads.map((thread) => [thread.id, thread])), [allThreads]);
   const activeThreadId =
     selectedThreadId && threadById.has(selectedThreadId) ? selectedThreadId : view.defaultThreadId ?? allThreads[0]?.id ?? null;
+  activeThreadIdRef.current = activeThreadId;
 
   // Deduplicate: once TanStack Query refetches and the real message arrives, drop the matching optimistic entry
   const realMessageIds = useMemo(() => new Set(serverMessages.map((m) => m.id)), [serverMessages]);
@@ -154,6 +169,12 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
     };
 
     setOptimisticMessages((prev) => [...prev, optimistic]);
+    setNewMsgCutoffs((prev) => {
+      if (!activeThreadId || !prev.has(activeThreadId)) return prev;
+      const next = new Map(prev);
+      next.delete(activeThreadId);
+      return next;
+    });
 
     try {
       const response = await fetch(`/api/weddings/${view.weddingSlug}/records`, {
@@ -182,6 +203,23 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
     }
   }
 
+  function handleSelectThread(id: string) {
+    setNewThreadIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    setNewMsgCutoffs((prev) => {
+      const leaving = activeThreadIdRef.current;
+      if (!leaving || !prev.has(leaving)) return prev;
+      const next = new Map(prev);
+      next.delete(leaving);
+      return next;
+    });
+    setSelectedThreadId(id);
+  }
+
   const activeThread = activeThreadId ? threadById.get(activeThreadId) ?? null : null;
 
   return (
@@ -199,10 +237,11 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
           <MessagesConversationList
             threads={filteredThreads}
             threadLastMessage={threadLastMessage}
+            newThreadIds={newThreadIds}
             search={search}
             onSearchChange={setSearch}
             selectedThreadId={activeThreadId}
-            onSelectThreadId={setSelectedThreadId}
+            onSelectThreadId={handleSelectThread}
           />
         </div>
       </div>
@@ -215,7 +254,7 @@ export function WeddingMessagesWorkspace({ view, initialThreadId }: WeddingMessa
           </div>
         )}
         <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
-          <MessagesThread messages={filteredMessages} />
+          <MessagesThread messages={filteredMessages} newMsgCutoff={activeThreadId ? (newMsgCutoffs.get(activeThreadId) ?? null) : null} />
           <MessagesComposer threadId={activeThreadId} onSend={sendMessage} />
         </div>
       </div>
