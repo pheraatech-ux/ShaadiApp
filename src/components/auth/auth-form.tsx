@@ -1,6 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   ArrowRight,
   Check,
@@ -16,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { PhoneOtpSignIn } from "@/components/auth/phone-otp/phone-otp-sign-in";
+import { PasswordRequirements } from "@/components/auth/password-requirements";
 import {
   Select,
   SelectContent,
@@ -24,7 +28,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { passwordSchema } from "@/lib/auth/signup-schema";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+
+// ─── Sign-up Schema ────────────────────────────────────────────────────────────
+
+const authSignUpSchema = z
+  .object({
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+    businessName: z.string().optional(),
+    email: z.string().email("Please enter a valid email address"),
+    password: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+type AuthSignUpData = z.infer<typeof authSignUpSchema>;
 
 type AuthMode = "login" | "signup";
 type AuthStep = "auth" | "profile";
@@ -71,6 +94,7 @@ export function AuthForm() {
   const [password, setPassword] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -85,6 +109,13 @@ export function AuthForm() {
     useState(false);
   const [businessProfilePulse, setBusinessProfilePulse] = useState(false);
   const [dashboardStepPulse, setDashboardStepPulse] = useState(false);
+
+  // ─── Sign-up form (RHF + Zod) ───────────────────────────────────────────────
+  const signupForm = useForm<AuthSignUpData>({
+    resolver: zodResolver(authSignUpSchema),
+    mode: "onChange",
+  });
+  const signupPassword = signupForm.watch("password", "");
 
   useEffect(() => {
     return () => {
@@ -166,40 +197,43 @@ export function AuthForm() {
     };
   }, [postAuthDestination, router, supabase]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setMessage(null);
     setError(null);
 
-    if (mode === "login") {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-      if (signInError) {
-        setError(signInError.message);
-        setLoading(false);
-      } else {
-        await new Promise<void>((resolve) => {
-          setTimeout(resolve, 1500);
-        });
-        router.refresh();
-        router.replace(postAuthDestination);
-      }
-      return;
+    if (signInError) {
+      setError(signInError.message);
+      setLoading(false);
+    } else {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 1500);
+      });
+      router.refresh();
+      router.replace(postAuthDestination);
     }
+  }
+
+  async function onSignup(data: AuthSignUpData) {
+    setLoading(true);
+    setMessage(null);
+    setError(null);
 
     const signUpStartedAt = Date.now();
     const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
+      email: data.email,
+      password: data.password,
       options: {
         data: {
-          first_name: firstName || null,
-          last_name: lastName || null,
-          business_name: businessName || null,
+          first_name: data.firstName || null,
+          last_name: data.lastName || null,
+          business_name: data.businessName || null,
           phone: phone || null,
         },
       },
@@ -286,7 +320,7 @@ export function AuthForm() {
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden">
+    <div className="flex overflow-hidden" style={{ zoom: 0.9, height: 'calc(100vh / 0.9)', width: 'calc(100vw / 0.9)' }}>
       {/* ── Left Panel: Brand / Hero ── */}
       <div className="relative hidden h-full w-1/2 flex-col items-start overflow-hidden bg-neutral-950 px-14 lg:flex xl:px-20">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_10%_0%,rgba(16,185,129,0.15),transparent),radial-gradient(ellipse_50%_60%_at_100%_100%,rgba(255,255,255,0.04),transparent)]" />
@@ -410,7 +444,7 @@ export function AuthForm() {
       </div>
 
       {/* ── Right Panel: Auth Form ── */}
-      <div className="relative h-screen w-full flex-1 overflow-y-auto px-6 py-12 sm:px-12 lg:w-1/2">
+      <div className="relative h-full w-full flex-1 overflow-y-auto px-6 py-12 sm:px-12 lg:w-1/2">
         {/* Mobile logo */}
         <div className="mb-10 flex items-center gap-2.5 lg:hidden">
           <div className="flex size-9 items-center justify-center rounded-xl bg-neutral-900">
@@ -479,61 +513,11 @@ export function AuthForm() {
           {step === "auth" ? (
             authScreen === "phoneOtp" ? (
               <PhoneOtpSignIn onBack={() => setAuthScreen("credentials")} />
-            ) : (
-            <form className="space-y-5" onSubmit={handleSubmit}>
-              {mode === "signup" && (
-                <>
-                  {/* First / Last Name row */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label htmlFor="first_name" className={labelClass}>
-                        First Name
-                      </label>
-                      <Input
-                        id="first_name"
-                        value={firstName}
-                        required
-                        placeholder="Meera"
-                        className={inputClass}
-                        onChange={(e) => setFirstName(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="last_name" className={labelClass}>
-                        Last Name
-                      </label>
-                      <Input
-                        id="last_name"
-                        value={lastName}
-                        required
-                        placeholder="Sharma"
-                        className={inputClass}
-                        onChange={(e) => setLastName(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Business Name */}
-                  <div className="space-y-2">
-                    <label htmlFor="business_name" className={labelClass}>
-                      Business Name
-                    </label>
-                    <Input
-                      id="business_name"
-                      value={businessName}
-                      placeholder="Meera Events"
-                      className={inputClass}
-                      onChange={(e) => setBusinessName(e.target.value)}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Email */}
+            ) : mode === "login" ? (
+            /* ── Login Form (raw state, no RHF needed) ── */
+            <form className="space-y-5" onSubmit={handleLogin}>
               <div className="space-y-2">
-                <label htmlFor="email" className={labelClass}>
-                  Email
-                </label>
+                <label htmlFor="email" className={labelClass}>Email</label>
                 <Input
                   id="email"
                   type="email"
@@ -545,28 +529,15 @@ export function AuthForm() {
                 />
               </div>
 
-              {/* Phone Number (signup only) */}
-              {mode === "signup" && (
-                <div className="space-y-2">
-                  <label className={labelClass}>Phone Number</label>
-                  <PhoneInput value={phone} onChangeNumber={setPhone} />
-                </div>
-              )}
-
-              {/* Password */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label htmlFor="password" className={labelClass}>
-                    Password
-                  </label>
-                  {mode === "login" && (
-                    <button
-                      type="button"
-                      className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      Forgot?
-                    </button>
-                  )}
+                  <label htmlFor="password" className={labelClass}>Password</label>
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    Forgot?
+                  </button>
                 </div>
                 <div className="relative">
                   <Input
@@ -574,7 +545,7 @@ export function AuthForm() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     required
-                    placeholder="Min. 6 characters"
+                    placeholder="Your password"
                     className={`${inputClass} pr-11`}
                     onChange={(e) => setPassword(e.target.value)}
                   />
@@ -584,42 +555,148 @@ export function AuthForm() {
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                     tabIndex={-1}
                   >
-                    {showPassword ? (
-                      <EyeOff className="size-[18px]" />
-                    ) : (
-                      <Eye className="size-[18px]" />
-                    )}
+                    {showPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
                   </button>
                 </div>
               </div>
 
-              <Button
-                disabled={loading}
-                className="h-12 w-full gap-2 rounded-xl text-[15px] font-bold"
-                type="submit"
-              >
+              <Button disabled={loading} className="h-12 w-full gap-2 rounded-xl text-[15px] font-bold" type="submit">
                 {loading ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    {mode === "login" ? "Signing in..." : "Creating your account..."}
-                  </>
+                  <><Loader2 className="size-4 animate-spin" />Signing in...</>
                 ) : (
-                  <>
-                    {mode === "login" ? "Sign In" : "Create my account"}
-                    <ArrowRight className="size-4" />
-                  </>
+                  <>Sign In<ArrowRight className="size-4" /></>
                 )}
               </Button>
 
-              {message && (
-                <p className="text-center text-sm font-medium text-emerald-600">
-                  {message}
-                </p>
-              )}
+              {error && <p className="text-center text-sm font-medium text-destructive">{error}</p>}
+            </form>
+            ) : (
+            /* ── Sign-up Form (RHF + Zod) ── */
+            <form className="space-y-5" onSubmit={signupForm.handleSubmit(onSignup)}>
+              {/* Name row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="first_name" className={labelClass}>First Name</label>
+                  <Input
+                    id="first_name"
+                    placeholder="Meera"
+                    className={inputClass}
+                    {...signupForm.register("firstName")}
+                  />
+                  {signupForm.formState.errors.firstName && (
+                    <p className="text-xs text-destructive">{signupForm.formState.errors.firstName.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="last_name" className={labelClass}>Last Name</label>
+                  <Input
+                    id="last_name"
+                    placeholder="Sharma"
+                    className={inputClass}
+                    {...signupForm.register("lastName")}
+                  />
+                  {signupForm.formState.errors.lastName && (
+                    <p className="text-xs text-destructive">{signupForm.formState.errors.lastName.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Business Name */}
+              <div className="space-y-2">
+                <label htmlFor="business_name" className={labelClass}>Business Name</label>
+                <Input
+                  id="business_name"
+                  placeholder="Meera Events"
+                  className={inputClass}
+                  {...signupForm.register("businessName")}
+                />
+              </div>
+
+              {/* Email */}
+              <div className="space-y-2">
+                <label htmlFor="signup_email" className={labelClass}>Email</label>
+                <Input
+                  id="signup_email"
+                  type="email"
+                  placeholder="your@email.com"
+                  className={inputClass}
+                  {...signupForm.register("email")}
+                />
+                {signupForm.formState.errors.email && (
+                  <p className="text-xs text-destructive">{signupForm.formState.errors.email.message}</p>
+                )}
+              </div>
+
+              {/* Phone (uncontrolled by RHF — custom component) */}
+              <div className="space-y-2">
+                <label className={labelClass}>Phone Number</label>
+                <PhoneInput value={phone} onChangeNumber={setPhone} />
+              </div>
+
+              {/* Password */}
+              <div className="space-y-2">
+                <label htmlFor="signup_password" className={labelClass}>Password</label>
+                <div className="relative">
+                  <Input
+                    id="signup_password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Min. 8 characters"
+                    className={`${inputClass} pr-11`}
+                    {...signupForm.register("password")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+                  </button>
+                </div>
+                {/* Real-time requirements checklist */}
+                <PasswordRequirements password={signupPassword} />
+                {signupForm.formState.errors.password && (
+                  <p className="text-xs text-destructive">{signupForm.formState.errors.password.message}</p>
+                )}
+              </div>
+
+              {/* Confirm Password */}
+              <div className="space-y-2">
+                <label htmlFor="signup_confirm_password" className={labelClass}>Confirm Password</label>
+                <div className="relative">
+                  <Input
+                    id="signup_confirm_password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Re-enter your password"
+                    className={`${inputClass} pr-11`}
+                    {...signupForm.register("confirmPassword")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+                  </button>
+                </div>
+                {signupForm.formState.errors.confirmPassword && (
+                  <p className="text-xs font-medium text-destructive">
+                    {signupForm.formState.errors.confirmPassword.message}
+                  </p>
+                )}
+              </div>
+
+              <Button disabled={loading} className="h-12 w-full gap-2 rounded-xl text-[15px] font-bold" type="submit">
+                {loading ? (
+                  <><Loader2 className="size-4 animate-spin" />Creating your account...</>
+                ) : (
+                  <>Create my account<ArrowRight className="size-4" /></>
+                )}
+              </Button>
+
               {error && (
-                <p className="text-center text-sm font-medium text-destructive">
-                  {error}
-                </p>
+                <p className="text-center text-sm font-medium text-destructive">{error}</p>
               )}
             </form>
             )
