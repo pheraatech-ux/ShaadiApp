@@ -13,7 +13,7 @@ import {
   type EventsTab,
 } from "@/components/app-dashboard/dashboard/add-wedding-events-step";
 import { AddWeddingBudgetStep } from "@/components/app-dashboard/budget/add-wedding-budget-step";
-import type { BudgetVisibility } from "@/components/app-dashboard/add-wedding-budget/budget-editor-panel";
+import { ReviewConfirmPanel } from "@/components/app-dashboard/add-wedding-budget/review-confirm-panel";
 import {
   AddWeddingStepper,
   type WeddingFlowStep,
@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
-  getEventsForCultures,
   type CultureId,
   type WeddingEvent,
 } from "../../../../weddingCultures";
@@ -40,6 +39,17 @@ type AddWeddingFlowDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+function formatDate(date?: Date) {
+  if (!date) return "Not set";
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function toLakhLabel(rupees: number) {
+  if (!rupees) return "Not set";
+  const lakh = rupees / 100000;
+  return `INR ${lakh.toLocaleString("en-IN", { maximumFractionDigits: 2 })} Lakh`;
+}
+
 export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialogProps) {
   const router = useRouter();
   const [step, setStep] = useState<WeddingFlowStep>(1);
@@ -47,20 +57,11 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
   const [showCultureErrors, setShowCultureErrors] = useState(false);
   const [eventsTab, setEventsTab] = useState<EventsTab>("choose-culture");
   const [selectedCultureIds, setSelectedCultureIds] = useState<CultureId[]>([]);
+  const [eventsAiResolved, setEventsAiResolved] = useState(false);
   const [reviewEvents, setReviewEvents] = useState<WeddingEvent[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [budgetState, setBudgetState] = useState<{
-    totalBudgetPaise: number;
-    plannerFeeRupees: number;
-    paymentTerms: string;
-    budgetVisibility: BudgetVisibility;
-  }>({
-    totalBudgetPaise: 0,
-    plannerFeeRupees: 0,
-    paymentTerms: "50-50",
-    budgetVisibility: "planner",
-  });
+  const [totalBudgetPaise, setTotalBudgetPaise] = useState(0);
   const [coupleForm, setCoupleForm] = useState<AddWeddingCoupleForm>({
     brideName: "",
     groomName: "",
@@ -80,6 +81,7 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
     setReviewEvents([]);
     setIsSubmitting(false);
     setSubmitError(null);
+    setTotalBudgetPaise(0);
     setCoupleForm({
       brideName: "",
       groomName: "",
@@ -110,7 +112,7 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
           city: coupleForm.city,
           venueName: coupleForm.venueName,
           cultures: selectedCultureIds,
-          totalBudgetPaise: budgetState.totalBudgetPaise,
+          totalBudgetPaise,
           events: reviewEvents.map((event) => ({
             title: event.name,
             cultureLabel: event.cultures[0] ?? null,
@@ -141,8 +143,11 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
     onOpenChange(nextOpen);
   }
 
-  const isLastStep = step === 3;
+  const isLastStep = step === 4;
   const isReviewEventsTab = step === 2 && eventsTab === "review-events";
+
+  const coupleLabel = `${coupleForm.brideName || "Bride"} & ${coupleForm.groomName || "Groom"}`;
+  const cityVenueLabel = [coupleForm.city || "City", coupleForm.venueName || "Venue"].join(" · ");
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -162,12 +167,7 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
           </div>
         </DialogHeader>
 
-        <div
-          className={cn(
-            "px-6 py-5",
-            step === 3 ? "h-[64vh] overflow-hidden" : "max-h-[64vh] overflow-y-auto",
-          )}
-        >
+        <div className={cn("px-6 py-5", step === 4 ? "h-[64vh] overflow-y-auto" : "max-h-[64vh] overflow-y-auto")}>
           {step === 1 ? (
             <AddWeddingCoupleStep
               value={coupleForm}
@@ -179,7 +179,8 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
               selectedCultures={selectedCultureIds}
               onSelectedCulturesChange={(next) => {
                 setSelectedCultureIds(next);
-                setReviewEvents(getEventsForCultures(next));
+                setReviewEvents([]);
+                setEventsAiResolved(false);
                 if (next.length > 0) {
                   setShowCultureErrors(false);
                 }
@@ -189,13 +190,21 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
               activeTab={eventsTab}
               onActiveTabChange={setEventsTab}
               showCultureError={showCultureErrors}
+              onAiResolved={() => setEventsAiResolved(true)}
+            />
+          ) : step === 3 ? (
+            <AddWeddingBudgetStep
+              onBudgetChange={(b) => setTotalBudgetPaise(b.totalBudgetPaise)}
             />
           ) : (
-            <AddWeddingBudgetStep
-              coupleForm={coupleForm}
+            <ReviewConfirmPanel
+              coupleLabel={coupleLabel}
+              weddingDateLabel={formatDate(coupleForm.weddingDate)}
+              cityVenueLabel={cityVenueLabel}
               selectedCultures={selectedCultureIds}
               reviewEvents={reviewEvents}
-              onBudgetChange={setBudgetState}
+              totalBudgetLabel={toLakhLabel(totalBudgetPaise / 100)}
+              weddingDate={coupleForm.weddingDate}
             />
           )}
         </div>
@@ -218,7 +227,7 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
             </Button>
             <Button
               className="rounded-xl"
-              disabled={isSubmitting}
+              disabled={isSubmitting || (isReviewEventsTab && !eventsAiResolved)}
               onClick={() => {
                 if (isLastStep) {
                   void handleCreateWedding();
@@ -241,7 +250,7 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
                   }
                 }
                 setShowStepOneErrors(false);
-                setStep((prev) => (prev < 3 ? ((prev + 1) as WeddingFlowStep) : prev));
+                setStep((prev) => (prev < 4 ? ((prev + 1) as WeddingFlowStep) : prev));
               }}
             >
               {isLastStep
@@ -252,7 +261,9 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
                   ? "Review events"
                   : step === 2 && eventsTab === "review-events"
                     ? "Continue to budget"
-                    : "Continue"}
+                    : step === 3
+                      ? "Review and confirm"
+                      : "Continue"}
               <ArrowRight />
             </Button>
           </div>

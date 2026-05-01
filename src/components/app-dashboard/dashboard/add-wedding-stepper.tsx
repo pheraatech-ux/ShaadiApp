@@ -4,12 +4,13 @@ import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-export type WeddingFlowStep = 1 | 2 | 3;
+export type WeddingFlowStep = 1 | 2 | 3 | 4;
 
 const steps: { id: WeddingFlowStep; label: string }[] = [
   { id: 1, label: "The couple" },
   { id: 2, label: "Events" },
-  { id: 3, label: "Budget & review" },
+  { id: 3, label: "Budget" },
+  { id: 4, label: "Review" },
 ];
 
 type AddWeddingStepperProps = {
@@ -19,8 +20,8 @@ type AddWeddingStepperProps = {
 export function AddWeddingStepper({ step }: AddWeddingStepperProps) {
   return (
     <div className="space-y-3">
-      <p className="text-sm font-medium text-muted-foreground">Step {step} of 3</p>
-      <div className="grid grid-cols-3 gap-2 text-xs">
+      <p className="text-sm font-medium text-muted-foreground">Step {step} of 4</p>
+      <div className="grid grid-cols-4 gap-2 text-xs">
         {steps.map((item) => {
           const isDone = item.id < step;
           const isCurrent = item.id === step;

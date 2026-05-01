@@ -1,138 +1,51 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-import type { AddWeddingCoupleForm } from "@/components/app-dashboard/dashboard/add-wedding-couple-step";
-import {
-  BudgetEditorPanel,
-  type BudgetVisibility,
-} from "@/components/app-dashboard/add-wedding-budget/budget-editor-panel";
-import { ReviewConfirmPanel } from "@/components/app-dashboard/add-wedding-budget/review-confirm-panel";
-import { buildFallbackAllocation, type WeddingBudgetInput } from "../../../../budgetAI";
-import type { CultureId, WeddingEvent } from "../../../../weddingCultures";
+import { Input } from "@/components/ui/input";
 
 type AddWeddingBudgetStepProps = {
-  coupleForm: AddWeddingCoupleForm;
-  selectedCultures: CultureId[];
-  reviewEvents: WeddingEvent[];
-  onBudgetChange?: (budget: {
-    totalBudgetPaise: number;
-    plannerFeeRupees: number;
-    paymentTerms: string;
-    budgetVisibility: BudgetVisibility;
-  }) => void;
+  onBudgetChange?: (budget: { totalBudgetPaise: number }) => void;
 };
 
-const paymentTermLabels: Record<string, string> = {
-  "50-50": "50% advance, 50% on wedding day",
-  "40-40-20": "40% booking, 40% mid-way, 20% on wedding week",
-  "30-40-30": "30% booking, 40% planning phase, 30% before wedding",
-};
+export function AddWeddingBudgetStep({ onBudgetChange }: AddWeddingBudgetStepProps) {
+  const [budgetRupees, setBudgetRupees] = useState("");
 
-function toLakhLabel(rupees: number) {
-  const lakh = rupees / 100000;
-  return `INR ${lakh.toLocaleString("en-IN", { maximumFractionDigits: 2 })} Lakh`;
-}
-
-function formatDate(date?: Date) {
-  if (!date) return "Not set";
-  return date.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-}
-
-function parseNumber(value: string) {
-  const n = Number.parseInt(value, 10);
-  return Number.isFinite(n) ? Math.max(0, n) : 0;
-}
-
-function advancePercentFromTerms(terms: string) {
-  const first = terms.split("-")[0];
-  const n = Number.parseInt(first, 10);
-  return Number.isFinite(n) ? n : 50;
-}
-
-export function AddWeddingBudgetStep({
-  coupleForm,
-  selectedCultures,
-  reviewEvents,
-  onBudgetChange,
-}: AddWeddingBudgetStepProps) {
-  const [budgetRupees, setBudgetRupees] = useState("2500000");
-  const [plannerFeeRupees, setPlannerFeeRupees] = useState("");
-  const [budgetVisibility, setBudgetVisibility] = useState<BudgetVisibility>("planner");
-  const [paymentTerms, setPaymentTerms] = useState("50-50");
-
-  const totalBudgetRupees = parseNumber(budgetRupees);
-  const totalBudgetPaise = totalBudgetRupees * 100;
-
-  const fallbackInput: WeddingBudgetInput = useMemo(
-    () => ({
-      totalBudgetPaise,
-      cultures: selectedCultures,
-      weddingCity: coupleForm.city || "Not specified",
-      estimatedGuestCount: undefined,
-      numberOfEvents: reviewEvents.length,
-      numberOfDays: Math.max(1, Math.min(5, Math.ceil(reviewEvents.length / 5))),
-      includeDecor: true,
-      includePhotography: true,
-      isDestinationWedding: false,
-      venueTier: "mid",
-    }),
-    [totalBudgetPaise, selectedCultures, coupleForm.city, reviewEvents.length],
-  );
-
-  const allocationResult = useMemo(() => buildFallbackAllocation(fallbackInput), [fallbackInput]);
-  const sortedAllocations = useMemo(
-    () => [...allocationResult.allocations].sort((a, b) => b.percentage - a.percentage),
-    [allocationResult.allocations],
-  );
-
-  const coupleLabel = `${coupleForm.brideName || "Bride"} & ${coupleForm.groomName || "Groom"}`;
-  const cityVenueLabel = [coupleForm.city || "City", coupleForm.venueName || "Venue"].join(" · ");
-  const contextLine = `${coupleLabel} · ${selectedCultures.length} culture${selectedCultures.length === 1 ? "" : "s"} · ${reviewEvents.length} events`;
-  const plannerFeeLabel = plannerFeeRupees ? `INR ${parseNumber(plannerFeeRupees).toLocaleString("en-IN")}` : "Not set";
-  const advanceDue = Math.round((advancePercentFromTerms(paymentTerms) / 100) * totalBudgetRupees);
-  const plannerFee = parseNumber(plannerFeeRupees);
+  const totalBudgetPaise = budgetRupees ? Math.max(0, parseInt(budgetRupees, 10)) * 100 : 0;
 
   useEffect(() => {
-    onBudgetChange?.({
-      totalBudgetPaise,
-      plannerFeeRupees: plannerFee,
-      paymentTerms,
-      budgetVisibility,
-    });
-  }, [budgetVisibility, onBudgetChange, paymentTerms, plannerFee, totalBudgetPaise]);
+    onBudgetChange?.({ totalBudgetPaise });
+  }, [totalBudgetPaise, onBudgetChange]);
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-1 gap-4 lg:grid-cols-2">
-      <div className="min-h-0 overflow-y-auto pr-1">
-        <BudgetEditorPanel
-          budgetRupees={budgetRupees}
-          onBudgetRupeesChange={setBudgetRupees}
-          plannerFeeRupees={plannerFeeRupees}
-          onPlannerFeeRupeesChange={setPlannerFeeRupees}
-          budgetVisibility={budgetVisibility}
-          onBudgetVisibilityChange={setBudgetVisibility}
-          paymentTerms={paymentTerms}
-          onPaymentTermsChange={setPaymentTerms}
-          allocations={sortedAllocations}
-          totalBudgetRupeesLabel={toLakhLabel(totalBudgetRupees)}
-          contextLine={contextLine}
-        />
+    <div className="space-y-6 py-4">
+      <div>
+        <h3 className="text-2xl font-semibold tracking-tight">Budget</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Set an estimated total budget for the wedding. You can update this anytime from the budget page.
+        </p>
       </div>
 
-      <div className="min-h-0 overflow-y-auto pl-1">
-        <ReviewConfirmPanel
-          coupleLabel={coupleLabel}
-          weddingDateLabel={formatDate(coupleForm.weddingDate)}
-          cityVenueLabel={cityVenueLabel}
-          selectedCultures={selectedCultures}
-          reviewEvents={reviewEvents}
-          totalBudgetLabel={toLakhLabel(totalBudgetRupees)}
-          plannerFeeLabel={plannerFeeLabel}
-          paymentTermsLabel={paymentTermLabels[paymentTerms] ?? paymentTerms}
-          advanceDueLabel={`INR ${advanceDue.toLocaleString("en-IN")}`}
-          weddingDate={coupleForm.weddingDate}
-        />
+      <div className="space-y-2">
+        <p className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
+          Total estimated wedding budget{" "}
+          <span className="font-normal normal-case tracking-normal text-muted-foreground/70">(optional)</span>
+        </p>
+        <div className="flex items-center gap-2 rounded-xl border border-input bg-muted/20 px-3 py-2">
+          <span className="text-lg font-semibold text-muted-foreground">INR</span>
+          <Input
+            className="h-10 border-0 bg-transparent px-0 text-3xl font-semibold shadow-none focus-visible:ring-0"
+            inputMode="numeric"
+            placeholder="0"
+            value={budgetRupees}
+            onChange={(e) => setBudgetRupees(e.target.value.replace(/[^\d]/g, ""))}
+          />
+        </div>
+        {budgetRupees ? (
+          <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+            = INR {(parseInt(budgetRupees, 10) / 100000).toLocaleString("en-IN", { maximumFractionDigits: 2 })} Lakh
+          </p>
+        ) : null}
       </div>
     </div>
   );

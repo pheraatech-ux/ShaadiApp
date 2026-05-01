@@ -15,6 +15,7 @@ type AddWeddingEventsStepProps = {
   activeTab: EventsTab;
   onActiveTabChange: (next: EventsTab) => void;
   showCultureError?: boolean;
+  onAiResolved?: () => void;
 };
 
 export function AddWeddingEventsStep({
@@ -25,6 +26,7 @@ export function AddWeddingEventsStep({
   activeTab,
   onActiveTabChange,
   showCultureError = false,
+  onAiResolved,
 }: AddWeddingEventsStepProps) {
   return (
     <div className="space-y-4">
@@ -65,9 +67,11 @@ export function AddWeddingEventsStep({
         />
       ) : (
         <ReviewEventsTab
+          key={selectedCultures.join(",")}
           selectedCultures={selectedCultures}
           reviewEvents={reviewEvents}
           onReviewEventsChange={onReviewEventsChange}
+          onAiResolved={onAiResolved}
         />
       )}
     </div>

@@ -1,7 +1,9 @@
+// import { SuperAdminBudgetDashboard } from "@/components/wedding-workspace/budget/super-admin-budget-dashboard";
+
 import { notFound } from "next/navigation";
 
-import { SuperAdminBudgetDashboard } from "@/components/wedding-workspace/budget/super-admin-budget-dashboard";
 import { getWeddingBudgetWorkspaceViewBySlug } from "@/lib/data/app-data";
+import { BudgetPageClient } from "@/components/wedding-workspace/budget/budget-page-client";
 
 type WeddingWorkspaceBudgetPageProps = {
   params: Promise<{ weddingId: string }>;
@@ -14,7 +16,7 @@ export default async function WeddingWorkspaceBudgetPage({ params }: WeddingWork
     notFound();
   }
 
-  return (
-    <SuperAdminBudgetDashboard view={view} />
-  );
+  return <BudgetPageClient view={view} />;
+
+  // return <SuperAdminBudgetDashboard view={view} />;
 }
