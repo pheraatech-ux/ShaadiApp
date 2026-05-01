@@ -234,7 +234,7 @@ async function executeTool(
     });
 
     if (error) return JSON.stringify({ success: false, error: error.message });
-    return JSON.stringify({ success: true, title: input.title });
+    return JSON.stringify({ success: true, action: "tasks", title: input.title });
   }
 
   if (toolName === "update_task") {
@@ -273,7 +273,7 @@ async function executeTool(
       .eq("wedding_id", weddingId);
 
     if (error) return JSON.stringify({ success: false, error: error.message });
-    return JSON.stringify({ success: true });
+    return JSON.stringify({ success: true, action: "tasks" });
   }
 
   if (toolName === "create_event") {

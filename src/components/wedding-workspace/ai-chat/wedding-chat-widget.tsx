@@ -6,6 +6,7 @@ import { ArrowLeft, Clock, MessageSquare, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { vendorsQueryKey } from "@/components/wedding-workspace/vendors/use-vendors-query";
+import { tasksQueryKey } from "@/components/wedding-workspace/tasks/use-tasks-query";
 
 type Session = {
   id: string;
@@ -138,6 +139,9 @@ function ChatPanel({ weddingSlug, sessionId, onFirstMessageSent }: ChatPanelProp
 
           if (actions.includes("vendors")) {
             queryClient.invalidateQueries({ queryKey: vendorsQueryKey(weddingSlug) });
+          }
+          if (actions.includes("tasks")) {
+            queryClient.invalidateQueries({ queryKey: tasksQueryKey(weddingSlug) });
           }
           if (isFirstReply) {
             isFirstReply = false;
