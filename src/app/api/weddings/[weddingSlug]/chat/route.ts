@@ -585,6 +585,9 @@ When asked about missing events or ceremonies, compare what's listed above again
 
       const actionsPerformed = new Set<string>();
       let currentMessages = [...anthropicMessages];
+      // Set to true after the first custom tool fires. Used to decide whether
+      // to stream text live (bubble 1) or buffer it for bubble 2.
+      let hasCalledTool = false;
 
       try {
         // Agentic loop with streaming. Each iteration opens one Anthropic stream.
@@ -600,10 +603,16 @@ When asked about missing events or ceremonies, compare what's listed above again
             messages: currentMessages,
           });
 
-          // Forward text deltas to the client as they arrive.
+          // Stream text live before the first tool call (bubble 1).
+          // After a tool has been called, buffer silently — the final text will
+          // be sent as a complete "final_text" event for bubble 2.
+          const textBuffer: string[] = [];
           for await (const event of stream) {
             if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-              send({ text: event.delta.text });
+              textBuffer.push(event.delta.text);
+              if (!hasCalledTool) {
+                send({ text: event.delta.text });
+              }
             }
           }
 
@@ -616,6 +625,13 @@ When asked about missing events or ceremonies, compare what's listed above again
           }
 
           if (finalMsg.stop_reason === "tool_use") {
+            if (!hasCalledTool) {
+              // Pre-tool text has been streaming live into bubble 1.
+              // Signal the client to close bubble 1 now before the tool runs.
+              send({ tool_call: true });
+              hasCalledTool = true;
+            }
+
             const toolUseBlocks = assistantContent.filter(
               (b): b is Anthropic.ToolUseBlock => b.type === "tool_use",
             );
@@ -641,6 +657,13 @@ When asked about missing events or ceremonies, compare what's listed above again
               { role: "user", content: toolResults },
             ];
             continue;
+          }
+
+          // end_turn — if a tool was called, send the final text as a complete
+          // event so the client renders it as a second bubble via addMessage.
+          // Otherwise the text was already streamed live into bubble 1.
+          if (hasCalledTool) {
+            send({ final_text: textBuffer.join("") });
           }
 
           // end_turn (or max_tokens / stop_sequence)

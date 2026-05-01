@@ -63,30 +63,91 @@ function ChatPanel({ weddingSlug, sessionId, onFirstMessageSent }: ChatPanelProp
         };
       }
 
+      // Use deep-chat's connect.handler so we control the fetch ourselves and
+      // can split the pre-tool announcement + confirmation into two bubbles.
+      // A bare URL with stream:true would treat the entire SSE as one bubble.
       (el as any).connect = {
-        url: `/api/weddings/${weddingSlug}/chat`,
-        method: "POST",
-        additionalBodyProps: { sessionId },
-        stream: true,
-      };
+        handler: async (
+          body: { messages: Array<{ role: string; text: string }> },
+          signals: {
+            onResponse: (r: { text?: string; error?: string }) => void;
+            onClose: () => void;
+          },
+        ) => {
+        try {
+          const response = await fetch(`/api/weddings/${weddingSlug}/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: body.messages, sessionId }),
+          });
 
-      // With streaming, responseInterceptor is called for every SSE chunk.
-      // We use it only to pick up the final metadata event (no text, has actionsPerformed).
-      (el as any).responseInterceptor = (response: { text?: string; actionsPerformed?: string[] }) => {
-        const actions = response?.actionsPerformed ?? [];
-        if (actions.includes("vendors")) {
-          queryClient.invalidateQueries({ queryKey: vendorsQueryKey(weddingSlug) });
-        }
-        return response;
-      };
+          if (!response.ok || !response.body) {
+            signals.onResponse({ error: "Failed to connect to AI" });
+            signals.onClose();
+            return;
+          }
 
-      // onMessage fires once when the full streaming message is complete.
-      // Use it to refresh the session list (title was set server-side during this turn).
-      (el as any).onMessage = (body: { message: { role?: string }; isHistory: boolean }) => {
-        if (!body.isHistory && body.message.role === "ai" && isFirstReply) {
-          isFirstReply = false;
-          onFirstMessageSentRef.current();
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buf = "";
+          let bubble1Text = "";
+          let bubble1Closed = false;
+          let finalText = "";
+          const actions: string[] = [];
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            const lines = buf.split("\n");
+            buf = lines.pop() ?? "";
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              try {
+                const data = JSON.parse(line.slice(6)) as {
+                  text?: string;
+                  tool_call?: boolean;
+                  final_text?: string;
+                  actionsPerformed?: string[];
+                  error?: string;
+                };
+                if (data.error) {
+                  signals.onResponse({ error: data.error });
+                  signals.onClose();
+                  return;
+                }
+                if (data.text) bubble1Text += data.text;
+                if (data.tool_call && !bubble1Closed) {
+                  signals.onResponse({ text: bubble1Text });
+                  signals.onClose();
+                  bubble1Closed = true;
+                }
+                if (data.final_text) finalText = data.final_text;
+                if (data.actionsPerformed) actions.push(...data.actionsPerformed);
+              } catch {}
+            }
+          }
+
+          if (bubble1Closed) {
+            await new Promise<void>((r) => setTimeout(r, 0));
+            (el as any).addMessage({ role: "ai", text: finalText });
+          } else {
+            signals.onResponse({ text: bubble1Text });
+            signals.onClose();
+          }
+
+          if (actions.includes("vendors")) {
+            queryClient.invalidateQueries({ queryKey: vendorsQueryKey(weddingSlug) });
+          }
+          if (isFirstReply) {
+            isFirstReply = false;
+            onFirstMessageSentRef.current();
+          }
+        } catch (err) {
+          signals.onResponse({ error: err instanceof Error ? err.message : "Request failed" });
+          signals.onClose();
         }
+        },
       };
 
       (el as any).messageStyles = {
