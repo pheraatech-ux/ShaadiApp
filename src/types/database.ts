@@ -959,6 +959,155 @@ export type Database = {
           },
         ]
       }
+      business_expense_categories: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          owner_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          owner_user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          owner_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_expense_categories_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_expense_entries: {
+        Row: {
+          amount_paise: number
+          category_id: string
+          category_label: string
+          created_at: string
+          description: string
+          entry_date: string
+          id: string
+          owner_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_paise: number
+          category_id: string
+          category_label: string
+          created_at?: string
+          description?: string
+          entry_date: string
+          id?: string
+          owner_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_paise?: number
+          category_id?: string
+          category_label?: string
+          created_at?: string
+          description?: string
+          entry_date?: string
+          id?: string
+          owner_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_expense_entries_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_overdue_receivables: {
+        Row: {
+          amount_paise: number
+          client_name: string
+          created_at: string
+          due_since: string
+          id: string
+          owner_user_id: string
+        }
+        Insert: {
+          amount_paise: number
+          client_name: string
+          created_at?: string
+          due_since: string
+          id?: string
+          owner_user_id: string
+        }
+        Update: {
+          amount_paise?: number
+          client_name?: string
+          created_at?: string
+          due_since?: string
+          id?: string
+          owner_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_overdue_receivables_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_revenue_entries: {
+        Row: {
+          amount_paise: number
+          category: string
+          created_at: string
+          description: string
+          entry_date: string
+          id: string
+          owner_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_paise: number
+          category: string
+          created_at?: string
+          description?: string
+          entry_date: string
+          id?: string
+          owner_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_paise?: number
+          category?: string
+          created_at?: string
+          description?: string
+          entry_date?: string
+          id?: string
+          owner_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_revenue_entries_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
