@@ -900,6 +900,7 @@ export type Database = {
       weddings: {
         Row: {
           bride_name: string
+          budget_setup_completed: boolean
           city: string | null
           couple_name: string
           created_at: string
@@ -917,6 +918,7 @@ export type Database = {
         }
         Insert: {
           bride_name: string
+          budget_setup_completed?: boolean
           city?: string | null
           couple_name: string
           created_at?: string
@@ -934,6 +936,7 @@ export type Database = {
         }
         Update: {
           bride_name?: string
+          budget_setup_completed?: boolean
           city?: string | null
           couple_name?: string
           created_at?: string

@@ -9,6 +9,7 @@ type BudgetPayload = {
   allocatedRupees?: number;
   spentRupees?: number;
   totalBudgetRupees?: number;
+  completeBudgetSetup?: boolean;
 };
 
 async function getWeddingLookup(request: NextRequest, weddingSlug: string) {
@@ -85,7 +86,10 @@ export async function PATCH(
       const totalBudgetPaise = Math.max(0, Math.round(payload.totalBudgetRupees * 100));
       const { error } = await supabase
         .from("weddings")
-        .update({ total_budget_paise: totalBudgetPaise })
+        .update({
+          total_budget_paise: totalBudgetPaise,
+          ...(payload.completeBudgetSetup ? { budget_setup_completed: true } : {}),
+        })
         .eq("id", weddingId);
       if (error) {
         return NextResponse.json({ error: error.message || "Unable to update total budget." }, { status: 400 });

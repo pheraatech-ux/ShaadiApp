@@ -6,6 +6,7 @@ import {
   BudgetEditorPanel,
   type BudgetVisibility,
 } from "@/components/app-dashboard/add-wedding-budget/budget-editor-panel";
+import { BudgetSetupFlow } from "@/components/wedding-workspace/budget/budget-setup-flow";
 import { buildFallbackAllocation, type WeddingBudgetInput } from "../../../../budgetAI";
 import type { WeddingBudgetWorkspaceViewModel } from "@/lib/data/app-data";
 import type { CultureId } from "../../../../weddingCultures";
@@ -53,6 +54,17 @@ export function BudgetPageClient({ view }: BudgetPageClientProps) {
   );
 
   const contextLine = `${view.coupleName} · ${view.cultures.length} culture${view.cultures.length === 1 ? "" : "s"}`;
+
+  if (!view.budgetSetupCompleted) {
+    return (
+      <BudgetSetupFlow
+        weddingSlug={view.weddingSlug}
+        coupleName={view.coupleName}
+        cultures={view.cultures}
+        initialBudgetPaise={view.totalBudgetPaise}
+      />
+    );
+  }
 
   return (
     <div className="mx-auto max-w-xl px-4 py-6">

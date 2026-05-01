@@ -58,6 +58,7 @@ export type WeddingBudgetWorkspaceViewModel = {
   weddingSlug: string;
   coupleName: string;
   cultures: string[];
+  budgetSetupCompleted: boolean;
   totalBudgetPaise: number;
   spentBudgetPaise: number;
   allocatedBudgetPaise: number;
@@ -118,6 +119,7 @@ type WeddingRow = {
   status: "upcoming" | "completed" | "cancelled";
   total_budget_paise: number;
   spent_budget_paise: number;
+  budget_setup_completed: boolean;
 };
 
 type WeddingMemberRow = {
@@ -329,7 +331,7 @@ const getAccessibleWeddings = cache(async (userId: string): Promise<WeddingRow[]
   if (!weddingIds.length) return [];
   const { data, error } = await supabase
     .from("weddings")
-    .select("id, slug, couple_name, bride_name, groom_name, city, venue_name, wedding_date, cultures, status, total_budget_paise, spent_budget_paise")
+    .select("id, slug, couple_name, bride_name, groom_name, city, venue_name, wedding_date, cultures, status, total_budget_paise, spent_budget_paise, budget_setup_completed")
     .in("id", weddingIds)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -2210,6 +2212,7 @@ export const getWeddingBudgetWorkspaceViewBySlug = cache(
       weddingSlug,
       coupleName: wedding.couple_name,
       cultures: wedding.cultures ?? [],
+      budgetSetupCompleted: wedding.budget_setup_completed,
       totalBudgetPaise: wedding.total_budget_paise,
       spentBudgetPaise,
       allocatedBudgetPaise,
