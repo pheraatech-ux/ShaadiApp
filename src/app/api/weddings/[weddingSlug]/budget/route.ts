@@ -3,6 +3,12 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
 import type { Database } from "@/types/database";
 
+type AllocationItem = {
+  category: string;
+  allocatedRupees: number;
+  allocationPct: number;
+};
+
 type BudgetPayload = {
   itemId?: string;
   category?: string;
@@ -10,6 +16,7 @@ type BudgetPayload = {
   spentRupees?: number;
   totalBudgetRupees?: number;
   completeBudgetSetup?: boolean;
+  allocations?: AllocationItem[];
 };
 
 async function getWeddingLookup(request: NextRequest, weddingSlug: string) {
@@ -84,6 +91,24 @@ export async function PATCH(
 
     if (typeof payload.totalBudgetRupees === "number") {
       const totalBudgetPaise = Math.max(0, Math.round(payload.totalBudgetRupees * 100));
+
+      // Bulk-insert allocations before marking setup complete (so setup stays false if this fails)
+      if (payload.completeBudgetSetup && Array.isArray(payload.allocations) && payload.allocations.length > 0) {
+        const rows = payload.allocations
+          .filter((a) => a.category?.trim())
+          .map((a) => ({
+            wedding_id: weddingId,
+            category: a.category.trim(),
+            allocated_paise: Math.max(0, Math.round(a.allocatedRupees * 100)),
+            spent_paise: 0,
+            allocation_pct: Math.max(0, a.allocationPct),
+          }));
+        const { error: insertError } = await supabase.from("budget_items").insert(rows);
+        if (insertError) {
+          return NextResponse.json({ error: insertError.message || "Unable to save allocations." }, { status: 400 });
+        }
+      }
+
       const { error } = await supabase
         .from("weddings")
         .update({

@@ -57,6 +57,9 @@ export type CreateWeddingInput = {
 export type WeddingBudgetWorkspaceViewModel = {
   weddingSlug: string;
   coupleName: string;
+  weddingDate: string | null;
+  venueName: string | null;
+  city: string | null;
   cultures: string[];
   budgetSetupCompleted: boolean;
   totalBudgetPaise: number;
@@ -77,8 +80,17 @@ export type WeddingBudgetWorkspaceViewModel = {
     category: string;
     allocatedPaise: number;
     spentPaise: number;
+    allocationPct: number | null;
     bucketId: BudgetBucketId;
     bucketLabel: string;
+  }>;
+  vendors: Array<{
+    id: string;
+    name: string;
+    category: string;
+    quotedPricePaise: number;
+    advancePaidPaise: number;
+    status: "pending" | "confirmed" | "declined";
   }>;
 };
 
@@ -2157,11 +2169,17 @@ export const getWeddingBudgetWorkspaceViewBySlug = cache(
     if (!wedding) return null;
 
     const supabase = await createSupabaseServerClient();
-    const { data: budgetRows, error } = await supabase
-      .from("budget_items")
-      .select("id, category, allocated_paise, spent_paise")
-      .eq("wedding_id", wedding.id)
-      .order("created_at", { ascending: false });
+    const [{ data: budgetRows, error }, { data: vendorRows }] = await Promise.all([
+      supabase
+        .from("budget_items")
+        .select("id, category, allocated_paise, spent_paise, allocation_pct")
+        .eq("wedding_id", wedding.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("vendors")
+        .select("id, name, category, quoted_price_paise, advance_paid_paise, status")
+        .eq("wedding_id", wedding.id),
+    ]);
     if (error) throw error;
 
     const recommendation = buildRecommendedBudgetSplit(wedding.cultures ?? []);
@@ -2200,6 +2218,7 @@ export const getWeddingBudgetWorkspaceViewBySlug = cache(
         category: item.category,
         allocatedPaise: item.allocated_paise,
         spentPaise: item.spent_paise,
+        allocationPct: item.allocation_pct ?? null,
         bucketId,
         bucketLabel: bucketMeta.get(bucketId)?.label ?? "Other",
       };
@@ -2211,6 +2230,9 @@ export const getWeddingBudgetWorkspaceViewBySlug = cache(
     return {
       weddingSlug,
       coupleName: wedding.couple_name,
+      weddingDate: wedding.wedding_date ?? null,
+      venueName: wedding.venue_name ?? null,
+      city: wedding.city ?? null,
       cultures: wedding.cultures ?? [],
       budgetSetupCompleted: wedding.budget_setup_completed,
       totalBudgetPaise: wedding.total_budget_paise,
@@ -2220,6 +2242,14 @@ export const getWeddingBudgetWorkspaceViewBySlug = cache(
       recommendationNotes: recommendation.reasoning,
       buckets,
       budgetItems,
+      vendors: (vendorRows ?? []).map((v) => ({
+        id: v.id,
+        name: v.name,
+        category: v.category ?? "",
+        quotedPricePaise: v.quoted_price_paise ?? 0,
+        advancePaidPaise: v.advance_paid_paise ?? 0,
+        status: v.status as "pending" | "confirmed" | "declined",
+      })),
     };
   },
 );

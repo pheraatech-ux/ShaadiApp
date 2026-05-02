@@ -167,13 +167,24 @@ export function BudgetSetupFlow({ weddingSlug, coupleName, cultures, initialBudg
     setIsSubmitting(true);
     setSubmitError(null);
     try {
+      const totalRupees = Math.max(0, parseInt(budgetRupees || "0", 10));
+      const allocations = sortedAllocations.map((row) => {
+        const pct = parseFloat(userPcts[row.categoryId] ?? String(row.percentage)) || 0;
+        return {
+          category: row.label,
+          allocatedRupees: Math.round((pct / 100) * totalRupees),
+          allocationPct: Math.round(pct * 100) / 100,
+        };
+      });
+
       const response = await fetch(`/api/weddings/${weddingSlug}/budget`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          totalBudgetRupees: Math.max(0, parseInt(budgetRupees || "0", 10)),
+          totalBudgetRupees: totalRupees,
           completeBudgetSetup: true,
+          allocations,
         }),
       });
       if (!response.ok) {

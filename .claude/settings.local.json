@@ -34,7 +34,16 @@
       "Bash(select-object -First 50)",
       "PowerShell(New-Item *)",
       "Bash(echo \"TSC_DONE:$?\")",
-      "PowerShell(cd \"C:\\\\Users\\\\sandy\\\\Downloads\\\\ShaadiApp\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -match \"budget-setup\" } | Select-Object -First 20)"
+      "PowerShell(cd \"C:\\\\Users\\\\sandy\\\\Downloads\\\\ShaadiApp\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -match \"budget-setup\" } | Select-Object -First 20)",
+      "Bash(grep -v \"^$\")",
+      "Bash(Get-Content \"C:\\\\Users\\\\sandy\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-sandy-Downloads-ShaadiApp\\\\a846afb8-36a0-4c0a-b454-153694c0105b\\\\tasks\\\\bk8mru07f.output\" -Wait)",
+      "Bash(Select-String -Pattern \"error TS|warning|No inputs|Found \\\\d+ error\")",
+      "Bash(Get-Content \"C:\\\\Users\\\\sandy\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-sandy-Downloads-ShaadiApp\\\\a846afb8-36a0-4c0a-b454-153694c0105b\\\\tasks\\\\bk8mru07f.output\")",
+      "Bash(Select-String \"error TS\")",
+      "Bash(Select-Object -First 20)",
+      "PowerShell(cd \"C:\\\\Users\\\\sandy\\\\Downloads\\\\ShaadiApp\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -notmatch \"\\\\.next\" -and $_ -ne \"\" } | Select-Object -First 30)",
+      "PowerShell($bytes = [System.IO.File]::ReadAllBytes\\(\"C:\\\\Users\\\\sandy\\\\Downloads\\\\ShaadiApp\\\\src\\\\types\\\\database.ts\"\\); \"First 4 bytes: $\\($bytes[0..3] -join ', '\\)\"; \"File length: $\\($bytes.Length\\)\")",
+      "PowerShell(cd \"C:\\\\Users\\\\sandy\\\\Downloads\\\\ShaadiApp\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -notmatch \"\\\\.next\" -and $_ -ne \"\" } | Select-Object -First 20)"
     ]
   },
   "enableAllProjectMcpServers": true,
