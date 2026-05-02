@@ -26,6 +26,7 @@ type BudgetItem = {
   category: string;
   allocatedPaise: number;
   spentPaise: number;
+  vendorSpentPaise: number;
   allocationPct: number | null;
 };
 
@@ -407,9 +408,10 @@ export function BudgetCategoryDetailPanel({
     (v) => v.category.toLowerCase().trim() === item.category.toLowerCase().trim(),
   );
 
-  // Use optimistic expenses total for the spent display
-  const optimisticSpentPaise = expenses.reduce((s, e) => s + e.amount_paise, 0);
-  const displaySpentPaise = expenses.length > 0 ? optimisticSpentPaise : item.spentPaise;
+  // Optimistic expenses total + vendor advances = true spent
+  const optimisticExpensesPaise = expenses.reduce((s, e) => s + e.amount_paise, 0);
+  const expenseSpentPaise = expenses.length > 0 ? optimisticExpensesPaise : item.spentPaise;
+  const displaySpentPaise = expenseSpentPaise + item.vendorSpentPaise;
   const remainingPaise = Math.max(0, item.allocatedPaise - displaySpentPaise);
   const utilization = pct(displaySpentPaise, item.allocatedPaise);
   const categoryStatus = getCategoryStatus(displaySpentPaise, item.allocatedPaise);

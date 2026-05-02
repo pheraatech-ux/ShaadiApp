@@ -12,6 +12,7 @@ type BudgetItem = {
   category: string;
   allocatedPaise: number;
   spentPaise: number;
+  vendorSpentPaise: number;
   allocationPct: number | null;
 };
 
@@ -213,7 +214,7 @@ export function BudgetCategoryBreakdown({
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const totalAllocated = items.reduce((s, i) => s + i.allocatedPaise, 0);
-  const totalSpent = items.reduce((s, i) => s + i.spentPaise, 0);
+  const totalSpent = items.reduce((s, i) => s + i.spentPaise + i.vendorSpentPaise, 0);
   const totalRemaining = Math.max(0, totalAllocated - totalSpent);
   const totalUtilization = pct(totalSpent, totalAllocated);
   const totalStatus = getStatus(totalSpent, totalAllocated);
@@ -265,9 +266,10 @@ export function BudgetCategoryBreakdown({
           );
         }
 
-        const remainingPaise = Math.max(0, item.allocatedPaise - item.spentPaise);
-        const utilization = pct(item.spentPaise, item.allocatedPaise);
-        const status = getStatus(item.spentPaise, item.allocatedPaise);
+        const effectiveSpentPaise = item.spentPaise + item.vendorSpentPaise;
+        const remainingPaise = Math.max(0, item.allocatedPaise - effectiveSpentPaise);
+        const utilization = pct(effectiveSpentPaise, item.allocatedPaise);
+        const status = getStatus(effectiveSpentPaise, item.allocatedPaise);
         const allocPct = item.allocationPct ?? pct(item.allocatedPaise, totalBudgetPaise);
         const isDeleting = deletingId === item.id;
 
@@ -284,8 +286,8 @@ export function BudgetCategoryBreakdown({
               )}
             </div>
             <p className="text-center text-sm font-medium">{formatInr(item.allocatedPaise)}</p>
-            <p className="text-center text-sm">{formatInr(item.spentPaise)}</p>
-            <p className={`text-center text-sm font-medium ${item.spentPaise > item.allocatedPaise ? "text-rose-500" : ""}`}>
+            <p className="text-center text-sm">{formatInr(effectiveSpentPaise)}</p>
+            <p className={`text-center text-sm font-medium ${effectiveSpentPaise > item.allocatedPaise ? "text-rose-500" : ""}`}>
               {formatInr(remainingPaise)}
             </p>
             <div className="flex items-center gap-2 px-1">

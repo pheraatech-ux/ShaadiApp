@@ -80,6 +80,7 @@ export type WeddingBudgetWorkspaceViewModel = {
     category: string;
     allocatedPaise: number;
     spentPaise: number;
+    vendorSpentPaise: number;
     allocationPct: number | null;
     bucketId: BudgetBucketId;
     bucketLabel: string;
@@ -2211,13 +2212,22 @@ export const getWeddingBudgetWorkspaceViewBySlug = cache(
       };
     });
 
+    // Sum vendor advance payments per category (case-insensitive match)
+    const vendorAdvanceByCategory = new Map<string, number>();
+    for (const v of vendorRows ?? []) {
+      const key = (v.category ?? "").toLowerCase().trim();
+      vendorAdvanceByCategory.set(key, (vendorAdvanceByCategory.get(key) ?? 0) + (v.advance_paid_paise ?? 0));
+    }
+
     const budgetItems = (budgetRows ?? []).map((item) => {
       const bucketId = mapBudgetCategoryToBucket(item.category);
+      const vendorSpentPaise = vendorAdvanceByCategory.get(item.category.toLowerCase().trim()) ?? 0;
       return {
         id: item.id,
         category: item.category,
         allocatedPaise: item.allocated_paise,
         spentPaise: item.spent_paise,
+        vendorSpentPaise,
         allocationPct: item.allocation_pct ?? null,
         bucketId,
         bucketLabel: bucketMeta.get(bucketId)?.label ?? "Other",
@@ -2225,7 +2235,7 @@ export const getWeddingBudgetWorkspaceViewBySlug = cache(
     });
 
     const allocatedBudgetPaise = budgetItems.reduce((sum, item) => sum + item.allocatedPaise, 0);
-    const spentBudgetPaise = budgetItems.reduce((sum, item) => sum + item.spentPaise, 0);
+    const spentBudgetPaise = budgetItems.reduce((sum, item) => sum + item.spentPaise + item.vendorSpentPaise, 0);
 
     return {
       weddingSlug,

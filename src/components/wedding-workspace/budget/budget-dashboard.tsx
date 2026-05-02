@@ -161,8 +161,8 @@ export function BudgetDashboard({ view }: BudgetDashboardProps) {
 
       <BudgetCategoryBreakdown
         items={[...view.budgetItems].sort((a, b) => {
-          const uA = a.allocatedPaise > 0 ? a.spentPaise / a.allocatedPaise : 0;
-          const uB = b.allocatedPaise > 0 ? b.spentPaise / b.allocatedPaise : 0;
+          const uA = a.allocatedPaise > 0 ? (a.spentPaise + a.vendorSpentPaise) / a.allocatedPaise : 0;
+          const uB = b.allocatedPaise > 0 ? (b.spentPaise + b.vendorSpentPaise) / b.allocatedPaise : 0;
           return uB - uA;
         })}
         totalBudgetPaise={view.totalBudgetPaise}
