@@ -124,17 +124,18 @@ export function WorkspaceSidebar({
         <SidebarGroup>
           <SidebarGroupLabel>App</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               <SidebarMenuItem>
                 <SidebarMenuButton
                   render={<Link href={`${appRoot}/dashboard`} />}
                   isActive={
                     pathname === `${appRoot}/dashboard` || pathname.startsWith(`${appRoot}/dashboard/`)
                   }
-                  size="lg"
+                  size="default"
                   tooltip="Dashboard"
+                  className="pl-2.5 h-9 before:-inset-y-2"
                 >
-                  <LayoutGrid className="size-5 shrink-0" />
+                  <LayoutGrid className="size-4 shrink-0" />
                   <span className="group-data-[collapsible=icon]:hidden">Dashboard</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -142,11 +143,12 @@ export function WorkspaceSidebar({
                 <SidebarMenuButton
                   render={<Link href={`${appRoot}/weddings`} />}
                   isActive={pathname === `${appRoot}/weddings` || pathname.startsWith(`${appRoot}/weddings/`)}
-                  size="lg"
+                  size="default"
                   tooltip="All weddings"
+                  className="pl-2.5 h-9 before:-inset-y-2"
                 >
-                  <BookHeart className="size-5 shrink-0" />
-                  <span className="group-data-[collapsible=icon]:hidden">All weddings</span>
+                  <BookHeart className="size-4 shrink-0" />
+                  <span className="group-data-[collapsible=icon]:hidden">All Weddings</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -155,7 +157,7 @@ export function WorkspaceSidebar({
         <SidebarGroup>
           <SidebarGroupLabel>This wedding</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {items.map((item) => {
                 const href = item.hrefSuffix === "" ? base : `${base}${item.hrefSuffix}`;
                 const active = isActive(item.hrefSuffix);
@@ -166,10 +168,11 @@ export function WorkspaceSidebar({
                     <SidebarMenuButton
                       render={<Link href={href} />}
                       isActive={active}
-                      size="lg"
+                      size="default"
                       tooltip={item.label}
+                      className="pl-2.5 h-9 before:-inset-y-2"
                     >
-                      <Icon className="size-5 shrink-0" />
+                      <Icon className="size-4 shrink-0" />
                       <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                       {item.badge ? (
                         <span
@@ -191,15 +194,16 @@ export function WorkspaceSidebar({
         <SidebarGroup>
           <SidebarGroupLabel>Intelligence</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               <SidebarMenuItem>
                 <SidebarMenuButton
                   render={<Link href={`${base}/ai-report`} />}
                   isActive={pathname.startsWith(`${base}/ai-report`)}
-                  size="lg"
+                  size="default"
                   tooltip="AI report"
+                  className="pl-2.5 h-9 before:-inset-y-2"
                 >
-                  <Sparkles className="size-5 shrink-0" />
+                  <Sparkles className="size-4 shrink-0" />
                   <span className="group-data-[collapsible=icon]:hidden">AI report</span>
                   <span className="ml-auto rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[10px] font-medium text-violet-700 group-data-[collapsible=icon]:hidden dark:text-violet-200">
                     AI

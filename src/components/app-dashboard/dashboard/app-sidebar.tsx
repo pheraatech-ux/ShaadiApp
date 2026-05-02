@@ -77,7 +77,7 @@ export function AppSidebar({
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {sidebarItems.map((item) => {
                 const active = isPathActive(item.href);
                 const Icon = item.icon;
@@ -100,10 +100,11 @@ export function AppSidebar({
                     <SidebarMenuButton
                       render={<Link href={item.href} />}
                       isActive={active}
-                      size="lg"
+                      size="default"
                       tooltip={item.label}
+                      className="pl-2.5 h-9 before:-inset-y-2"
                     >
-                      <Icon className="size-5 shrink-0" />
+                      <Icon className="size-4 shrink-0" />
                       <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                     </SidebarMenuButton>
                     {item.badgeCount ? <SidebarMenuBadge>{item.badgeCount}</SidebarMenuBadge> : null}
