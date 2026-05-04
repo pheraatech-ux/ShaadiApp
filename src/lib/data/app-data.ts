@@ -1715,7 +1715,7 @@ export const getWeddingTasksBoardViewBySlug = cache(
         priority: task.priority ?? "medium",
         dueDate: task.due_date,
         linkedEventId: task.linked_event_id,
-        linkedEventLabel: linkedEvent?.title ?? "General (no event)",
+        linkedEventLabel: linkedEvent?.title ?? "General",
         assigneeId: primaryAssigneeId,
         assigneeIds,
         assigneeLabel:
@@ -1740,7 +1740,6 @@ export const getWeddingTasksBoardViewBySlug = cache(
     const completed = tasks.filter((task) => task.status === "done").length;
     const overdue = tasks.filter((task) => task.isOverdue).length;
     const dueThisWeek = tasks.filter((task) => task.isDueThisWeek).length;
-    const flagged = tasks.filter((task) => task.isOverdue || !task.assigneeId).length;
     const myTasks = tasks.filter((task) => task.isAssignedToCurrentUser).length;
 
     const memberSummaries = memberOptions
@@ -1780,7 +1779,6 @@ export const getWeddingTasksBoardViewBySlug = cache(
         completed,
         overdue,
         dueThisWeek,
-        flagged,
       },
       memberSummaries,
       weddingId: wedding.id,

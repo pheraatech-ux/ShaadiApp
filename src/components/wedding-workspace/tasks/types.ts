@@ -68,7 +68,6 @@ export type WeddingTasksBoardViewModel = {
     completed: number;
     overdue: number;
     dueThisWeek: number;
-    flagged: number;
   };
   memberSummaries: {
     id: string;

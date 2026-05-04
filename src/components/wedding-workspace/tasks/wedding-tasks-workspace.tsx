@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useInvalidateTasks, useTasksQuery } from "@/components/wedding-workspace/tasks/use-tasks-query";
-import { Search } from "lucide-react";
+import { LayoutGrid, List, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { NewTaskDialog } from "@/components/wedding-workspace/tasks/new-task-dialog";
 import { TaskDetailPanel } from "@/components/wedding-workspace/tasks/task-detail-panel";
 import { TaskKanbanColumn, type TaskLaneId } from "@/components/wedding-workspace/tasks/task-kanban-column";
 import { TaskKpiCards } from "@/components/wedding-workspace/tasks/task-kpi-cards";
+import { TaskListView } from "@/components/wedding-workspace/tasks/task-list-view";
 import { TaskMemberStatsCards } from "@/components/wedding-workspace/tasks/task-member-stats-cards";
 import type { WeddingTasksBoardStatus, WeddingTasksBoardViewModel } from "@/components/wedding-workspace/tasks/types";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ type WeddingTasksWorkspaceProps = {
   view: WeddingTasksBoardViewModel;
 };
 
-type TopFilter = "all" | "my" | "overdue" | "unassigned" | "flagged";
+type TopFilter = "all" | "my" | "overdue" | "unassigned";
 
 
 export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
@@ -45,6 +46,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [search, setSearch] = useState("");
   const viewMode = "super-admin";
+  const [displayMode, setDisplayMode] = useState<"kanban" | "list">("kanban");
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -71,9 +73,8 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
     const completed = tasksWithOptimistic.filter((task) => task.status === "done").length;
     const overdue = tasksWithOptimistic.filter((task) => task.isOverdue).length;
     const dueThisWeek = tasksWithOptimistic.filter((task) => task.isDueThisWeek).length;
-    const flagged = tasksWithOptimistic.filter((task) => task.isOverdue || task.assigneeIds.length === 0).length;
     const myTasks = tasksWithOptimistic.filter((task) => task.assigneeIds.includes(view.currentUserId)).length;
-    return { total, completed, overdue, dueThisWeek, flagged, myTasks };
+    return { total, completed, overdue, dueThisWeek, myTasks };
   }, [tasksWithOptimistic, view.currentUserId]);
 
   const scopedBoard = Boolean(view.scopedToEmployeeTasks);
@@ -84,7 +85,6 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
     if (activeFilter === "my") current = current.filter((task) => task.assigneeIds.includes(view.currentUserId));
     if (activeFilter === "overdue") current = current.filter((task) => task.isOverdue);
     if (activeFilter === "unassigned") current = current.filter((task) => task.assigneeIds.length === 0);
-    if (activeFilter === "flagged") current = current.filter((task) => task.isOverdue || task.assigneeIds.length === 0);
 
     if (assigneeFilter !== "all") {
       current = current.filter((task) =>
@@ -211,19 +211,17 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
         completed={summary.completed}
         overdue={summary.overdue}
         dueThisWeek={summary.dueThisWeek}
-        flagged={summary.flagged}
       />
 
       {/* Filter bar — single row */}
-      <section className="-mx-4 px-4 py-2.5 sm:-mx-6 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
+      <section className="-mx-4 overflow-x-auto px-4 py-2.5 sm:-mx-6 sm:px-6">
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {[
               { id: "all", label: `All (${summary.total})` },
               { id: "my", label: `My tasks (${summary.myTasks})` },
               { id: "overdue", label: `Overdue (${summary.overdue})` },
               { id: "unassigned", label: `Unassigned (${tasks.filter((task) => task.assigneeIds.length === 0).length})` },
-              { id: "flagged", label: `Flagged (${summary.flagged})` },
             ].map((filter) => (
               <button
                 key={filter.id}
@@ -277,6 +275,28 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
                 <SelectItem value="low">Low</SelectItem>
               </SelectContent>
             </Select>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant={displayMode === "kanban" ? "secondary" : "ghost"}
+                size="icon-sm"
+                className="rounded-md"
+                onClick={() => setDisplayMode("kanban")}
+                aria-label="Kanban view"
+              >
+                <LayoutGrid className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant={displayMode === "list" ? "secondary" : "ghost"}
+                size="icon-sm"
+                className="rounded-md"
+                onClick={() => setDisplayMode("list")}
+                aria-label="List view"
+              >
+                <List className="size-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </section>
@@ -291,112 +311,118 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
         </div>
       )}
 
-      <section className="mt-4 flex divide-x divide-dashed divide-border/50 overflow-x-auto">
-        <TaskKanbanColumn
-          laneId="todo"
-          title="To do"
-          count={columns.todo.length}
-          toneClassName="border border-rose-500/40 bg-rose-500/10 text-rose-300"
-          tasks={columns.todo}
-          busyTaskId={busyTaskId}
-          draggingTaskId={draggingTaskId}
-          dragOverLaneId={dragOverLaneId}
-          onDragStartTask={setDraggingTaskId}
-          onDragEndTask={() => {
-            setDraggingTaskId(null);
-            setDragOverLaneId(null);
-          }}
-          onDropTaskToLane={(lane) => {
-            if (!draggingTaskId) return;
-            void moveTaskToLane(draggingTaskId, lane);
-            setDraggingTaskId(null);
-            setDragOverLaneId(null);
-          }}
-          onDragEnterLane={setDragOverLaneId}
-          onDragLeaveLane={(lane) => {
-            setDragOverLaneId((current) => (current === lane ? null : current));
-          }}
-          onTaskClick={setSelectedTaskId}
-        />
-        <TaskKanbanColumn
-          laneId="in_progress"
-          title="In progress"
-          count={columns.inProgress.length}
-          toneClassName="border border-sky-500/40 bg-sky-500/10 text-sky-300"
-          tasks={columns.inProgress}
-          busyTaskId={busyTaskId}
-          draggingTaskId={draggingTaskId}
-          dragOverLaneId={dragOverLaneId}
-          onDragStartTask={setDraggingTaskId}
-          onDragEndTask={() => {
-            setDraggingTaskId(null);
-            setDragOverLaneId(null);
-          }}
-          onDropTaskToLane={(lane) => {
-            if (!draggingTaskId) return;
-            void moveTaskToLane(draggingTaskId, lane);
-            setDraggingTaskId(null);
-            setDragOverLaneId(null);
-          }}
-          onDragEnterLane={setDragOverLaneId}
-          onDragLeaveLane={(lane) => {
-            setDragOverLaneId((current) => (current === lane ? null : current));
-          }}
-          onTaskClick={setSelectedTaskId}
-        />
-        <TaskKanbanColumn
-          laneId="needs_review"
-          title="Needs review"
-          count={columns.needsReview.length}
-          toneClassName="border border-violet-500/40 bg-violet-500/10 text-violet-300"
-          tasks={columns.needsReview}
-          busyTaskId={busyTaskId}
-          draggingTaskId={draggingTaskId}
-          dragOverLaneId={dragOverLaneId}
-          onDragStartTask={setDraggingTaskId}
-          onDragEndTask={() => {
-            setDraggingTaskId(null);
-            setDragOverLaneId(null);
-          }}
-          onDropTaskToLane={(lane) => {
-            if (!draggingTaskId) return;
-            void moveTaskToLane(draggingTaskId, lane);
-            setDraggingTaskId(null);
-            setDragOverLaneId(null);
-          }}
-          onDragEnterLane={setDragOverLaneId}
-          onDragLeaveLane={(lane) => {
-            setDragOverLaneId((current) => (current === lane ? null : current));
-          }}
-          onTaskClick={setSelectedTaskId}
-        />
-        <TaskKanbanColumn
-          laneId="done"
-          title="Done"
-          count={columns.done.length}
-          toneClassName="border border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-          tasks={columns.done}
-          busyTaskId={busyTaskId}
-          draggingTaskId={draggingTaskId}
-          dragOverLaneId={dragOverLaneId}
-          onDragStartTask={setDraggingTaskId}
-          onDragEndTask={() => {
-            setDraggingTaskId(null);
-            setDragOverLaneId(null);
-          }}
-          onDropTaskToLane={(lane) => {
-            if (!draggingTaskId) return;
-            void moveTaskToLane(draggingTaskId, lane);
-            setDraggingTaskId(null);
-            setDragOverLaneId(null);
-          }}
-          onDragEnterLane={setDragOverLaneId}
-          onDragLeaveLane={(lane) => {
-            setDragOverLaneId((current) => (current === lane ? null : current));
-          }}
-          onTaskClick={setSelectedTaskId}
-        />
-      </section>
+      {displayMode === "list" ? (
+        <div className="mt-4">
+          <TaskListView tasks={filteredTasks} onTaskClick={setSelectedTaskId} />
+        </div>
+      ) : (
+        <section className="mt-4 flex divide-x divide-dashed divide-border/50 overflow-x-auto">
+          <TaskKanbanColumn
+            laneId="todo"
+            title="To do"
+            count={columns.todo.length}
+            toneClassName="border border-rose-500/40 bg-rose-500/10 text-rose-300"
+            tasks={columns.todo}
+            busyTaskId={busyTaskId}
+            draggingTaskId={draggingTaskId}
+            dragOverLaneId={dragOverLaneId}
+            onDragStartTask={setDraggingTaskId}
+            onDragEndTask={() => {
+              setDraggingTaskId(null);
+              setDragOverLaneId(null);
+            }}
+            onDropTaskToLane={(lane) => {
+              if (!draggingTaskId) return;
+              void moveTaskToLane(draggingTaskId, lane);
+              setDraggingTaskId(null);
+              setDragOverLaneId(null);
+            }}
+            onDragEnterLane={setDragOverLaneId}
+            onDragLeaveLane={(lane) => {
+              setDragOverLaneId((current) => (current === lane ? null : current));
+            }}
+            onTaskClick={setSelectedTaskId}
+          />
+          <TaskKanbanColumn
+            laneId="in_progress"
+            title="In progress"
+            count={columns.inProgress.length}
+            toneClassName="border border-sky-500/40 bg-sky-500/10 text-sky-300"
+            tasks={columns.inProgress}
+            busyTaskId={busyTaskId}
+            draggingTaskId={draggingTaskId}
+            dragOverLaneId={dragOverLaneId}
+            onDragStartTask={setDraggingTaskId}
+            onDragEndTask={() => {
+              setDraggingTaskId(null);
+              setDragOverLaneId(null);
+            }}
+            onDropTaskToLane={(lane) => {
+              if (!draggingTaskId) return;
+              void moveTaskToLane(draggingTaskId, lane);
+              setDraggingTaskId(null);
+              setDragOverLaneId(null);
+            }}
+            onDragEnterLane={setDragOverLaneId}
+            onDragLeaveLane={(lane) => {
+              setDragOverLaneId((current) => (current === lane ? null : current));
+            }}
+            onTaskClick={setSelectedTaskId}
+          />
+          <TaskKanbanColumn
+            laneId="needs_review"
+            title="Needs review"
+            count={columns.needsReview.length}
+            toneClassName="border border-violet-500/40 bg-violet-500/10 text-violet-300"
+            tasks={columns.needsReview}
+            busyTaskId={busyTaskId}
+            draggingTaskId={draggingTaskId}
+            dragOverLaneId={dragOverLaneId}
+            onDragStartTask={setDraggingTaskId}
+            onDragEndTask={() => {
+              setDraggingTaskId(null);
+              setDragOverLaneId(null);
+            }}
+            onDropTaskToLane={(lane) => {
+              if (!draggingTaskId) return;
+              void moveTaskToLane(draggingTaskId, lane);
+              setDraggingTaskId(null);
+              setDragOverLaneId(null);
+            }}
+            onDragEnterLane={setDragOverLaneId}
+            onDragLeaveLane={(lane) => {
+              setDragOverLaneId((current) => (current === lane ? null : current));
+            }}
+            onTaskClick={setSelectedTaskId}
+          />
+          <TaskKanbanColumn
+            laneId="done"
+            title="Done"
+            count={columns.done.length}
+            toneClassName="border border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+            tasks={columns.done}
+            busyTaskId={busyTaskId}
+            draggingTaskId={draggingTaskId}
+            dragOverLaneId={dragOverLaneId}
+            onDragStartTask={setDraggingTaskId}
+            onDragEndTask={() => {
+              setDraggingTaskId(null);
+              setDragOverLaneId(null);
+            }}
+            onDropTaskToLane={(lane) => {
+              if (!draggingTaskId) return;
+              void moveTaskToLane(draggingTaskId, lane);
+              setDraggingTaskId(null);
+              setDragOverLaneId(null);
+            }}
+            onDragEnterLane={setDragOverLaneId}
+            onDragLeaveLane={(lane) => {
+              setDragOverLaneId((current) => (current === lane ? null : current));
+            }}
+            onTaskClick={setSelectedTaskId}
+          />
+        </section>
+      )}
 
       <NewTaskDialog
         weddingSlug={view.weddingSlug}

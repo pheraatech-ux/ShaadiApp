@@ -203,7 +203,7 @@ export async function GET(
         priority: t.priority ?? "medium",
         dueDate: t.due_date,
         linkedEventId: t.linked_event_id,
-        linkedEventLabel: t.linked_event_id ? (eventById.get(t.linked_event_id) ?? "General (no event)") : "General (no event)",
+        linkedEventLabel: t.linked_event_id ? (eventById.get(t.linked_event_id) ?? "General") : "General",
         assigneeId: assigneeIds[0] ?? null,
         assigneeIds,
         assigneeLabel: assigneeLabels.length === 0

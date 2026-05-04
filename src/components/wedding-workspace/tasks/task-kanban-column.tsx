@@ -139,11 +139,6 @@ export function TaskKanbanColumn({
                       {task.linkedEventLabel}
                     </span>
                   )}
-                  {(task.isOverdue || task.assigneeIds.length === 0) && (
-                    <span className="rounded-md bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-violet-400">
-                      Flagged
-                    </span>
-                  )}
                 </div>
 
                 {/* footer row */}

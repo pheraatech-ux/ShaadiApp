@@ -82,7 +82,7 @@ export function TasksForWeddingPanel({ tasks, onTaskClick, tasksHref, totalCount
                       variant="outline"
                       className="truncate rounded-md border-border/70 px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground"
                     >
-                      {task.linkedEventLabel === "General (no event)" ? "General" : task.linkedEventLabel}
+                      {task.linkedEventLabel}
                     </Badge>
                   </span>
 

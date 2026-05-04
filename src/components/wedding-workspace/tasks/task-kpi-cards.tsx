@@ -3,20 +3,18 @@ type TaskKpiCardsProps = {
   completed: number;
   overdue: number;
   dueThisWeek: number;
-  flagged: number;
 };
 
-export function TaskKpiCards({ total, completed, overdue, dueThisWeek, flagged }: TaskKpiCardsProps) {
+export function TaskKpiCards({ total, completed, overdue, dueThisWeek }: TaskKpiCardsProps) {
   const cards = [
     { id: "total", title: "Total tasks", value: total, helper: "Across this wedding", color: "text-foreground" },
     { id: "completed", title: "Completed", value: completed, helper: total > 0 ? `${Math.round((completed / total) * 100)}% done` : "No tasks yet", color: "text-emerald-400" },
     { id: "overdue", title: "Overdue", value: overdue, helper: "Needs immediate action", color: "text-rose-400" },
     { id: "due-week", title: "Due this week", value: dueThisWeek, helper: "Upcoming commitments", color: "text-foreground" },
-    { id: "flagged", title: "Flagged / blocked", value: flagged, helper: "Overdue or unassigned", color: "text-foreground" },
   ];
 
   return (
-    <section className="-mx-4 grid grid-cols-2 border-b border-border/60 sm:-mx-6 lg:grid-cols-5">
+    <section className="-mx-4 grid grid-cols-2 border-b border-border/60 sm:-mx-6 lg:grid-cols-4">
       {cards.map((card, i) => (
         <article
           key={card.id}
