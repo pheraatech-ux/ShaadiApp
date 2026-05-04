@@ -44,7 +44,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
   const [assigneeFilter, setAssigneeFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<"super-admin" | "team-member">("super-admin");
+  const viewMode = "super-admin";
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -81,10 +81,6 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
   const filteredTasks = useMemo(() => {
     let current = tasksWithOptimistic;
 
-    if (!scopedBoard && viewMode === "team-member") {
-      current = current.filter((task) => task.assigneeIds.includes(view.currentUserId));
-    }
-
     if (activeFilter === "my") current = current.filter((task) => task.assigneeIds.includes(view.currentUserId));
     if (activeFilter === "overdue") current = current.filter((task) => task.isOverdue);
     if (activeFilter === "unassigned") current = current.filter((task) => task.assigneeIds.length === 0);
@@ -108,7 +104,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
     }
 
     return current;
-  }, [activeFilter, assigneeFilter, priorityFilter, scopedBoard, search, tasksWithOptimistic, view.currentUserId, viewMode]);
+  }, [activeFilter, assigneeFilter, priorityFilter, scopedBoard, search, tasksWithOptimistic, view.currentUserId]);
 
   const columns = useMemo(() => {
     return {
@@ -202,15 +198,6 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
             ))}
           </div>
           <div className="flex items-center gap-2">
-            {scopedBoard ? null : (
-              <Button
-                variant="outline"
-                className="h-9 rounded-xl"
-                onClick={() => setViewMode((current) => (current === "super-admin" ? "team-member" : "super-admin"))}
-              >
-                {viewMode === "super-admin" ? "Team member view" : "Super admin view"}
-              </Button>
-            )}
             <Button className="h-9 rounded-xl bg-emerald-600 text-white hover:bg-emerald-600/90" onClick={() => setTaskDialogOpen(true)}>
               + New task
             </Button>
@@ -295,7 +282,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
       </section>
 
       {/* Member stats */}
-      {!scopedBoard && viewMode === "super-admin" && view.memberSummaries.length > 0 && (
+      {!scopedBoard && view.memberSummaries.length > 0 && (
         <div className="py-4">
           <TaskMemberStatsCards
             members={view.memberSummaries}
