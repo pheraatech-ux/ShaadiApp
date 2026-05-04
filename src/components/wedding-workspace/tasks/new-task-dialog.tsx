@@ -241,12 +241,14 @@ export function NewTaskDialog({
             </div>
 
             <div className="space-y-3 border-t border-border/60 pt-4">
-              <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Assignment</p>
-              <div className="space-y-1.5">
-                <label className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Raised by</label>
-                <div className="h-10 rounded-xl border border-border/70 bg-background px-3 text-sm text-foreground flex items-center">
-                  {currentUserLabel} (me)
-                </div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Assignment</p>
+                <p className="text-xs text-muted-foreground">
+                  Raised by:{" "}
+                  <span className="font-semibold text-foreground drop-shadow-[0_0_6px_hsl(var(--foreground)/0.35)]">
+                    {currentUserLabel} (me)
+                  </span>
+                </p>
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Assign to</label>

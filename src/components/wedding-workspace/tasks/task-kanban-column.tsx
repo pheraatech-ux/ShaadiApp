@@ -21,6 +21,7 @@ type TaskKanbanColumnProps = {
   onDragEnterLane: (laneId: TaskLaneId) => void;
   onDragLeaveLane: (laneId: TaskLaneId) => void;
   onTaskClick: (taskId: string) => void;
+  showWeddingBadge?: boolean;
 };
 
 const laneAccent: Record<TaskLaneId, string> = {
@@ -66,6 +67,7 @@ export function TaskKanbanColumn({
   onDragEnterLane,
   onDragLeaveLane,
   onTaskClick,
+  showWeddingBadge,
 }: TaskKanbanColumnProps) {
   const laneDragActive = dragOverLaneId === laneId;
 
@@ -137,6 +139,11 @@ export function TaskKanbanColumn({
                   {task.linkedEventLabel && (
                     <span className="rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400">
                       {task.linkedEventLabel}
+                    </span>
+                  )}
+                  {showWeddingBadge && task.weddingName && (
+                    <span className="rounded-md bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-400">
+                      {task.weddingName}
                     </span>
                   )}
                 </div>

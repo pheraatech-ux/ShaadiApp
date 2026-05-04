@@ -35,9 +35,10 @@ function DueCell({ task }: { task: WeddingTasksBoardTask }) {
 type TaskListViewProps = {
   tasks: WeddingTasksBoardTask[];
   onTaskClick: (taskId: string) => void;
+  showWeddingBadge?: boolean;
 };
 
-export function TaskListView({ tasks, onTaskClick }: TaskListViewProps) {
+export function TaskListView({ tasks, onTaskClick, showWeddingBadge }: TaskListViewProps) {
   return (
     <section className="overflow-hidden rounded-2xl border border-border/70 bg-card">
       <header className="hidden grid-cols-[minmax(0,2.5fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.5fr)_auto] items-center gap-3 border-b border-border/60 px-4 py-2 text-[11px] font-medium tracking-wide text-muted-foreground uppercase md:grid">
@@ -69,6 +70,11 @@ export function TaskListView({ tasks, onTaskClick }: TaskListViewProps) {
                 <p className="truncate text-sm font-semibold text-foreground">{task.title}</p>
                 {task.description && (
                   <p className="truncate text-xs text-muted-foreground">{task.description}</p>
+                )}
+                {showWeddingBadge && task.weddingName && (
+                  <span className="mt-1 inline-block rounded-md bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-400">
+                    {task.weddingName}
+                  </span>
                 )}
               </div>
 

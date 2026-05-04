@@ -21,6 +21,8 @@ export type WeddingTasksBoardTask = {
   dueDate: string | null;
   linkedEventId: string | null;
   linkedEventLabel: string;
+  /** Populated only in the all-weddings view; used to show the wedding badge on cards. */
+  weddingName?: string;
   /** Primary assignee id (first in array) — kept for backward-compat filters. */
   assigneeId: string | null;
   /** All assignee user ids. */
@@ -62,6 +64,46 @@ export type WeddingTasksBoardViewModel = {
     dateLabel: string;
   }[];
   tasks: WeddingTasksBoardTask[];
+  summary: {
+    total: number;
+    myTasks: number;
+    completed: number;
+    overdue: number;
+    dueThisWeek: number;
+  };
+  memberSummaries: {
+    id: string;
+    label: string;
+    assignedCount: number;
+    doneCount: number;
+    overdueCount: number;
+    progressPercent: number;
+  }[];
+};
+
+export type AllTasksBoardTask = WeddingTasksBoardTask & {
+  weddingId: string;
+  weddingSlug: string;
+  weddingName: string;
+};
+
+export type AllTasksBoardWedding = {
+  id: string;
+  slug: string;
+  name: string;
+  members: WeddingTasksBoardMemberOption[];
+  events: { id: string; label: string; dateLabel: string }[];
+};
+
+export type AllTasksBoardViewModel = {
+  currentUserId: string;
+  currentUserLabel: string;
+  /** Server scoped tasks to this user only (employee persona). */
+  scopedToEmployeeTasks: boolean;
+  tasks: AllTasksBoardTask[];
+  weddings: AllTasksBoardWedding[];
+  /** Deduplicated members across all accessible weddings. */
+  allMembers: WeddingTasksBoardMemberOption[];
   summary: {
     total: number;
     myTasks: number;

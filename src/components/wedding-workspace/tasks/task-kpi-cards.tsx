@@ -3,11 +3,12 @@ type TaskKpiCardsProps = {
   completed: number;
   overdue: number;
   dueThisWeek: number;
+  allWeddings?: boolean;
 };
 
-export function TaskKpiCards({ total, completed, overdue, dueThisWeek }: TaskKpiCardsProps) {
+export function TaskKpiCards({ total, completed, overdue, dueThisWeek, allWeddings }: TaskKpiCardsProps) {
   const cards = [
-    { id: "total", title: "Total tasks", value: total, helper: "Across this wedding", color: "text-foreground" },
+    { id: "total", title: "Total tasks", value: total, helper: allWeddings ? "Across all weddings" : "Across this wedding", color: "text-foreground" },
     { id: "completed", title: "Completed", value: completed, helper: total > 0 ? `${Math.round((completed / total) * 100)}% done` : "No tasks yet", color: "text-emerald-400" },
     { id: "overdue", title: "Overdue", value: overdue, helper: "Needs immediate action", color: "text-rose-400" },
     { id: "due-week", title: "Due this week", value: dueThisWeek, helper: "Upcoming commitments", color: "text-foreground" },

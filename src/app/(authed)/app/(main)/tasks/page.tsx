@@ -1,5 +1,7 @@
-import { TasksMainView } from "@/components/app-dashboard/tasks/tasks-main-view";
+import { AllTasksWorkspace } from "@/components/app-dashboard/tasks/all-tasks-workspace";
+import { getAllTasksBoardView } from "@/lib/data/app-data";
 
-export default function TasksPage() {
-  return <TasksMainView />;
+export default async function TasksPage() {
+  const view = await getAllTasksBoardView();
+  return <AllTasksWorkspace view={view} />;
 }
