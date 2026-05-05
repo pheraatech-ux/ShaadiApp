@@ -1,7 +1,6 @@
-import { Search, Sparkles } from "lucide-react";
+import { Search } from "lucide-react";
 import { ReactNode } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/app-dashboard/dashboard/theme-toggle";
 
@@ -28,10 +27,6 @@ export function DashboardTopbar({
             aria-label="Search"
           />
         </div>
-        <Button variant="secondary" size="sm" className="rounded-xl">
-          <Sparkles />
-          AI Assistant
-        </Button>
         {actions}
         <ThemeToggle />
       </div>

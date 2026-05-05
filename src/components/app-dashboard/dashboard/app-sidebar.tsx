@@ -52,7 +52,7 @@ export function AppSidebar({
     { label: "Dashboard", href: `${basePath}/dashboard`, icon: LayoutGrid },
     { label: "All Weddings", href: `${basePath}/weddings`, icon: BookHeart, badgeCount: counts.weddings },
     ...(!hideTeamTab ? [{ label: "Teams", href: `${basePath}/team`, icon: Users, badgeCount: counts.team } as SidebarItem] : []),
-    { label: "Tasks", href: `${basePath}/tasks`, icon: ClipboardList, badgeCount: counts.tasksOverdue },
+    { label: "Tasks", href: `${basePath}/tasks`, icon: ClipboardList },
     { label: "Messages", href: `${basePath}/messages`, icon: MessageSquare },
   ];
   if (!hideBudgetTab) {
