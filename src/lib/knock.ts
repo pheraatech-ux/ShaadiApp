@@ -8,7 +8,7 @@ let knockClient: Knock | undefined;
 export function getKnockClient(): Knock {
   if (!knockClient) {
     const { knockApiKeySecret } = getKnockServerEnv();
-    knockClient = new Knock(knockApiKeySecret);
+    knockClient = new Knock({ apiKey: knockApiKeySecret });
   }
   return knockClient;
 }
