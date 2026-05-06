@@ -1,5 +1,5 @@
 import { AiInsightsWidget } from "@/components/app-dashboard/dashboard/ai-insights-widget";
-import { RecentActivityWidget } from "@/components/app-dashboard/dashboard/recent-activity-widget";
+import { FinancialSnapshotWidget } from "@/components/app-dashboard/dashboard/financial-snapshot-widget";
 import { StatsGrid } from "@/components/app-dashboard/dashboard/stats-grid";
 import { WeddingGlanceWidget } from "@/components/app-dashboard/dashboard/wedding-glance-widget";
 import { UrgentTasksWidget } from "@/components/app-dashboard/tasks/urgent-tasks-widget";
@@ -40,7 +40,7 @@ export async function DashboardContent() {
           <WeddingGlanceWidget items={data.weddings} />
         </div>
         <div className="h-[340px]">
-          <RecentActivityWidget items={data.recentActivity} />
+          <FinancialSnapshotWidget snapshot={data.financialSnapshot} />
         </div>
       </div>
     </div>

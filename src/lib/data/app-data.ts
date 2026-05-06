@@ -636,14 +636,16 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
   const [tasks, { data: vendorRows }] = await Promise.all([
     getAccessibleTasks(),
     weddingIds.length
-      ? supabase.from("vendors").select("status, wedding_id").in("wedding_id", weddingIds)
-      : Promise.resolve({ data: [] as { status: "pending" | "confirmed" | "declined"; wedding_id: string }[] }),
+      ? supabase.from("vendors").select("status, wedding_id, advance_paid_paise").in("wedding_id", weddingIds)
+      : Promise.resolve({ data: [] as { status: "pending" | "confirmed" | "declined"; wedding_id: string; advance_paid_paise: number | null }[] }),
   ]);
 
   const today = new Date().toISOString().slice(0, 10);
   const overdueTasks = tasks.filter((task) => task.status !== "done" && task.due_date && task.due_date < today);
   const doneTaskIds = new Set(tasks.filter((task) => task.status === "done").map((task) => task.id));
   const budgetTotal = weddings.reduce((sum, wedding) => sum + wedding.total_budget_paise, 0);
+  const spendTotal = weddings.reduce((sum, wedding) => sum + wedding.spent_budget_paise, 0);
+  const vendorAdvancePaise = (vendorRows ?? []).reduce((sum, v) => sum + (v.advance_paid_paise ?? 0), 0);
   const overBudgetCount = weddings.filter((wedding) => wedding.spent_budget_paise > wedding.total_budget_paise).length;
   const vendorPending = (vendorRows ?? []).filter((vendor) => vendor.status !== "confirmed").length;
 
@@ -805,6 +807,12 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
     weeklyCompletion,
     recentActivity,
     aiInsights,
+    financialSnapshot: {
+      totalBudgetPaise: budgetTotal,
+      totalSpendPaise: spendTotal,
+      committedPaise: vendorAdvancePaise,
+      utilizationPct: budgetTotal > 0 ? Math.round((spendTotal / budgetTotal) * 100) : 0,
+    } satisfies FinancialSnapshot,
   };
 });
 
@@ -937,6 +945,14 @@ export const getEmployeeDashboardView = cache(async (): Promise<DashboardViewMod
     urgentTasks,
     weeklyCompletion,
     recentActivity,
+    financialSnapshot: {
+      totalBudgetPaise: weddings.reduce((s, w) => s + w.total_budget_paise, 0),
+      totalSpendPaise: weddings.reduce((s, w) => s + w.spent_budget_paise, 0),
+      committedPaise: 0,
+      utilizationPct: weddings.reduce((s, w) => s + w.total_budget_paise, 0) > 0
+        ? Math.round((weddings.reduce((s, w) => s + w.spent_budget_paise, 0) / weddings.reduce((s, w) => s + w.total_budget_paise, 0)) * 100)
+        : 0,
+    } satisfies FinancialSnapshot,
     aiInsights: overdueTasks.length > 0
       ? [{
           id: "tasks-overdue",
