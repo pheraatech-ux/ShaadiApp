@@ -31,15 +31,26 @@ function parseMentions(body: string): string[] {
   return [...new Set(ids)];
 }
 
-async function getProfile(userId: string): Promise<string> {
+type InlineRecipient = { id: string; name?: string; email?: string };
+
+async function resolveRecipients(userIds: string[]): Promise<InlineRecipient[]> {
+  if (userIds.length === 0) return [];
   const supabase = getSupabaseAdminClient();
   const { data } = await supabase
     .from("profiles")
-    .select("first_name, last_name")
-    .eq("id", userId)
-    .maybeSingle();
-  if (!data) return "A team member";
-  return [data.first_name, data.last_name].filter(Boolean).join(" ").trim() || "A team member";
+    .select("id, first_name, last_name, email")
+    .in("id", userIds);
+  const byId = new Map((data ?? []).map((p) => [p.id, p]));
+  return userIds.map((id) => {
+    const p = byId.get(id);
+    const name = p ? [p.first_name, p.last_name].filter(Boolean).join(" ").trim() : undefined;
+    return { id, ...(name ? { name } : {}), ...(p?.email ? { email: p.email } : {}) };
+  });
+}
+
+async function getProfile(userId: string): Promise<string> {
+  const [r] = await resolveRecipients([userId]);
+  return r?.name ?? "A team member";
 }
 
 // ── Event handlers ────────────────────────────────────────────────────────────
@@ -70,54 +81,40 @@ async function handleTaskComment(event: WebhookEvent) {
 
   // 1. Reminder (is_system=true)
   if (record.is_system && task.assignee_user_id) {
+    const recipients = await resolveRecipients([task.assignee_user_id]);
     await knock.workflows.trigger("reminder", {
-      recipients: [task.assignee_user_id],
+      recipients,
       actor: record.author_user_id,
       tenant: record.wedding_id,
-      data: {
-        reminderBody: record.body,
-        taskId: task.id,
-        taskTitle: task.title ?? "a task",
-        authorName,
-      },
+      data: { reminderBody: record.body, taskId: task.id, taskTitle: task.title ?? "a task", authorName },
     });
     return;
   }
 
   // 2. Mentions — parse @mentions from comment body
-  const mentionedIds = parseMentions(record.body).filter(
-    (id) => id !== record.author_user_id,
-  );
+  const mentionedIds = parseMentions(record.body).filter((id) => id !== record.author_user_id);
   if (mentionedIds.length > 0) {
+    const recipients = await resolveRecipients(mentionedIds);
     await knock.workflows.trigger("mention", {
-      recipients: mentionedIds,
+      recipients,
       actor: record.author_user_id,
       tenant: record.wedding_id,
-      data: {
-        commentBody: record.body,
-        taskId: task.id,
-        taskTitle: task.title ?? "a task",
-        authorName,
-      },
+      data: { commentBody: record.body, taskId: task.id, taskTitle: task.title ?? "a task", authorName },
     });
   }
 
   // 3. Comment — notify assignee + task creator (excluding author + already mentioned)
   const alreadyNotified = new Set([record.author_user_id, ...mentionedIds]);
-  const commentRecipients = [task.assignee_user_id, task.raised_by_user_id]
+  const commentRecipientIds = [task.assignee_user_id, task.raised_by_user_id]
     .filter((id): id is string => !!id && !alreadyNotified.has(id));
 
-  if (commentRecipients.length > 0) {
+  if (commentRecipientIds.length > 0) {
+    const recipients = await resolveRecipients(commentRecipientIds);
     await knock.workflows.trigger("comment-added", {
-      recipients: commentRecipients,
+      recipients,
       actor: record.author_user_id,
       tenant: record.wedding_id,
-      data: {
-        commentBody: record.body,
-        taskId: task.id,
-        taskTitle: task.title ?? "a task",
-        authorName,
-      },
+      data: { commentBody: record.body, taskId: task.id, taskTitle: task.title ?? "a task", authorName },
     });
   }
 }
@@ -141,14 +138,11 @@ async function handleTaskUpdate(event: WebhookEvent) {
 
   if (!assigneeChanged || !record.assignee_user_id) return;
 
+  const recipients = await resolveRecipients([record.assignee_user_id]);
   await knock.workflows.trigger("task-assigned", {
-    recipients: [record.assignee_user_id],
+    recipients,
     tenant: record.wedding_id,
-    data: {
-      taskId: record.id,
-      taskTitle: record.title ?? "A task",
-      weddingId: record.wedding_id,
-    },
+    data: { taskId: record.id, taskTitle: record.title ?? "A task", weddingId: record.wedding_id },
   });
 }
 
@@ -172,8 +166,9 @@ async function handleNewMessage(event: WebhookEvent) {
     .eq("thread_id", record.thread_id)
     .neq("user_id", record.author_user_id);
 
-  const recipients = (members ?? []).map((m) => m.user_id);
-  if (recipients.length === 0) return;
+  const recipientIds = (members ?? []).map((m) => m.user_id);
+  if (recipientIds.length === 0) return;
+  const recipients = await resolveRecipients(recipientIds);
 
   // Get thread title
   const { data: thread } = await supabase
