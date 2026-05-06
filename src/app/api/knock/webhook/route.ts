@@ -38,13 +38,13 @@ async function resolveRecipients(userIds: string[]): Promise<InlineRecipient[]> 
   const supabase = getSupabaseAdminClient();
   const { data } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, email")
+    .select("id, first_name, last_name")
     .in("id", userIds);
   const byId = new Map((data ?? []).map((p) => [p.id, p]));
   return userIds.map((id) => {
     const p = byId.get(id);
     const name = p ? [p.first_name, p.last_name].filter(Boolean).join(" ").trim() : undefined;
-    return { id, ...(name ? { name } : {}), ...(p?.email ? { email: p.email } : {}) };
+    return { id, ...(name ? { name } : {}) };
   });
 }
 
