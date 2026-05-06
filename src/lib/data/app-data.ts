@@ -1,7 +1,7 @@
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { AiInsight, DashboardViewModel, RecentActivityItem, WeddingItem } from "@/components/app-dashboard/dashboard/types";
+import type { AiInsight, DashboardViewModel, FinancialSnapshot, RecentActivityItem, WeddingItem } from "@/components/app-dashboard/dashboard/types";
 import type {
   TeamListPageViewModel,
   TeamMemberProfileViewModel,
