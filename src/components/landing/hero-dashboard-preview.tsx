@@ -75,6 +75,9 @@ const HERO_WEDDINGS: WeddingItem[] = [
     daysLeft: 6,
     tasksDone: 28,
     tasksTotal: 38,
+    tasksOverdue: 2,
+    budgetSpentPaise: 18_00_000 * 100,
+    budgetTotalPaise: 22_00_000 * 100,
     status: "upcoming",
   },
   {
@@ -85,6 +88,9 @@ const HERO_WEDDINGS: WeddingItem[] = [
     daysLeft: 25,
     tasksDone: 14,
     tasksTotal: 36,
+    tasksOverdue: 1,
+    budgetSpentPaise: 8_00_000 * 100,
+    budgetTotalPaise: 15_00_000 * 100,
     status: "upcoming",
   },
 ];
