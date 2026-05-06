@@ -68,6 +68,13 @@ export type AiInsight = {
   ctaHref?: string;
 };
 
+export type FinancialSnapshot = {
+  totalBudgetPaise: number;
+  totalSpendPaise: number;
+  committedPaise: number;
+  utilizationPct: number;
+};
+
 export type DashboardViewModel = {
   greeting: string;
   workspaceName: string;
@@ -80,4 +87,5 @@ export type DashboardViewModel = {
   weeklyCompletion: WeeklyCompletionDay[];
   recentActivity: RecentActivityItem[];
   aiInsights: AiInsight[];
+  financialSnapshot: FinancialSnapshot;
 };
