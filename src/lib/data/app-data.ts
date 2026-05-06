@@ -1,7 +1,7 @@
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { DashboardViewModel, RecentActivityItem, WeddingItem } from "@/components/app-dashboard/dashboard/types";
+import type { AiInsight, DashboardViewModel, FinancialSnapshot, RecentActivityItem, WeddingItem } from "@/components/app-dashboard/dashboard/types";
 import type {
   TeamListPageViewModel,
   TeamMemberProfileViewModel,
@@ -636,14 +636,16 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
   const [tasks, { data: vendorRows }] = await Promise.all([
     getAccessibleTasks(),
     weddingIds.length
-      ? supabase.from("vendors").select("status, wedding_id").in("wedding_id", weddingIds)
-      : Promise.resolve({ data: [] as { status: "pending" | "confirmed" | "declined"; wedding_id: string }[] }),
+      ? supabase.from("vendors").select("status, wedding_id, advance_paid_paise").in("wedding_id", weddingIds)
+      : Promise.resolve({ data: [] as { status: "pending" | "confirmed" | "declined"; wedding_id: string; advance_paid_paise: number | null }[] }),
   ]);
 
   const today = new Date().toISOString().slice(0, 10);
   const overdueTasks = tasks.filter((task) => task.status !== "done" && task.due_date && task.due_date < today);
   const doneTaskIds = new Set(tasks.filter((task) => task.status === "done").map((task) => task.id));
   const budgetTotal = weddings.reduce((sum, wedding) => sum + wedding.total_budget_paise, 0);
+  const spendTotal = weddings.reduce((sum, wedding) => sum + wedding.spent_budget_paise, 0);
+  const committedPaise = (vendorRows ?? []).reduce((sum, v) => sum + (v.advance_paid_paise ?? 0), 0);
   const overBudgetCount = weddings.filter((wedding) => wedding.spent_budget_paise > wedding.total_budget_paise).length;
   const vendorPending = (vendorRows ?? []).filter((vendor) => vendor.status !== "confirmed").length;
 
@@ -656,13 +658,14 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
   const overdueTaskIds = slicedOverdue.map((t) => t.id);
   const overdueEventIds = [...new Set(slicedOverdue.map((t) => t.linked_event_id).filter(Boolean))] as string[];
 
-  const [{ data: commentRows }, { data: urgentEventRows }] = await Promise.all([
+  const [{ data: commentRows }, { data: urgentEventRows }, recentActivity] = await Promise.all([
     overdueTaskIds.length
       ? supabase.from("task_comments").select("task_id").in("task_id", overdueTaskIds)
       : Promise.resolve({ data: [] as { task_id: string }[] }),
     overdueEventIds.length
       ? supabase.from("wedding_events").select("id, title").in("id", overdueEventIds)
       : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+    getEmployeeRecentActivityItems(weddingIds),
   ]);
 
   const commentCountByTask = new Map<string, number>();
@@ -671,16 +674,20 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
   }
   const eventTitleById = new Map((urgentEventRows ?? []).map((e) => [e.id, e.title]));
 
-  const tasksByWedding = new Map<string, { total: number; done: number }>();
+  const tasksByWedding = new Map<string, { total: number; done: number; overdue: number }>();
   for (const task of tasks) {
-    const current = tasksByWedding.get(task.wedding_id) ?? { total: 0, done: 0 };
+    const current = tasksByWedding.get(task.wedding_id) ?? { total: 0, done: 0, overdue: 0 };
     current.total += 1;
     if (doneTaskIds.has(task.id)) current.done += 1;
     tasksByWedding.set(task.wedding_id, current);
   }
+  for (const task of overdueTasks) {
+    const current = tasksByWedding.get(task.wedding_id);
+    if (current) current.overdue += 1;
+  }
 
   const weddingItems: WeddingItem[] = weddings.map((wedding) => {
-    const counts = tasksByWedding.get(wedding.id) ?? { total: 0, done: 0 };
+    const counts = tasksByWedding.get(wedding.id) ?? { total: 0, done: 0, overdue: 0 };
     return {
       id: wedding.slug,
       name: wedding.couple_name,
@@ -689,11 +696,47 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
       daysLeft: daysUntil(wedding.wedding_date),
       tasksDone: counts.done,
       tasksTotal: counts.total,
+      tasksOverdue: counts.overdue,
+      budgetSpentPaise: wedding.spent_budget_paise,
+      budgetTotalPaise: wedding.total_budget_paise,
       status: buildStatusFromWedding(wedding),
     };
   });
 
   const urgentTasks = buildUrgentTaskItems(overdueTasks, weddings, "/app", commentCountByTask, eventTitleById);
+
+  const weddingsWithOverdueTasks = new Set(overdueTasks.map((t) => t.wedding_id));
+  const aiInsights: AiInsight[] = [];
+  if (weddingsWithOverdueTasks.size > 0) {
+    aiInsights.push({
+      id: "weddings-at-risk",
+      variant: "risk",
+      title: `${weddingsWithOverdueTasks.size} ${weddingsWithOverdueTasks.size === 1 ? "wedding is" : "weddings are"} at risk`,
+      description: "Due to overdue tasks and vendor delays",
+      ctaLabel: "View details",
+      ctaHref: "/app/tasks",
+    });
+  }
+  if (overBudgetCount > 0) {
+    aiInsights.push({
+      id: "budget-at-risk",
+      variant: "budget",
+      title: `${toInrLakh(budgetTotal)} at risk`,
+      description: "Potential impact if issues aren't resolved",
+      ctaLabel: "View report",
+      ctaHref: "/app/budget",
+    });
+  }
+  if (vendorPending > 0) {
+    aiInsights.push({
+      id: "vendor-pending",
+      variant: "vendor",
+      title: "Vendor confirmation pending",
+      description: `${vendorPending} ${vendorPending === 1 ? "critical vendor" : "vendors"} awaiting confirmation`,
+      ctaLabel: "Follow up",
+      ctaHref: "/app/vendors",
+    });
+  }
 
   const weekdayIds = [
     { id: "monday", label: "M" },
@@ -721,7 +764,7 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
         id: "tasks-overdue",
         title: "Tasks Overdue",
         value: String(overdueTasks.length),
-        helperText: "Across all accessible weddings",
+        helperText: "Across all weddings",
         progress: tasks.length > 0 ? Math.round((overdueTasks.length / tasks.length) * 100) : 0,
       },
       {
@@ -762,7 +805,8 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
     weddings: weddingItems,
     urgentTasks,
     weeklyCompletion,
-    recentActivity: [],
+    recentActivity,
+    aiInsights,
   };
 });
 
@@ -779,16 +823,20 @@ export const getEmployeeDashboardView = cache(async (): Promise<DashboardViewMod
   const inProgressTasks = scopedTasks.filter((task) => task.status === "in_progress");
   const doneTaskIds = new Set(scopedTasks.filter((task) => task.status === "done").map((task) => task.id));
 
-  const tasksByWedding = new Map<string, { total: number; done: number }>();
+  const tasksByWedding = new Map<string, { total: number; done: number; overdue: number }>();
   for (const task of scopedTasks) {
-    const current = tasksByWedding.get(task.wedding_id) ?? { total: 0, done: 0 };
+    const current = tasksByWedding.get(task.wedding_id) ?? { total: 0, done: 0, overdue: 0 };
     current.total += 1;
     if (doneTaskIds.has(task.id)) current.done += 1;
     tasksByWedding.set(task.wedding_id, current);
   }
+  for (const task of overdueTasks) {
+    const current = tasksByWedding.get(task.wedding_id);
+    if (current) current.overdue += 1;
+  }
 
   const weddingItems: WeddingItem[] = weddings.map((wedding) => {
-    const counts = tasksByWedding.get(wedding.id) ?? { total: 0, done: 0 };
+    const counts = tasksByWedding.get(wedding.id) ?? { total: 0, done: 0, overdue: 0 };
     return {
       id: wedding.slug,
       name: wedding.couple_name,
@@ -797,6 +845,9 @@ export const getEmployeeDashboardView = cache(async (): Promise<DashboardViewMod
       daysLeft: daysUntil(wedding.wedding_date),
       tasksDone: counts.done,
       tasksTotal: counts.total,
+      tasksOverdue: counts.overdue,
+      budgetSpentPaise: wedding.spent_budget_paise,
+      budgetTotalPaise: wedding.total_budget_paise,
       status: buildStatusFromWedding(wedding),
     };
   });
@@ -869,7 +920,7 @@ export const getEmployeeDashboardView = cache(async (): Promise<DashboardViewMod
         id: "tasks-overdue",
         title: "Overdue Tasks",
         value: String(overdueTasks.length),
-        helperText: "Across all accessible weddings",
+        helperText: "Across all weddings",
         progress: scopedTasks.length > 0 ? Math.round((overdueTasks.length / scopedTasks.length) * 100) : 0,
       },
     ],
@@ -888,6 +939,16 @@ export const getEmployeeDashboardView = cache(async (): Promise<DashboardViewMod
     urgentTasks,
     weeklyCompletion,
     recentActivity,
+    aiInsights: overdueTasks.length > 0
+      ? [{
+          id: "tasks-overdue",
+          variant: "task" as const,
+          title: `${overdueTasks.length} ${overdueTasks.length === 1 ? "task is" : "tasks are"} overdue`,
+          description: "Across your assigned weddings",
+          ctaLabel: "View tasks",
+          ctaHref: "/app/employee/tasks",
+        }]
+      : [],
   };
 });
 

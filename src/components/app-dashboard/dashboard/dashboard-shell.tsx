@@ -17,7 +17,7 @@ export function DashboardShell({ sidebar, topbar, children }: DashboardShellProp
           <SidebarTrigger className="-ml-1" />
           <div className="min-w-0 flex-1">{topbar}</div>
         </header>
-        <main className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">{children}</main>
+        <main className="min-h-0 flex-1 overflow-y-auto bg-muted/90 px-4 py-5 sm:px-6 sm:py-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );

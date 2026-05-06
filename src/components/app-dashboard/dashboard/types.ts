@@ -22,6 +22,9 @@ export type WeddingItem = {
   daysLeft: number;
   tasksDone: number;
   tasksTotal: number;
+  tasksOverdue: number;
+  budgetSpentPaise: number;
+  budgetTotalPaise: number;
   status: WeddingStatus;
 };
 
@@ -56,6 +59,22 @@ export type RecentActivityItem = {
   time: string;
 };
 
+export type AiInsight = {
+  id: string;
+  variant: "risk" | "budget" | "vendor" | "task";
+  title: string;
+  description: string;
+  ctaLabel: string;
+  ctaHref?: string;
+};
+
+export type FinancialSnapshot = {
+  totalBudgetPaise: number;
+  totalSpendPaise: number;
+  committedPaise: number;
+  utilizationPct: number;
+};
+
 export type DashboardViewModel = {
   greeting: string;
   workspaceName: string;
@@ -67,4 +86,6 @@ export type DashboardViewModel = {
   urgentTasks: UrgentTaskItem[];
   weeklyCompletion: WeeklyCompletionDay[];
   recentActivity: RecentActivityItem[];
+  aiInsights: AiInsight[];
+  financialSnapshot: FinancialSnapshot;
 };

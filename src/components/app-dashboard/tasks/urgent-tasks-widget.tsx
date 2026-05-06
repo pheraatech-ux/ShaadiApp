@@ -1,143 +1,97 @@
-import { Calendar } from "lucide-react";
+import { AlertTriangle, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
-import { SectionCard } from "@/components/app-dashboard/dashboard/section-card";
 import { UrgentTaskItem } from "@/components/app-dashboard/dashboard/types";
-import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type UrgentTasksWidgetProps = {
   items: UrgentTaskItem[];
-  /** Base route for the global tasks list (planner vs employee). */
   allTasksHref?: string;
-  /** When set (e.g. marketing preview), no links or navigation. */
   disableNavigation?: boolean;
 };
-
-function hasSpotlightData(item: UrgentTaskItem) {
-  return item.dueDateLabel != null && item.daysOverdue != null;
-}
 
 export function UrgentTasksWidget({
   items,
   allTasksHref = "/app/tasks",
   disableNavigation = false,
 }: UrgentTasksWidgetProps) {
-  const allTasksCta = disableNavigation ? (
-    <span
-      className={cn(
-        buttonVariants({ variant: "ghost", size: "sm" }),
-        "inline-flex items-center justify-center rounded-xl",
-      )}
-    >
-      All tasks
-    </span>
-  ) : (
-    <Link
-      href={allTasksHref}
-      className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "rounded-xl")}
-    >
-      All tasks
-    </Link>
-  );
   return (
-    <SectionCard
-      title="Urgent tasks"
-      action={allTasksCta}
-    >
-      <div className="space-y-3">
+    <div className="flex h-full flex-col rounded-2xl border border-border/70 bg-card shadow-sm">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/70 px-4 py-1.5 sm:px-5">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="size-3.5 text-amber-500" aria-hidden />
+          <p className="text-sm font-semibold text-foreground">Overdue tasks</p>
+        </div>
+        {disableNavigation ? (
+          <span className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "rounded-xl")}>
+            View all tasks
+          </span>
+        ) : (
+          <Link href={allTasksHref} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "rounded-xl")}>
+            View all tasks
+          </Link>
+        )}
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-3 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items.length === 0 ? (
-          <p className="rounded-2xl border border-border/70 bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
+          <p className="rounded-xl border border-border/70 bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
             No overdue tasks. You&apos;re all caught up.
           </p>
         ) : (
-          items.map((item) =>
-            hasSpotlightData(item) ? (
-              <article
-                key={item.id}
-                className="flex overflow-hidden rounded-2xl border border-border/80 bg-muted/15 shadow-sm dark:bg-muted/25"
-              >
-                <div className="w-1 shrink-0 bg-destructive" aria-hidden />
-                <div className="min-w-0 flex-1 px-4 py-4 sm:px-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="size-2 shrink-0 rounded-full bg-destructive" aria-hidden />
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        Needs attention now
-                      </span>
-                    </div>
-                    <Badge
-                      variant="destructive"
-                      className="shrink-0 rounded-full border-0 bg-destructive/20 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-destructive dark:bg-destructive/25 dark:text-red-200"
-                    >
-                      Overdue
-                    </Badge>
-                  </div>
+          items.map((item) => {
+            const isOverdue = item.daysOverdue != null && item.daysOverdue > 0;
+            const isDueSoon = !isOverdue && !!item.overdueLabel;
 
-                  <h3 className="mt-3 text-base font-semibold leading-snug text-foreground sm:text-lg">
+            const rowContent = (
+              <>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold leading-tight text-foreground">
                     {item.title}
-                  </h3>
-
-                  <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                      <Calendar className="size-3.5 shrink-0 opacity-70" aria-hidden />
-                      <span className="min-w-0">
-                        <span className="text-foreground/90">{item.coupleName}</span>
-                        <span className="text-muted-foreground"> · {item.contextLabel}</span>
-                      </span>
-                      <span>
-                        Due {item.dueDateLabel}
-                        {" — "}
-                        <span className="font-medium text-destructive">
-                          {item.daysOverdue} {item.daysOverdue === 1 ? "day" : "days"} overdue
-                        </span>
-                      </span>
-                      {item.commentCount != null && item.commentCount > 0 ? (
-                        <>
-                          <span className="text-border">·</span>
-                          <span>
-                            {item.commentCount} {item.commentCount === 1 ? "comment" : "comments"}
-                          </span>
-                        </>
-                      ) : null}
-                    </div>
-
-                    {item.taskHref && !disableNavigation ? (
-                      <Link
-                        href={item.taskHref}
-                        className="shrink-0 text-sm font-medium text-primary hover:underline"
-                      >
-                        View task →
-                      </Link>
-                    ) : null}
-                  </div>
-                </div>
-              </article>
-            ) : (
-              <div
-                key={item.id}
-                className={cn(
-                  "rounded-2xl border border-border/70 px-4 py-3",
-                  item.completed && "bg-muted/40",
-                )}
-              >
-                <p
-                  className={cn(
-                    "text-sm",
-                    item.completed && "text-muted-foreground line-through",
+                  </p>
+                  {(item.coupleName || item.contextLabel) && (
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {[item.coupleName, item.contextLabel].filter(Boolean).join(" • ")}
+                    </p>
                   )}
-                >
-                  {item.title}
-                </p>
-                {item.overdueLabel ? (
-                  <p className="mt-1 text-xs text-destructive">{item.overdueLabel}</p>
-                ) : null}
+                </div>
+
+                {item.dueDateLabel && (
+                  <div className="shrink-0 text-right">
+                    <p className="text-xs text-muted-foreground">Due {item.dueDateLabel}</p>
+                    {isOverdue && (
+                      <p className="mt-0.5 text-xs font-medium text-destructive">
+                        {item.daysOverdue} {item.daysOverdue === 1 ? "day" : "days"} overdue
+                      </p>
+                    )}
+                    {isDueSoon && item.overdueLabel && (
+                      <p className="mt-0.5 text-xs font-medium text-amber-500">{item.overdueLabel}</p>
+                    )}
+                  </div>
+                )}
+
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" aria-hidden />
+              </>
+            );
+
+            const rowClass = cn(
+              "flex shrink-0 items-center gap-3 rounded-xl border border-border/70 bg-muted/15 px-4 py-3 dark:bg-muted/25",
+              item.taskHref && !disableNavigation && "transition-colors hover:bg-muted/30",
+            );
+
+            return item.taskHref && !disableNavigation ? (
+              <Link key={item.id} href={item.taskHref} className={rowClass}>
+                {rowContent}
+              </Link>
+            ) : (
+              <div key={item.id} className={rowClass}>
+                {rowContent}
               </div>
-            ),
-          )
+            );
+          })
         )}
       </div>
-    </SectionCard>
+    </div>
   );
 }
