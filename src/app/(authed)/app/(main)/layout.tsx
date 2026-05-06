@@ -17,10 +17,10 @@ export default async function MainAppShellLayout({ children }: { children: React
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const userId = user?.id ?? "";
+  const userId = user?.id ?? null;
   const [userToken, publicKey] = userId
     ? await Promise.all([generateKnockUserToken(userId), Promise.resolve(getKnockPublicKey())])
-    : [undefined, ""];
+    : [undefined, undefined];
 
   return (
     <KnockClientProvider userId={userId} userToken={userToken} apiKey={publicKey}>

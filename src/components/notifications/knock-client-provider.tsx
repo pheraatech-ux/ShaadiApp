@@ -11,6 +11,8 @@ type KnockClientProviderProps = {
 };
 
 export function KnockClientProvider({ userId, userToken, apiKey, children }: KnockClientProviderProps) {
+  if (!userId || !apiKey) return <>{children}</>;
+
   return (
     <KnockProvider
       apiKey={apiKey}

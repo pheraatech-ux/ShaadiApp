@@ -1,7 +1,21 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { KnockFeedProvider, NotificationIconButton, NotificationFeedPopover } from "@knocklabs/react";
+import { useEffect, useRef, useState } from "react";
+import {
+  KnockFeedProvider,
+  NotificationIconButton,
+  NotificationFeedPopover,
+  useKnockFeed,
+} from "@knocklabs/react";
+
+function FeedListener() {
+  const { feedClient } = useKnockFeed();
+  useEffect(() => {
+    feedClient.listenForUpdates();
+    return () => feedClient.teardown();
+  }, [feedClient]);
+  return null;
+}
 
 type NotificationBellProps = {
   feedChannelId: string;
@@ -13,6 +27,7 @@ export function NotificationBell({ feedChannelId }: NotificationBellProps) {
 
   return (
     <KnockFeedProvider feedId={feedChannelId}>
+      <FeedListener />
       <NotificationIconButton
         ref={buttonRef}
         onClick={() => setIsOpen((prev) => !prev)}
