@@ -4,9 +4,9 @@ import { KnockProvider } from "@knocklabs/react";
 import "@knocklabs/react/dist/index.css";
 
 type KnockClientProviderProps = {
-  userId: string;
+  userId: string | null | undefined;
   userToken?: string | null;
-  apiKey: string;
+  apiKey: string | null | undefined;
   children: React.ReactNode;
 };
 
