@@ -45,7 +45,8 @@
       "PowerShell($bytes = [System.IO.File]::ReadAllBytes\\(\"C:\\\\Users\\\\sandy\\\\Downloads\\\\ShaadiApp\\\\src\\\\types\\\\database.ts\"\\); \"First 4 bytes: $\\($bytes[0..3] -join ', '\\)\"; \"File length: $\\($bytes.Length\\)\")",
       "PowerShell(cd \"C:\\\\Users\\\\sandy\\\\Downloads\\\\ShaadiApp\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -notmatch \"\\\\.next\" -and $_ -ne \"\" } | Select-Object -First 20)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\sandy\\\\Downloads\\\\ShaadiApp\" -Recurse -Filter \"*dashboard*\" -ErrorAction SilentlyContinue)",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "Bash(git commit *)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookHeart, ClipboardList, LayoutGrid, MessageSquare, Users, Wallet } from "lucide-react";
+import { BookHeart, CalendarDays, ClipboardList, LayoutGrid, MessageSquare, Users, Wallet } from "lucide-react";
 import { ComponentType } from "react";
 
 import { SidebarProfileMenu } from "@/components/app-dashboard/dashboard/sidebar-profile-menu";
@@ -53,6 +53,7 @@ export function AppSidebar({
     { label: "All Weddings", href: `${basePath}/weddings`, icon: BookHeart, badgeCount: counts.weddings },
     ...(!hideTeamTab ? [{ label: "Teams", href: `${basePath}/team`, icon: Users, badgeCount: counts.team } as SidebarItem] : []),
     { label: "Tasks", href: `${basePath}/tasks`, icon: ClipboardList },
+    { label: "Calendar", href: `${basePath}/calendar`, icon: CalendarDays },
     { label: "Messages", href: `${basePath}/messages`, icon: MessageSquare },
   ];
   if (!hideBudgetTab) {
@@ -93,6 +94,8 @@ export function AppSidebar({
                   ? "onborda-nav-budget"
                   : item.label === "Teams"
                   ? "onborda-nav-teams"
+                  : item.label === "Calendar"
+                  ? "onborda-nav-calendar"
                   : undefined;
 
                 return (

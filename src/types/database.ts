@@ -91,6 +91,66 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          description: string | null
+          start_at: string
+          end_at: string | null
+          all_day: boolean
+          color: string | null
+          wedding_id: string | null
+          event_type: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          description?: string | null
+          start_at: string
+          end_at?: string | null
+          all_day?: boolean
+          color?: string | null
+          wedding_id?: string | null
+          event_type?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          description?: string | null
+          start_at?: string
+          end_at?: string | null
+          all_day?: boolean
+          color?: string | null
+          wedding_id?: string | null
+          event_type?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       budget_expenses: {
         Row: {
           amount_paise: number
