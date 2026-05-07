@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { LayoutGrid, List, Plus, Search, SlidersHorizontal } from "lucide-react";
+import { LayoutGrid, List, Plus, Search } from "lucide-react";
 
-import { AppPageHeader } from "@/components/app-dashboard/dashboard/app-page-header";
 import { AddWeddingFlowDialog } from "@/components/app-dashboard/dashboard/add-wedding-flow-dialog";
 import { AllWeddingsCardView } from "@/components/app-dashboard/all-weddings/all-weddings-card-view";
 import { AllWeddingsListView } from "@/components/app-dashboard/all-weddings/all-weddings-list-view";
@@ -75,31 +74,7 @@ export function AllWeddingsPage({
 
   return (
     <div className="space-y-5">
-      <AppPageHeader
-        title="All weddings"
-        description={
-          <>
-            Free plan: <span className="font-medium text-foreground">{initialData.usedSlots}</span> of{" "}
-            <span className="font-medium text-foreground">{initialData.planCap}</span> weddings used.
-            {slotsLeft > 0 ? ` ${slotsLeft} more slot${slotsLeft > 1 ? "s" : ""} remaining.` : " Upgrade for more slots."}
-          </>
-        }
-        actions={
-          canCreateWedding ? (
-          <>
-            <Button variant="outline" size="sm" className="rounded-xl">
-              <SlidersHorizontal />
-              Filter
-            </Button>
-            <Button size="sm" className="rounded-xl" onClick={() => setOpenCreateDialog(true)}>
-              <Plus />
-              New wedding
-            </Button>
-          </>
-          ) : undefined
-        }
-      />
-
+      <div className="space-y-1.5">
       <div className="flex flex-col gap-2 rounded-2xl border border-border/70 bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
           <div className="relative w-full sm:max-w-sm">
@@ -113,7 +88,9 @@ export function AllWeddingsPage({
           </div>
           <Select value={sortBy} onValueChange={(value) => setSortBy(value as AllWeddingsSort)}>
             <SelectTrigger className="h-9 w-full rounded-xl sm:w-[180px]">
-              <SelectValue />
+              <SelectValue>
+                {sortBy === "date-latest" ? "Date (latest first)" : sortBy === "date-earliest" ? "Date (earliest first)" : "Name (A–Z)"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="date-latest">Date (latest first)</SelectItem>
@@ -123,26 +100,41 @@ export function AllWeddingsPage({
           </Select>
         </div>
 
-        <div className="flex items-center gap-1 self-end rounded-lg border border-border/70 p-1 sm:self-auto">
-          <Button
-            variant={viewMode === "cards" ? "secondary" : "ghost"}
-            size="icon-sm"
-            className="rounded-md"
-            onClick={() => setViewMode("cards")}
-            aria-label="Cards view"
-          >
-            <LayoutGrid className="size-4" />
-          </Button>
-          <Button
-            variant={viewMode === "list" ? "secondary" : "ghost"}
-            size="icon-sm"
-            className="rounded-md"
-            onClick={() => setViewMode("list")}
-            aria-label="List view"
-          >
-            <List className="size-4" />
-          </Button>
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          {canCreateWedding && (
+            <Button size="sm" className="rounded-xl" onClick={() => setOpenCreateDialog(true)}>
+              <Plus />
+              New wedding
+            </Button>
+          )}
+          <div className="flex items-center gap-1 rounded-lg border border-border/70 p-1">
+            <Button
+              variant={viewMode === "cards" ? "secondary" : "ghost"}
+              size="icon-sm"
+              className="rounded-md"
+              onClick={() => setViewMode("cards")}
+              aria-label="Cards view"
+            >
+              <LayoutGrid className="size-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "secondary" : "ghost"}
+              size="icon-sm"
+              className="rounded-md"
+              onClick={() => setViewMode("list")}
+              aria-label="List view"
+            >
+              <List className="size-4" />
+            </Button>
+          </div>
         </div>
+      </div>
+
+      <p className="px-1 text-xs text-muted-foreground">
+        Free plan: <span className="font-medium text-foreground">{initialData.usedSlots}</span> of{" "}
+        <span className="font-medium text-foreground">{initialData.planCap}</span> weddings used.
+        {slotsLeft > 0 ? ` ${slotsLeft} more slot${slotsLeft > 1 ? "s" : ""} remaining.` : " Upgrade for more slots."}
+      </p>
       </div>
 
       <div className="flex w-fit gap-0.5 rounded-lg bg-muted/60 p-0.5">

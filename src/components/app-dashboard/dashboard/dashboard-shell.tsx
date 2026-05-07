@@ -1,4 +1,8 @@
+"use client";
+
 import { ReactNode } from "react";
+import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
+import "overlayscrollbars/overlayscrollbars.css";
 
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
@@ -17,7 +21,17 @@ export function DashboardShell({ sidebar, topbar, children }: DashboardShellProp
           <SidebarTrigger className="-ml-1" />
           <div className="min-w-0 flex-1">{topbar}</div>
         </header>
-        <main className="min-h-0 flex-1 overflow-y-auto bg-muted/90 px-4 py-5 sm:px-6 sm:py-6">{children}</main>
+        <OverlayScrollbarsComponent
+          element="main"
+          className="min-h-0 flex-1 bg-muted/90"
+          options={{
+            overflow: { x: "hidden", y: "scroll" },
+            scrollbars: { theme: "os-theme-dark", autoHide: "scroll", autoHideSuspend: true, clickScroll: true },
+          }}
+          defer
+        >
+          <div className="px-4 py-5 sm:px-6 sm:py-6">{children}</div>
+        </OverlayScrollbarsComponent>
       </SidebarInset>
     </SidebarProvider>
   );

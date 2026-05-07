@@ -31,9 +31,13 @@ export async function DashboardContent() {
         </div>
         <StatsGrid items={data.stats} variant="bar" className="flex-1" />
       </div>
-      <div className="grid h-[380px] items-stretch gap-4 lg:grid-cols-2">
-        <UrgentTasksWidget items={data.urgentTasks} />
-        <AiInsightsWidget insights={data.aiInsights} />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="h-[400px]">
+          <UrgentTasksWidget items={data.urgentTasks} />
+        </div>
+        <div className="h-[400px]">
+          <AiInsightsWidget insights={data.aiInsights} />
+        </div>
       </div>
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
         <div className="h-[340px]">

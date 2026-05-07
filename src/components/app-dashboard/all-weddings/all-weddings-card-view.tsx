@@ -1,5 +1,6 @@
 "use client";
 
+import { Calendar, MapPin } from "lucide-react";
 import Link from "next/link";
 
 import type { AllWeddingRow } from "@/components/app-dashboard/all-weddings/types";
@@ -52,7 +53,8 @@ export function AllWeddingsCardView({ items, basePath = "/app" }: AllWeddingsCar
                   </Avatar>
                   <div className="min-w-0">
                     <p className="truncate text-base font-semibold">{item.coupleName}</p>
-                    <p className="truncate text-xs text-muted-foreground">
+                    <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+                      <MapPin className="size-3 shrink-0" />
                       {item.venueName}, {item.city}
                     </p>
                   </div>
@@ -67,8 +69,9 @@ export function AllWeddingsCardView({ items, basePath = "/app" }: AllWeddingsCar
                   {item.stage === "completed" ? "Done" : item.daysAway}
                   {item.stage === "completed" ? "" : <span className="ml-1 text-sm font-medium text-muted-foreground">days</span>}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {item.stage === "completed" ? item.dateLabel : `${item.dateLabel} wedding date`}
+                <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Calendar className="size-3 shrink-0" />
+                  {item.dateLabel}
                 </p>
               </div>
 

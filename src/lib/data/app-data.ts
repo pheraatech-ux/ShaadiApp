@@ -384,14 +384,13 @@ function buildUrgentTaskItems(
     if (!b.due_date) return -1;
     return a.due_date.localeCompare(b.due_date);
   });
-  const sliced = sorted.slice(0, 5);
-  if (!sliced.length) return [];
+  if (!sorted.length) return [];
 
   const weddingById = new Map(weddings.map((w) => [w.id, w]));
   const today = new Date();
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-  return sliced.map((task) => {
+  return sorted.map((task) => {
     const wedding = weddingById.get(task.wedding_id);
     const slug = wedding?.slug ?? "";
     const coupleName = wedding?.couple_name ?? "Wedding";
@@ -1233,7 +1232,6 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
               .from("tasks")
               .select("id, assignee_user_id, status, due_date")
               .in("wedding_id", weddingIds)
-              .in("assignee_user_id", weddingAndTaskUserIds)
           : Promise.resolve({
               data: [] as {
                 id: string;
@@ -1367,12 +1365,22 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
     const totalOverdue = teamMembers.reduce((sum, member) => sum + member.overdueTasks, 0);
     const completionPercent = totalTasks > 0 ? Math.round((totalDone / totalTasks) * 100) : 0;
 
+    const in7DaysStr = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+    const upcomingCount = tasks.filter(t => t.status !== "done" && t.due_date && t.due_date >= today && t.due_date <= in7DaysStr).length;
+    const criticalCount = tasks.filter(t => t.status !== "done" && t.due_date && t.due_date < today).length;
+
+    const employeeUserIdSet = new Set(linkedUserIds);
+    const weddingsWithEmployees = new Set(
+      (weddingMemberRows ?? []).filter(r => r.user_id && employeeUserIdSet.has(r.user_id)).map(r => r.wedding_id),
+    );
+    const unassignedCount = weddingIds.filter(id => !weddingsWithEmployees.has(id)).length;
+
     return {
       workspaceLabel: "All staff across your business",
       kpis: [
         { id: "members", title: "Team members", value: String(teamMembers.length), helperText: "Company employees" },
-        { id: "overdue", title: "Overdue tasks (team)", value: String(totalOverdue), helperText: "Across assigned tasks" },
-        { id: "weddings", title: "Weddings covered", value: String(weddings.length), helperText: "Accessible to you" },
+        { id: "upcoming", title: "Upcoming load", value: String(upcomingCount), helperText: `Tasks due in 7 days · ${criticalCount} critical` },
+        { id: "unassigned", title: "Without assignees", value: String(unassignedCount), helperText: `Wedding${unassignedCount !== 1 ? "s" : ""} with no team assigned` },
         { id: "completion", title: "Avg task completion", value: `${completionPercent}%`, helperText: "Across all assigned tasks" },
       ],
       alertText:
@@ -1387,8 +1395,8 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
       workspaceLabel: "All staff across your business",
       kpis: [
         { id: "members", title: "Team members", value: "0", helperText: "No members added yet" },
-        { id: "overdue", title: "Overdue tasks (team)", value: "0", helperText: "No overdue tasks" },
-        { id: "weddings", title: "Weddings covered", value: "0", helperText: "Create your first wedding" },
+        { id: "upcoming", title: "Upcoming load", value: "0", helperText: "Tasks due in 7 days · 0 critical" },
+        { id: "unassigned", title: "Without assignees", value: "0", helperText: "No weddings yet" },
         { id: "completion", title: "Avg task completion", value: "0%", helperText: "No task history yet" },
       ],
       alertText: "No overdue team tasks right now.",
@@ -1488,12 +1496,21 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
   const totalOverdue = tasks.filter((task) => task.status !== "done" && task.due_date && task.due_date < today).length;
   const completionPercent = totalTasks > 0 ? Math.round((totalDone / totalTasks) * 100) : 0;
 
+  const in7DaysStr = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const upcomingCount = tasks.filter(t => t.status !== "done" && t.due_date && t.due_date >= today && t.due_date <= in7DaysStr).length;
+  const criticalCount = tasks.filter(t => t.status !== "done" && t.due_date && t.due_date < today).length;
+
+  const weddingsWithActiveMembers = new Set(
+    members.filter(m => m.user_id && m.user_id !== planner.userId && m.status === "active").map(m => m.wedding_id),
+  );
+  const unassignedCount = weddingIds.filter(id => !weddingsWithActiveMembers.has(id)).length;
+
   return {
     workspaceLabel: "All staff across your business",
     kpis: [
       { id: "members", title: "Team members", value: String(teamMembers.length), helperText: "Unique active members" },
-      { id: "overdue", title: "Overdue tasks (team)", value: String(totalOverdue), helperText: "Across assigned tasks" },
-      { id: "weddings", title: "Weddings covered", value: String(weddings.length), helperText: "Accessible to you" },
+      { id: "upcoming", title: "Upcoming load", value: String(upcomingCount), helperText: `Tasks due in 7 days · ${criticalCount} critical` },
+      { id: "unassigned", title: "Without assignees", value: String(unassignedCount), helperText: `Wedding${unassignedCount !== 1 ? "s" : ""} with no team assigned` },
       { id: "completion", title: "Avg task completion", value: `${completionPercent}%`, helperText: "Across all assigned tasks" },
     ],
     alertText:

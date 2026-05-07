@@ -4,13 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { AppPageHeader } from "@/components/app-dashboard/dashboard/app-page-header";
 import { TeamAlertBanner } from "@/components/app-dashboard/team/team-alert-banner";
 import { TeamMembersTable } from "@/components/app-dashboard/team/team-members-table";
 import { TeamSummaryCards } from "@/components/app-dashboard/team/team-summary-cards";
 import { TeamListPageViewModel } from "@/components/app-dashboard/team/team-types";
 import { InviteTeamMemberDialog } from "@/components/wedding-workspace/team/invite-team-member-dialog";
-import { Button } from "@/components/ui/button";
 
 type TeamPageViewProps = {
   view: TeamListPageViewModel;
@@ -54,15 +52,6 @@ export function TeamPageView({ view }: TeamPageViewProps) {
 
   return (
     <div className="space-y-5">
-      <AppPageHeader
-        title="Teams"
-        description={view.workspaceLabel}
-        actions={
-          <Button size="sm" className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-600/90" onClick={() => setInviteOpen(true)}>
-            + Invite team
-          </Button>
-        }
-      />
       <TeamSummaryCards cards={view.kpis} />
       <TeamAlertBanner message={view.alertText} />
       <TeamMembersTable

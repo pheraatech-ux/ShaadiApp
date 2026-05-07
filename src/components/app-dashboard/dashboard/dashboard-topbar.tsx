@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import { ReactNode } from "react";
 
 import { Input } from "@/components/ui/input";
+import { PageTitle } from "@/components/app-dashboard/dashboard/page-title";
 import { ThemeToggle } from "@/components/app-dashboard/dashboard/theme-toggle";
 
 type DashboardTopbarProps = {
@@ -17,7 +18,7 @@ export function DashboardTopbar({
 }: DashboardTopbarProps) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <h1 className="text-lg font-semibold tracking-tight sm:text-xl">Dashboard</h1>
+      <PageTitle />
       <div className="flex items-center gap-2 sm:gap-3">
         <div className="relative hidden w-full max-w-sm items-center sm:flex">
           <Search className="pointer-events-none absolute left-3 size-4 text-muted-foreground" />

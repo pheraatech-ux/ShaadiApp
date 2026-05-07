@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { Mail, Phone, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -21,8 +21,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-
 function RemoveMemberDescription({ member }: { member: TeamMemberSummary }) {
   const name = <strong className="font-semibold text-foreground">{member.name}</strong>;
   return member.employmentStatus === "invited" ? (
@@ -46,11 +44,6 @@ type TeamMembersTableProps = {
   onMessageMember?: (memberId: string) => Promise<void>;
 };
 
-const statusClassName: Record<TeamMemberSummary["status"], string> = {
-  online: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-100",
-  away: "bg-amber-500/20 text-amber-700 dark:text-amber-100",
-  offline: "bg-muted text-muted-foreground",
-};
 
 function memberIsCurrentUser(member: TeamMemberSummary, currentUserId: string) {
   return member.id === currentUserId || member.linkedUserId === currentUserId;
@@ -108,9 +101,6 @@ export function TeamMembersTable({
                   <th scope="col" className="w-[18%] px-4 py-3 text-center font-medium">
                     Tasks this month
                   </th>
-                  <th scope="col" className="w-[12%] px-4 py-3 text-center font-medium">
-                    Last active
-                  </th>
                   <th scope="col" className="w-[20%] px-4 py-3 text-center font-medium">
                     Actions
                   </th>
@@ -136,30 +126,30 @@ export function TeamMembersTable({
                     }}
                   >
                     <td className="px-4 py-5 align-middle text-left">
-                      <div className="flex min-w-0 items-start gap-3">
-                        <Avatar className="size-10 shrink-0 border border-border/70">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <Avatar className="size-11 shrink-0 border border-border/70">
                           <AvatarFallback className="text-xs font-semibold">{member.initials}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 max-w-[14rem] flex flex-col items-start gap-0.5 text-left">
-                          <p className="break-words text-sm font-semibold leading-snug">
-                            {member.name}
-                            {isYou ? (
-                              <span className="font-medium text-muted-foreground"> (You)</span>
-                            ) : null}
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="truncate text-sm font-semibold leading-snug">{member.name}</p>
+                            {isYou && <span className="shrink-0 text-xs font-medium text-muted-foreground">(You)</span>}
+                          </div>
                           <a
                             href={`mailto:${member.email}`}
-                            className="break-all text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                            className="flex items-center gap-1 break-all text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
                             onClick={(event) => event.stopPropagation()}
                           >
+                            <Mail className="size-3 shrink-0" />
                             {member.email}
                           </a>
                           {member.phone ? (
                             <a
                               href={`tel:${member.phone.replace(/[^\d+]/g, "")}`}
-                              className="break-all text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                              className="flex items-center gap-1 break-all text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
                               onClick={(event) => event.stopPropagation()}
                             >
+                              <Phone className="size-3 shrink-0" />
                               {member.phone}
                             </a>
                           ) : null}
@@ -197,13 +187,6 @@ export function TeamMembersTable({
                         {member.overdueTasks > 0 ? (
                           <p className="text-xs font-medium text-red-600 dark:text-red-300">{member.overdueTasks} overdue tasks</p>
                         ) : null}
-                      </div>
-                    </td>
-                    <td className="px-4 py-5 align-middle">
-                      <div className="flex min-w-0 flex-col items-center justify-center text-center">
-                        <span className={cn("rounded-full px-2 py-1 text-[10px] font-semibold", statusClassName[member.status])}>
-                          {member.lastActive}
-                        </span>
                       </div>
                     </td>
                     <td className="px-4 py-5 align-middle" onClick={(event) => event.stopPropagation()}>

@@ -1,5 +1,9 @@
+"use client";
+
 import { ChevronRight, Heart } from "lucide-react";
 import Link from "next/link";
+import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
+import "overlayscrollbars/overlayscrollbars.css";
 
 import { WeddingItem } from "@/components/app-dashboard/dashboard/types";
 import { buttonVariants } from "@/components/ui/button";
@@ -66,7 +70,16 @@ export function WeddingGlanceWidget({ items, basePath = "/app" }: WeddingGlanceW
       </div>
 
       {/* Rows */}
-      <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-3 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <OverlayScrollbarsComponent
+        element="div"
+        className="min-h-0 flex-1"
+        options={{
+          overflow: { x: "hidden", y: "scroll" },
+          scrollbars: { theme: "os-theme-dark", autoHide: "scroll", autoHideSuspend: true, clickScroll: true },
+        }}
+        defer
+      >
+        <div className="flex flex-col gap-1.5 px-3 py-3">
         {sorted.length === 0 ? (
           <p className="rounded-xl border border-border/70 bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
             No weddings yet.
@@ -116,7 +129,8 @@ export function WeddingGlanceWidget({ items, basePath = "/app" }: WeddingGlanceW
             </Link>
           ))
         )}
-      </div>
+        </div>
+      </OverlayScrollbarsComponent>
     </div>
   );
 }
