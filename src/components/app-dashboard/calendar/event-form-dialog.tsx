@@ -458,11 +458,19 @@ export function EventFormDialog({
 
             {/* Description */}
             <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">Description</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground">Description</p>
+                <p className={`text-xs tabular-nums ${description.trim().split(/\s+/).filter(Boolean).length > 250 ? "text-destructive" : "text-muted-foreground"}`}>
+                  {description.trim().split(/\s+/).filter(Boolean).length}/250 words
+                </p>
+              </div>
               <textarea
                 placeholder="Optional notes…"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  const words = e.target.value.trim().split(/\s+/).filter(Boolean);
+                  if (words.length <= 250) setDescription(e.target.value);
+                }}
                 rows={3}
                 className="w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />

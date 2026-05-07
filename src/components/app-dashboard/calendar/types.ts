@@ -84,3 +84,10 @@ export type CreateCalendarEventInput = {
 };
 
 export type UpdateCalendarEventInput = Partial<CreateCalendarEventInput>;
+
+export type AnyCalendarEvent =
+  | { source: "personal"; event: CalendarEventRow }
+  | { source: "attendee"; event: CalendarEventRow }
+  | { source: "wedding"; event: CalendarWeddingDate }
+  | { source: "ceremony"; event: CalendarCeremonyEvent }
+  | { source: "task"; event: CalendarTaskDeadline };

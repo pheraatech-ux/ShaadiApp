@@ -18,6 +18,7 @@ import type {
   CalendarCeremonyEvent,
   CalendarTaskDeadline,
   CalendarWeddingDate,
+  AnyCalendarEvent,
 } from "@/components/app-dashboard/calendar/types";
 
 type Props = {
@@ -26,7 +27,7 @@ type Props = {
   ceremonyEvents: CalendarCeremonyEvent[];
   taskDeadlines: CalendarTaskDeadline[];
   onSelectSlot: (date: string, time?: string) => void;
-  onEventClick: (event: CalendarEventRow) => void;
+  onEventClick: (event: AnyCalendarEvent, anchorEl: Element) => void;
   onEventDrop: (id: string, startAt: string, endAt: string | null) => void;
   onEventResize: (id: string, startAt: string, endAt: string) => void;
 };
@@ -75,7 +76,7 @@ export function CalendarView({
         backgroundColor: WEDDING_COLOR,
         borderColor: WEDDING_COLOR,
         editable: false,
-        extendedProps: { source: "wedding" },
+        extendedProps: { source: "wedding", raw: w },
       });
     }
 
@@ -91,7 +92,7 @@ export function CalendarView({
         backgroundColor: CEREMONY_COLOR,
         borderColor: CEREMONY_COLOR,
         editable: false,
-        extendedProps: { source: "ceremony" },
+        extendedProps: { source: "ceremony", raw: c },
       });
     }
 
@@ -104,7 +105,7 @@ export function CalendarView({
         backgroundColor: TASK_COLOR,
         borderColor: TASK_COLOR,
         editable: false,
-        extendedProps: { source: "task" },
+        extendedProps: { source: "task", raw: t },
       });
     }
 
@@ -135,10 +136,10 @@ export function CalendarView({
 
   const handleEventClick = useCallback(
     (arg: EventClickArg) => {
-      const source = arg.event.extendedProps.source as string;
-      if (source !== "personal" && source !== "attendee") return;
-      const raw = arg.event.extendedProps.raw as CalendarEventRow;
-      onEventClick(raw);
+      const source = arg.event.extendedProps.source as AnyCalendarEvent["source"];
+      const raw = arg.event.extendedProps.raw;
+      if (!raw) return;
+      onEventClick({ source, event: raw } as AnyCalendarEvent, arg.el);
     },
     [onEventClick],
   );

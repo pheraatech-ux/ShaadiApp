@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button";
 import { CalendarAiInput } from "@/components/app-dashboard/calendar/calendar-ai-input";
 import { CalendarView } from "@/components/app-dashboard/calendar/calendar-view";
 import { EventFormDialog } from "@/components/app-dashboard/calendar/event-form-dialog";
+import { EventDetailModal } from "@/components/app-dashboard/calendar/event-detail-modal";
 import {
   useCalendarQuery,
   useCreateCalendarEvent,
   useUpdateCalendarEvent,
   useDeleteCalendarEvent,
 } from "@/components/app-dashboard/calendar/use-calendar-query";
-import type { CalendarEventRow, CalendarViewModel } from "@/components/app-dashboard/calendar/types";
+import type { AnyCalendarEvent, CalendarEventRow, CalendarViewModel } from "@/components/app-dashboard/calendar/types";
 
 type Props = {
   view: CalendarViewModel;
@@ -29,9 +30,12 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
   const deleteEvent = useDeleteCalendarEvent();
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | undefined>();
   const [selectedTime, setSelectedTime] = useState<string | undefined>();
   const [editingEvent, setEditingEvent] = useState<CalendarEventRow | null>(null);
+  const [clickedEvent, setClickedEvent] = useState<AnyCalendarEvent | null>(null);
+  const [anchorEl, setAnchorEl] = useState<Element | null>(null);
 
   const isMutating = createEvent.isPending || updateEvent.isPending || deleteEvent.isPending;
 
@@ -55,12 +59,19 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
     setDialogOpen(true);
   }, []);
 
-  const handleEventClick = useCallback((event: CalendarEventRow) => {
-    setEditingEvent(event);
+  const handleEventClick = useCallback((anyEvent: AnyCalendarEvent, el: Element) => {
+    setClickedEvent(anyEvent);
+    setAnchorEl(el);
+    setDetailOpen(true);
+  }, []);
+
+  const handleDetailEdit = useCallback(() => {
+    if (!clickedEvent || (clickedEvent.source !== "personal" && clickedEvent.source !== "attendee")) return;
+    setEditingEvent(clickedEvent.event as CalendarEventRow);
     setSelectedDate(undefined);
     setSelectedTime(undefined);
     setDialogOpen(true);
-  }, []);
+  }, [clickedEvent]);
 
   const handleSave = useCallback(
     (data: Parameters<typeof createEvent.mutate>[0]) => {
@@ -80,6 +91,12 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
     if (!editingEvent) return;
     deleteEvent.mutate(editingEvent.id, { onSuccess: () => setDialogOpen(false) });
   }, [editingEvent, deleteEvent]);
+
+  const handleDetailDelete = useCallback(() => {
+    if (!clickedEvent || clickedEvent.source !== "personal") return;
+    const event = clickedEvent.event as CalendarEventRow;
+    deleteEvent.mutate(event.id, { onSuccess: () => setDetailOpen(false) });
+  }, [clickedEvent, deleteEvent]);
 
   const handleEventDrop = useCallback(
     (id: string, startAt: string, endAt: string | null) => {
@@ -160,6 +177,17 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
         onEventClick={handleEventClick}
         onEventDrop={handleEventDrop}
         onEventResize={handleEventResize}
+      />
+
+      <EventDetailModal
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        clickedEvent={clickedEvent}
+        anchorEl={anchorEl}
+        employees={view.employees}
+        onEdit={handleDetailEdit}
+        onDelete={handleDetailDelete}
+        isDeleting={deleteEvent.isPending}
       />
 
       <EventFormDialog
