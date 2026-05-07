@@ -70,7 +70,6 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       .from("calendar_events")
       .update(update)
       .eq("id", id)
-      .eq("user_id", user.id)
       .select()
       .single();
 
@@ -93,8 +92,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     const { error } = await supabase
       .from("calendar_events")
       .delete()
-      .eq("id", id)
-      .eq("user_id", user.id);
+      .eq("id", id);
 
     if (error) throw error;
     return NextResponse.json({ success: true });
