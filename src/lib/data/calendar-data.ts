@@ -2,7 +2,7 @@ import { cache } from "react";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPlannerContext, getAccessibleWeddingIds } from "@/lib/data/app-data";
-import type { CalendarViewModel } from "@/components/app-dashboard/calendar/types";
+import type { CalendarViewModel, CalendarVendorContext } from "@/components/app-dashboard/calendar/types";
 
 export const getCalendarView = cache(async (): Promise<CalendarViewModel> => {
   const [planner, weddingIds] = await Promise.all([
@@ -17,6 +17,7 @@ export const getCalendarView = cache(async (): Promise<CalendarViewModel> => {
     { data: ceremonyRows },
     { data: taskRows },
     { data: personalRows },
+    { data: vendorRows },
   ] = await Promise.all([
     supabase
       .from("weddings")
@@ -38,6 +39,10 @@ export const getCalendarView = cache(async (): Promise<CalendarViewModel> => {
       .select("*")
       .eq("user_id", planner.userId)
       .order("start_at", { ascending: true }),
+    supabase
+      .from("vendors")
+      .select("id, name, category, wedding_id")
+      .in("wedding_id", weddingIds.length ? weddingIds : ["__none__"]),
   ]);
 
   const weddingNameById = new Map(
@@ -90,6 +95,12 @@ export const getCalendarView = cache(async (): Promise<CalendarViewModel> => {
       id: w.id,
       slug: w.slug,
       name: w.couple_name,
+    })),
+    vendors: (vendorRows ?? []).map((v) => ({
+      id: v.id,
+      name: v.name,
+      category: v.category,
+      weddingName: weddingNameById.get(v.wedding_id) ?? "Wedding",
     })),
   };
 });

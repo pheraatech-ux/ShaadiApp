@@ -152,6 +152,44 @@ const TOOLS: Anthropic.Tool[] = [
       required: ["vendor_id"],
     },
   },
+  {
+    name: "create_calendar_event",
+    description:
+      "Create a new personal calendar event — for bookings, tastings, meetings, site visits, client calls, or any appointment the user wants to add to their calendar. Resolve relative dates using TODAY. Include the vendor name in the title when relevant.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Clear event title, e.g. 'Catering tasting — Tandoori Nights'" },
+        startAt: { type: "string", description: "ISO 8601 datetime, e.g. '2026-05-13T16:00:00'. Resolve relative dates using TODAY." },
+        endAt: { type: "string", description: "ISO 8601 end datetime (optional). Default 1 hour after start." },
+        allDay: { type: "boolean", description: "True only if no specific time given" },
+        description: { type: "string", description: "Notes — vendor name, location, any other relevant detail" },
+        color: {
+          type: "string",
+          description: "Hex color: #6366f1 meetings, #10b981 vendor tastings/trials, #3b82f6 client calls, #f59e0b deadlines, #ec4899 ceremonies",
+        },
+      },
+      required: ["title", "startAt", "allDay"],
+    },
+  },
+  {
+    name: "update_calendar_event",
+    description:
+      "Update an existing personal calendar event — reschedule, rename, add notes. Use event IDs from PERSONAL CALENDAR EVENTS. Only include fields to change.",
+    input_schema: {
+      type: "object",
+      properties: {
+        eventId: { type: "string", description: "ID of the event to update — from PERSONAL CALENDAR EVENTS list" },
+        title: { type: "string", description: "New title (optional)" },
+        startAt: { type: "string", description: "New ISO 8601 start datetime (optional). Resolve 'move by X hours' using the event's current startAt." },
+        endAt: { type: "string", description: "New ISO 8601 end datetime (optional)" },
+        allDay: { type: "boolean", description: "New all-day flag (optional)" },
+        description: { type: "string", description: "New description (optional)" },
+        color: { type: "string", description: "New hex color (optional)" },
+      },
+      required: ["eventId"],
+    },
+  },
 ];
 
 const SESSION_WINDOW = 30; // max messages loaded per session to control token cost
@@ -423,6 +461,69 @@ async function executeTool(
     return JSON.stringify({ success: true, action: "vendors" });
   }
 
+  if (toolName === "create_calendar_event") {
+    const input = toolInput as {
+      title: string;
+      startAt: string;
+      endAt?: string;
+      allDay: boolean;
+      description?: string;
+      color?: string;
+    };
+
+    const { error } = await supabase.from("calendar_events").insert({
+      user_id: userId,
+      title: input.title.trim(),
+      start_at: input.startAt,
+      end_at: input.endAt ?? null,
+      all_day: input.allDay ?? false,
+      description: input.description?.trim() || null,
+      color: input.color ?? null,
+      event_type: "personal",
+    });
+
+    if (error) return JSON.stringify({ success: false, error: error.message });
+    return JSON.stringify({ success: true, action: "calendar", title: input.title });
+  }
+
+  if (toolName === "update_calendar_event") {
+    const input = toolInput as {
+      eventId: string;
+      title?: string;
+      startAt?: string;
+      endAt?: string;
+      allDay?: boolean;
+      description?: string;
+      color?: string;
+    };
+
+    const updates: {
+      title?: string;
+      start_at?: string;
+      end_at?: string | null;
+      all_day?: boolean;
+      description?: string | null;
+      color?: string | null;
+      updated_at?: string;
+    } = { updated_at: new Date().toISOString() };
+
+    if (input.title !== undefined) updates.title = input.title.trim();
+    if (input.startAt !== undefined) updates.start_at = input.startAt;
+    if (input.endAt !== undefined) updates.end_at = input.endAt ?? null;
+    if (input.allDay !== undefined) updates.all_day = input.allDay;
+    if (input.description !== undefined) updates.description = input.description?.trim() || null;
+    if (input.color !== undefined) updates.color = input.color ?? null;
+
+    const { error } = await supabase
+      .from("calendar_events")
+      .update(updates)
+      .eq("id", input.eventId)
+      .eq("user_id", userId);
+
+    if (error) return JSON.stringify({ success: false, error: error.message });
+    return JSON.stringify({ success: true, action: "calendar" });
+  }
+
   return JSON.stringify({ error: `Unknown tool: ${toolName}` });
 }
 
@@ -453,7 +554,7 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const [{ data: eventsData }, { data: memberRows }] = await Promise.all([
+  const [{ data: eventsData }, { data: memberRows }, { data: calendarRows }] = await Promise.all([
     supabase
       .from("wedding_events")
       .select("id, title, event_date, culture_label")
@@ -464,6 +565,12 @@ export async function POST(
       .select("user_id, display_name, invited_email, role")
       .eq("wedding_id", summary.wedding.id)
       .eq("status", "active"),
+    supabase
+      .from("calendar_events")
+      .select("id, title, start_at, end_at, all_day")
+      .eq("user_id", user.id)
+      .order("start_at", { ascending: true })
+      .limit(50),
   ]);
 
   const events = (eventsData ?? []) as {
@@ -532,6 +639,11 @@ ${summary.tasks.slice(0, 20).map((t) => `- [id:${t.id}] [${t.status}] ${t.title}
 VENDORS (${summary.vendors.length}):
 ${summary.vendors.slice(0, 20).map((v) => `- [id:${v.id}] [${v.status}] ${v.name} (${v.category})`).join("\n") || "None yet"}
 
+PERSONAL CALENDAR EVENTS (${(calendarRows ?? []).length}) — use these IDs for update_calendar_event:
+${(calendarRows ?? []).length > 0
+  ? (calendarRows ?? []).map((e) => `- [id:${e.id}] "${e.title}" | ${e.start_at}${e.end_at ? ` → ${e.end_at}` : ""}${e.all_day ? " (all-day)" : ""}`).join("\n")
+  : "None yet"}
+
 BUDGET: ${formatINR(budgetTotal)} allocated, ${formatINR(budgetSpent)} spent, ${formatINR(budgetTotal - budgetSpent)} remaining
 DOCUMENTS: ${summary.documents.length} uploaded
 MESSAGES: ${summary.messages.length} on record
@@ -541,13 +653,15 @@ ${members.length > 0
   ? members.map((m) => `- ${m.name} [user_id: ${m.userId}]${m.role ? ` (${m.role})` : ""}`).join("\n")
   : "None yet"}
 
-You have seven actions available:
+You have nine actions available:
 - **create_task**: Adds a task to the wedding workspace. Before calling it, tell the user what you are creating. Resolve team member names to user IDs from the TEAM MEMBERS list.
 - **update_task**: Edits an existing task. Match the task by name from the TASKS list and use its id. Only send fields the user wants to change.
 - **create_event**: Adds an event or ceremony to the timeline. Confirm the title and date — if no date was given, ask for it first. Use the wedding's cultures for culture_label when relevant.
 - **update_event**: Edits an existing event. Match by name from the EVENTS/CEREMONIES list and use its id. Only send fields the user wants to change.
 - **add_vendor**: Saves a vendor to the wedding directory. **Before saving, always ensure you have at least one contact detail (phone, email, or website). If contact details are missing, first use web_search to find them, then add the vendor.** Extract all details from prior search results in your history — don't ask the user to repeat them.
 - **update_vendor**: Edits an existing vendor. Match by name from the VENDORS list and use its id. Only send fields the user wants to change.
+- **create_calendar_event**: Adds a personal calendar event — tastings, client meetings, site visits, bookings. Resolve relative dates using TODAY. Include vendor name in title when relevant.
+- **update_calendar_event**: Reschedules or edits a personal calendar event. Match by name from PERSONAL CALENDAR EVENTS and use its id. For "move by X hours", add X hours to the current startAt.
 - **web_search**: Searches the web for real-time information — vendor contacts, prices, services, availability, reviews. Tell the user what you are searching for before calling. Use specific queries including category, city, and budget when relevant.
 
 **Important — conversation continuity:** The full message history is available to you above, including the raw results of any previous searches. If the user asks a follow-up question about results already discussed (e.g. "find contact details for the top 2" after you listed dhol players), use the exact names and data from those prior search results — do not run a new search from scratch. Only call web_search when genuinely new information is needed.

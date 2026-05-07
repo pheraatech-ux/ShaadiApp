@@ -165,8 +165,8 @@ export function WorkspaceSidebar({
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  render={<Link href={`${appRoot}/calendar`} />}
-                  isActive={pathname === `${appRoot}/calendar` || pathname.startsWith(`${appRoot}/calendar/`)}
+                  render={<Link href={`${base}/calendar`} />}
+                  isActive={pathname === `${base}/calendar` || pathname.startsWith(`${base}/calendar/`)}
                   size="default"
                   tooltip="Calendar"
                   className="pl-2.5 h-9 before:-inset-y-2"

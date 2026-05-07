@@ -5,6 +5,7 @@ import { CalendarDays, CalendarCheck, ClipboardList, BookHeart, Plus } from "luc
 
 import { Button } from "@/components/ui/button";
 
+import { CalendarAiInput } from "@/components/app-dashboard/calendar/calendar-ai-input";
 import { CalendarView } from "@/components/app-dashboard/calendar/calendar-view";
 import { EventFormDialog } from "@/components/app-dashboard/calendar/event-form-dialog";
 import {
@@ -17,9 +18,10 @@ import type { CalendarEventRow, CalendarViewModel } from "@/components/app-dashb
 
 type Props = {
   view: CalendarViewModel;
+  showAiInput?: boolean;
 };
 
-export function CalendarWorkspace({ view }: Props) {
+export function CalendarWorkspace({ view, showAiInput = true }: Props) {
   const { data: personalEvents } = useCalendarQuery(view.personalEvents);
 
   const createEvent = useCreateCalendarEvent();
@@ -136,6 +138,14 @@ export function CalendarWorkspace({ view }: Props) {
           New Event
         </Button>
       </div>
+
+      {/* AI natural language input — hidden in workspace (chat modal handles it) */}
+      {showAiInput && <CalendarAiInput
+        existingEvents={personalEvents}
+        vendors={view.vendors}
+        onConfirmCreate={(input) => createEvent.mutate(input)}
+        onConfirmUpdate={(id, input) => updateEvent.mutate({ id, ...input })}
+      />}
 
       {/* Calendar */}
       <CalendarView

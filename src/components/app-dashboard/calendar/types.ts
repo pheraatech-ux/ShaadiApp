@@ -47,6 +47,14 @@ export type CalendarViewModel = {
   ceremonyEvents: CalendarCeremonyEvent[];
   taskDeadlines: CalendarTaskDeadline[];
   weddings: { id: string; slug: string; name: string }[];
+  vendors: CalendarVendorContext[];
+};
+
+export type CalendarVendorContext = {
+  id: string;
+  name: string;
+  category: string;
+  weddingName: string;
 };
 
 export type CreateCalendarEventInput = {

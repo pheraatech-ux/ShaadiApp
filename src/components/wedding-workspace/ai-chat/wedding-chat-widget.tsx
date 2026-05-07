@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { vendorsQueryKey } from "@/components/wedding-workspace/vendors/use-vendors-query";
 import { tasksQueryKey } from "@/components/wedding-workspace/tasks/use-tasks-query";
+import { calendarQueryKey } from "@/components/app-dashboard/calendar/use-calendar-query";
 
 type Session = {
   id: string;
@@ -142,6 +143,9 @@ function ChatPanel({ weddingSlug, sessionId, onFirstMessageSent }: ChatPanelProp
           }
           if (actions.includes("tasks")) {
             queryClient.invalidateQueries({ queryKey: tasksQueryKey(weddingSlug) });
+          }
+          if (actions.includes("calendar")) {
+            queryClient.invalidateQueries({ queryKey: calendarQueryKey() });
           }
           if (isFirstReply) {
             isFirstReply = false;
