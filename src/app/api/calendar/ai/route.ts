@@ -20,10 +20,23 @@ type VendorContext = {
   weddingName: string;
 };
 
+type EmployeeContext = {
+  id: string;
+  name: string;
+  role: string;
+};
+
+type WeddingContext = {
+  id: string;
+  name: string;
+};
+
 type RequestBody = {
   message: string;
   existingEvents: CalendarEventContext[];
   vendors: VendorContext[];
+  employees: EmployeeContext[];
+  weddings: WeddingContext[];
 };
 
 const CREATE_TOOL: Anthropic.Tool = {
@@ -45,11 +58,29 @@ const CREATE_TOOL: Anthropic.Tool = {
       allDay: { type: "boolean", description: "True only if no specific time is given" },
       description: {
         type: "string",
-        description: "Additional notes — include vendor name, location, any other details mentioned",
+        description: "Additional notes — include any extra context the user provided",
       },
       color: {
         type: "string",
         description: "Hex color. Use #6366f1 (violet) for meetings, #10b981 (emerald) for vendor tastings/trials, #3b82f6 (blue) for client calls, #f59e0b (amber) for deadlines, #ec4899 (pink) for ceremonies.",
+      },
+      location: {
+        type: "string",
+        description: "Physical location or address for the event, if the user mentions one (e.g. 'Tandoori Nights kitchen', '12 Baker Street')",
+      },
+      weddingId: {
+        type: "string",
+        description: "ID of the wedding this event is linked to. Resolve the wedding name the user mentions (e.g. 'Priya and Rahul's wedding') to an ID using the WEDDINGS list in the system prompt. Omit if the user doesn't reference a specific wedding.",
+      },
+      attendeeIds: {
+        type: "array",
+        items: { type: "string" },
+        description: "Array of employee IDs to invite. Resolve names to IDs using the EMPLOYEES list in the system prompt.",
+      },
+      guestEmails: {
+        type: "array",
+        items: { type: "string" },
+        description: "Email addresses of external guests, if the user mentions any specific email addresses.",
       },
     },
     required: ["title", "startAt", "allDay"],
@@ -73,6 +104,21 @@ const UPDATE_TOOL: Anthropic.Tool = {
       allDay: { type: "boolean", description: "New all-day flag (optional)" },
       description: { type: "string", description: "New description (optional)" },
       color: { type: "string", description: "New hex color (optional)" },
+      location: { type: "string", description: "New or updated location (optional)" },
+      weddingId: {
+        type: "string",
+        description: "New wedding link — resolve name to ID from WEDDINGS list (optional). Pass empty string to unlink.",
+      },
+      attendeeIds: {
+        type: "array",
+        items: { type: "string" },
+        description: "Updated attendee employee IDs. Resolve names to IDs from EMPLOYEES list. Replaces existing attendees entirely.",
+      },
+      guestEmails: {
+        type: "array",
+        items: { type: "string" },
+        description: "Updated guest email list. Replaces existing guest emails entirely.",
+      },
     },
     required: ["eventId"],
   },
@@ -82,6 +128,8 @@ function buildSystemPrompt(
   today: string,
   existingEvents: CalendarEventContext[],
   vendors: VendorContext[],
+  employees: EmployeeContext[],
+  weddings: WeddingContext[],
 ) {
   const eventsBlock =
     existingEvents.length > 0
@@ -95,6 +143,16 @@ function buildSystemPrompt(
       ? vendors.map((v) => `  - "${v.name}" (${v.category}, ${v.weddingName})`).join("\n")
       : "  (no vendors)";
 
+  const employeesBlock =
+    employees.length > 0
+      ? employees.map((e) => `  - ID: ${e.id} | ${e.name} (${e.role})`).join("\n")
+      : "  (no employees)";
+
+  const weddingsBlock =
+    weddings.length > 0
+      ? weddings.map((w) => `  - ID: ${w.id} | ${w.name}`).join("\n")
+      : "  (no weddings)";
+
   return `You are a smart calendar assistant for a wedding planner app. Parse the user's natural language message and call the appropriate tool.
 
 TODAY: ${today}
@@ -102,8 +160,14 @@ TODAY: ${today}
 EXISTING PERSONAL EVENTS:
 ${eventsBlock}
 
+WEDDINGS (resolve couple names to IDs for weddingId):
+${weddingsBlock}
+
 VENDORS (for name matching when user references a vendor):
 ${vendorsBlock}
+
+EMPLOYEES (resolve names to IDs for attendeeIds):
+${employeesBlock}
 
 RULES:
 - Always resolve relative dates (next Tuesday, tomorrow, in 3 days) using TODAY.
@@ -111,7 +175,10 @@ RULES:
 - For "move to [date/time]", set the new absolute datetime.
 - Match events by name fuzzy search — pick the closest match from EXISTING EVENTS.
 - Include the vendor name in the event title when the user mentions one (e.g. "Catering tasting — Tandoori Nights").
-- If the user mentions a location, include it in the description.
+- If the user mentions a specific wedding by the couple's name (e.g. "for Priya and Rahul's wedding"), set weddingId by matching against the WEDDINGS list.
+- If the user mentions a location or venue, set the location field.
+- If the user mentions inviting employees by name, resolve them to IDs from EMPLOYEES and set attendeeIds.
+- If the user mentions specific email addresses for guests, set guestEmails.
 - Default event duration is 1 hour unless specified.
 - Call exactly one tool per message. Do not explain yourself — just call the tool.`;
 }
@@ -123,14 +190,14 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
     const body = (await request.json()) as RequestBody;
-    const { message, existingEvents, vendors } = body;
+    const { message, existingEvents, vendors, employees = [], weddings = [] } = body;
 
     if (!message?.trim()) {
       return NextResponse.json({ error: "Message is required." }, { status: 400 });
     }
 
     const today = new Date().toISOString().slice(0, 10);
-    const systemPrompt = buildSystemPrompt(today, existingEvents, vendors);
+    const systemPrompt = buildSystemPrompt(today, existingEvents, vendors, employees, weddings);
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",

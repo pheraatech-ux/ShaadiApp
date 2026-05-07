@@ -58,6 +58,10 @@ export function useCreateCalendarEvent() {
         color: input.color ?? null,
         weddingId: input.weddingId ?? null,
         eventType: input.eventType ?? "personal",
+        location: input.location ?? null,
+        attendeeIds: input.attendeeIds ?? [],
+        guestEmails: input.guestEmails ?? [],
+        isAttendee: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

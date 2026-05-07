@@ -52,17 +52,33 @@ export function CalendarView({
     const items: EventInput[] = [];
 
     for (const e of personalEvents) {
-      items.push({
-        id: e.id,
-        title: e.title,
-        start: e.startAt,
-        end: e.endAt ?? undefined,
-        allDay: e.allDay,
-        backgroundColor: e.color ?? PERSONAL_COLOR,
-        borderColor: e.color ?? PERSONAL_COLOR,
-        editable: true,
-        extendedProps: { source: "personal", raw: e },
-      });
+      if (e.isAttendee) {
+        items.push({
+          id: e.id,
+          title: e.title,
+          start: e.startAt,
+          end: e.endAt ?? undefined,
+          allDay: e.allDay,
+          backgroundColor: (e.color ?? PERSONAL_COLOR) + "80",
+          borderColor: e.color ?? PERSONAL_COLOR,
+          textColor: "#ffffff",
+          editable: false,
+          classNames: ["fc-attendee-event"],
+          extendedProps: { source: "attendee", raw: e },
+        });
+      } else {
+        items.push({
+          id: e.id,
+          title: e.title,
+          start: e.startAt,
+          end: e.endAt ?? undefined,
+          allDay: e.allDay,
+          backgroundColor: e.color ?? PERSONAL_COLOR,
+          borderColor: e.color ?? PERSONAL_COLOR,
+          editable: true,
+          extendedProps: { source: "personal", raw: e },
+        });
+      }
     }
 
     for (const w of weddingDates) {
@@ -135,7 +151,7 @@ export function CalendarView({
   const handleEventClick = useCallback(
     (arg: EventClickArg) => {
       const source = arg.event.extendedProps.source as string;
-      if (source !== "personal") return;
+      if (source !== "personal" && source !== "attendee") return;
       const raw = arg.event.extendedProps.raw as CalendarEventRow;
       onEventClick(raw);
     },

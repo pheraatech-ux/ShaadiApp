@@ -9,8 +9,13 @@ export type CalendarEventRow = {
   color: string | null;
   weddingId: string | null;
   eventType: string;
+  location: string | null;
+  attendeeIds: string[];
+  guestEmails: string[];
   createdAt: string;
   updatedAt: string;
+  /** True when the current user is an invitee, not the owner. Read-only on the calendar. */
+  isAttendee: boolean;
 };
 
 export type CalendarCeremonyEvent = {
@@ -40,6 +45,12 @@ export type CalendarWeddingDate = {
   date: string;
 };
 
+export type CalendarEmployee = {
+  id: string;
+  name: string;
+  role: string;
+};
+
 export type CalendarViewModel = {
   currentUserId: string;
   personalEvents: CalendarEventRow[];
@@ -48,6 +59,7 @@ export type CalendarViewModel = {
   taskDeadlines: CalendarTaskDeadline[];
   weddings: { id: string; slug: string; name: string }[];
   vendors: CalendarVendorContext[];
+  employees: CalendarEmployee[];
 };
 
 export type CalendarVendorContext = {
@@ -66,6 +78,9 @@ export type CreateCalendarEventInput = {
   color?: string | null;
   weddingId?: string | null;
   eventType?: string;
+  location?: string | null;
+  attendeeIds?: string[];
+  guestEmails?: string[];
 };
 
 export type UpdateCalendarEventInput = Partial<CreateCalendarEventInput>;

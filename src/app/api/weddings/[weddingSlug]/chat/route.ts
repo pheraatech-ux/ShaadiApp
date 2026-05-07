@@ -163,10 +163,28 @@ const TOOLS: Anthropic.Tool[] = [
         startAt: { type: "string", description: "ISO 8601 datetime, e.g. '2026-05-13T16:00:00'. Resolve relative dates using TODAY." },
         endAt: { type: "string", description: "ISO 8601 end datetime (optional). Default 1 hour after start." },
         allDay: { type: "boolean", description: "True only if no specific time given" },
-        description: { type: "string", description: "Notes — vendor name, location, any other relevant detail" },
+        description: { type: "string", description: "Additional notes about the event" },
         color: {
           type: "string",
           description: "Hex color: #6366f1 meetings, #10b981 vendor tastings/trials, #3b82f6 client calls, #f59e0b deadlines, #ec4899 ceremonies",
+        },
+        location: {
+          type: "string",
+          description: "Physical location or address for the event if mentioned (e.g. 'Tandoori Nights kitchen', 'venue address')",
+        },
+        weddingId: {
+          type: "string",
+          description: "ID of the wedding this event relates to. Use CURRENT_WEDDING_ID from the system prompt when the user refers to this wedding. Omit only if the event is explicitly unrelated to any wedding.",
+        },
+        attendeeIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Employee IDs to invite. Resolve names to IDs using the COMPANY EMPLOYEES list in the system prompt.",
+        },
+        guestEmails: {
+          type: "array",
+          items: { type: "string" },
+          description: "External guest email addresses if the user mentions any.",
         },
       },
       required: ["title", "startAt", "allDay"],
@@ -175,7 +193,7 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "update_calendar_event",
     description:
-      "Update an existing personal calendar event — reschedule, rename, add notes. Use event IDs from PERSONAL CALENDAR EVENTS. Only include fields to change.",
+      "Update an existing personal calendar event — reschedule, rename, add notes, change location or attendees. Use event IDs from PERSONAL CALENDAR EVENTS. Only include fields to change.",
     input_schema: {
       type: "object",
       properties: {
@@ -186,6 +204,21 @@ const TOOLS: Anthropic.Tool[] = [
         allDay: { type: "boolean", description: "New all-day flag (optional)" },
         description: { type: "string", description: "New description (optional)" },
         color: { type: "string", description: "New hex color (optional)" },
+        location: { type: "string", description: "New location (optional)" },
+        weddingId: {
+          type: "string",
+          description: "New wedding link — use CURRENT_WEDDING_ID from the system prompt (optional). Pass empty string to unlink.",
+        },
+        attendeeIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Updated attendee employee IDs. Replaces existing list. Resolve names from COMPANY EMPLOYEES.",
+        },
+        guestEmails: {
+          type: "array",
+          items: { type: "string" },
+          description: "Updated guest email list. Replaces existing list.",
+        },
       },
       required: ["eventId"],
     },
@@ -469,6 +502,10 @@ async function executeTool(
       allDay: boolean;
       description?: string;
       color?: string;
+      location?: string;
+      weddingId?: string;
+      attendeeIds?: string[];
+      guestEmails?: string[];
     };
 
     const { error } = await supabase.from("calendar_events").insert({
@@ -480,6 +517,10 @@ async function executeTool(
       description: input.description?.trim() || null,
       color: input.color ?? null,
       event_type: "personal",
+      location: input.location?.trim() || null,
+      wedding_id: input.weddingId || null,
+      attendee_ids: input.attendeeIds ?? [],
+      guest_emails: input.guestEmails ?? [],
     });
 
     if (error) return JSON.stringify({ success: false, error: error.message });
@@ -495,6 +536,10 @@ async function executeTool(
       allDay?: boolean;
       description?: string;
       color?: string;
+      location?: string;
+      weddingId?: string;
+      attendeeIds?: string[];
+      guestEmails?: string[];
     };
 
     const updates: {
@@ -504,6 +549,10 @@ async function executeTool(
       all_day?: boolean;
       description?: string | null;
       color?: string | null;
+      location?: string | null;
+      wedding_id?: string | null;
+      attendee_ids?: string[];
+      guest_emails?: string[];
       updated_at?: string;
     } = { updated_at: new Date().toISOString() };
 
@@ -513,6 +562,10 @@ async function executeTool(
     if (input.allDay !== undefined) updates.all_day = input.allDay;
     if (input.description !== undefined) updates.description = input.description?.trim() || null;
     if (input.color !== undefined) updates.color = input.color ?? null;
+    if (input.location !== undefined) updates.location = input.location?.trim() || null;
+    if (input.weddingId !== undefined) updates.wedding_id = input.weddingId || null;
+    if (input.attendeeIds !== undefined) updates.attendee_ids = input.attendeeIds;
+    if (input.guestEmails !== undefined) updates.guest_emails = input.guestEmails;
 
     const { error } = await supabase
       .from("calendar_events")
@@ -554,7 +607,7 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const [{ data: eventsData }, { data: memberRows }, { data: calendarRows }] = await Promise.all([
+  const [{ data: eventsData }, { data: memberRows }, { data: calendarRows }, { data: companyEmployeeRows }] = await Promise.all([
     supabase
       .from("wedding_events")
       .select("id, title, event_date, culture_label")
@@ -571,6 +624,11 @@ export async function POST(
       .eq("user_id", user.id)
       .order("start_at", { ascending: true })
       .limit(50),
+    supabase
+      .from("company_employees")
+      .select("id, name, role")
+      .eq("owner_user_id", user.id)
+      .order("name", { ascending: true }),
   ]);
 
   const events = (eventsData ?? []) as {
@@ -615,6 +673,7 @@ export async function POST(
   const systemPrompt = `You are a knowledgeable wedding planning assistant for ShaadiOS. You are helping plan the wedding for ${summary.wedding.couple_name}.
 
 TODAY: ${today} — use this as your reference for resolving relative dates like "tomorrow", "next week", etc.
+CURRENT_WEDDING_ID: ${summary.wedding.id} — use this as the weddingId when creating/updating calendar events that relate to this wedding.
 
 Here is the complete current state of this wedding:
 
@@ -642,6 +701,11 @@ ${summary.vendors.slice(0, 20).map((v) => `- [id:${v.id}] [${v.status}] ${v.name
 PERSONAL CALENDAR EVENTS (${(calendarRows ?? []).length}) — use these IDs for update_calendar_event:
 ${(calendarRows ?? []).length > 0
   ? (calendarRows ?? []).map((e) => `- [id:${e.id}] "${e.title}" | ${e.start_at}${e.end_at ? ` → ${e.end_at}` : ""}${e.all_day ? " (all-day)" : ""}`).join("\n")
+  : "None yet"}
+
+COMPANY EMPLOYEES (${(companyEmployeeRows ?? []).length}) — resolve names to IDs for attendeeIds:
+${(companyEmployeeRows ?? []).length > 0
+  ? (companyEmployeeRows ?? []).map((e) => `- [id:${e.id}] ${e.name} (${e.role})`).join("\n")
   : "None yet"}
 
 BUDGET: ${formatINR(budgetTotal)} allocated, ${formatINR(budgetSpent)} spent, ${formatINR(budgetTotal - budgetSpent)} remaining

@@ -5,7 +5,7 @@ import { Sparkles, Send, Check, X, CalendarPlus, Pencil, Loader2 } from "lucide-
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { CalendarEventRow, CalendarVendorContext, CreateCalendarEventInput, UpdateCalendarEventInput } from "@/components/app-dashboard/calendar/types";
+import type { CalendarEmployee, CalendarEventRow, CalendarVendorContext, CreateCalendarEventInput, UpdateCalendarEventInput } from "@/components/app-dashboard/calendar/types";
 
 type AiCreateInput = CreateCalendarEventInput;
 type AiUpdateInput = UpdateCalendarEventInput & { eventId: string };
@@ -14,9 +14,13 @@ type AiResult =
   | { action: "create"; input: AiCreateInput }
   | { action: "update"; input: AiUpdateInput };
 
+type WeddingContext = { id: string; name: string };
+
 type Props = {
   existingEvents: CalendarEventRow[];
   vendors: CalendarVendorContext[];
+  employees: CalendarEmployee[];
+  weddings: WeddingContext[];
   onConfirmCreate: (input: CreateCalendarEventInput) => void;
   onConfirmUpdate: (id: string, input: UpdateCalendarEventInput) => void;
 };
@@ -31,7 +35,7 @@ function formatPreviewDate(iso: string) {
   });
 }
 
-export function CalendarAiInput({ existingEvents, vendors, onConfirmCreate, onConfirmUpdate }: Props) {
+export function CalendarAiInput({ existingEvents, vendors, employees, weddings, onConfirmCreate, onConfirmUpdate }: Props) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +65,8 @@ export function CalendarAiInput({ existingEvents, vendors, onConfirmCreate, onCo
             allDay: e.allDay,
           })),
           vendors,
+          employees,
+          weddings,
         }),
       });
 

@@ -32,6 +32,7 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
   const [selectedDate, setSelectedDate] = useState<string | undefined>();
   const [selectedTime, setSelectedTime] = useState<string | undefined>();
   const [editingEvent, setEditingEvent] = useState<CalendarEventRow | null>(null);
+  const isReadOnly = editingEvent?.isAttendee ?? false;
 
   const isMutating = createEvent.isPending || updateEvent.isPending || deleteEvent.isPending;
 
@@ -129,6 +130,7 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
           <LegendDot color="#6366f1" label="Personal events" />
+          <LegendDot color="#6366f180" label="Invited" opacity />
           <LegendDot color="#10b981" label="Wedding days" />
           <LegendDot color="#ec4899" label="Ceremony events" />
           <LegendDot color="#f59e0b" label="Task deadlines" />
@@ -143,6 +145,8 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
       {showAiInput && <CalendarAiInput
         existingEvents={personalEvents}
         vendors={view.vendors}
+        employees={view.employees}
+        weddings={view.weddings.map((w) => ({ id: w.id, name: w.name }))}
         onConfirmCreate={(input) => createEvent.mutate(input)}
         onConfirmUpdate={(id, input) => updateEvent.mutate({ id, ...input })}
       />}
@@ -166,8 +170,10 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
         initialTime={selectedTime}
         event={editingEvent}
         weddings={view.weddings.map((w) => ({ id: w.id, name: w.name }))}
+        employees={view.employees}
+        readOnly={isReadOnly}
         onSave={handleSave}
-        onDelete={editingEvent ? handleDelete : undefined}
+        onDelete={!isReadOnly && editingEvent ? handleDelete : undefined}
         isSaving={isMutating}
       />
     </div>
@@ -197,10 +203,16 @@ function StatCard({
   );
 }
 
-function LegendDot({ color, label }: { color: string; label: string }) {
+function LegendDot({ color, label, opacity }: { color: string; label: string; opacity?: boolean }) {
   return (
     <span className="flex items-center gap-1.5">
-      <span className="size-2.5 rounded-full" style={{ backgroundColor: color }} />
+      <span
+        className="size-2.5 rounded-full border"
+        style={{
+          backgroundColor: opacity ? "#6366f180" : color,
+          borderColor: opacity ? "#6366f1" : color,
+        }}
+      />
       {label}
     </span>
   );

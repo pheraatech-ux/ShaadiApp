@@ -103,6 +103,9 @@ export type Database = {
           color: string | null
           wedding_id: string | null
           event_type: string
+          location: string | null
+          attendee_ids: string[]
+          guest_emails: string[]
           created_at: string
           updated_at: string
         }
@@ -117,6 +120,9 @@ export type Database = {
           color?: string | null
           wedding_id?: string | null
           event_type?: string
+          location?: string | null
+          attendee_ids?: string[]
+          guest_emails?: string[]
           created_at?: string
           updated_at?: string
         }
@@ -131,6 +137,9 @@ export type Database = {
           color?: string | null
           wedding_id?: string | null
           event_type?: string
+          location?: string | null
+          attendee_ids?: string[]
+          guest_emails?: string[]
           created_at?: string
           updated_at?: string
         }

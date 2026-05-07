@@ -5,6 +5,31 @@ import type { UpdateCalendarEventInput } from "@/components/app-dashboard/calend
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+function mapRow(r: {
+  id: string; user_id: string; title: string; description: string | null;
+  start_at: string; end_at: string | null; all_day: boolean; color: string | null;
+  wedding_id: string | null; event_type: string; location: string | null;
+  attendee_ids: string[]; guest_emails: string[]; created_at: string; updated_at: string;
+}) {
+  return {
+    id: r.id,
+    userId: r.user_id,
+    title: r.title,
+    description: r.description,
+    startAt: r.start_at,
+    endAt: r.end_at,
+    allDay: r.all_day,
+    color: r.color,
+    weddingId: r.wedding_id,
+    eventType: r.event_type,
+    location: r.location,
+    attendeeIds: r.attendee_ids ?? [],
+    guestEmails: r.guest_emails ?? [],
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
@@ -23,8 +48,12 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       color?: string | null;
       wedding_id?: string | null;
       event_type?: string;
+      location?: string | null;
+      attendee_ids?: string[];
+      guest_emails?: string[];
       updated_at?: string;
     } = { updated_at: new Date().toISOString() };
+
     if (body.title !== undefined) update.title = body.title.trim();
     if (body.description !== undefined) update.description = body.description;
     if (body.startAt !== undefined) update.start_at = body.startAt;
@@ -33,6 +62,9 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     if (body.color !== undefined) update.color = body.color;
     if (body.weddingId !== undefined) update.wedding_id = body.weddingId;
     if (body.eventType !== undefined) update.event_type = body.eventType;
+    if (body.location !== undefined) update.location = body.location;
+    if (body.attendeeIds !== undefined) update.attendee_ids = body.attendeeIds;
+    if (body.guestEmails !== undefined) update.guest_emails = body.guestEmails;
 
     const { data, error } = await supabase
       .from("calendar_events")
@@ -45,22 +77,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     if (error) throw error;
     if (!data) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
-    return NextResponse.json({
-      event: {
-        id: data.id,
-        userId: data.user_id,
-        title: data.title,
-        description: data.description,
-        startAt: data.start_at,
-        endAt: data.end_at,
-        allDay: data.all_day,
-        color: data.color,
-        weddingId: data.wedding_id,
-        eventType: data.event_type,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-      },
-    });
+    return NextResponse.json({ event: mapRow(data) });
   } catch {
     return NextResponse.json({ error: "Unable to update calendar event." }, { status: 500 });
   }
