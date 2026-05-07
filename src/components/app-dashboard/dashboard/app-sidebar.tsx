@@ -51,13 +51,13 @@ export function AppSidebar({
   const sidebarItems: SidebarItem[] = [
     { label: "Dashboard", href: `${basePath}/dashboard`, icon: LayoutGrid },
     { label: "All Weddings", href: `${basePath}/weddings`, icon: BookHeart, badgeCount: counts.weddings },
+    { label: "Calendar", href: `${basePath}/calendar`, icon: CalendarDays },
     ...(!hideTeamTab ? [{ label: "Teams", href: `${basePath}/team`, icon: Users, badgeCount: counts.team } as SidebarItem] : []),
     { label: "Tasks", href: `${basePath}/tasks`, icon: ClipboardList },
-    { label: "Calendar", href: `${basePath}/calendar`, icon: CalendarDays },
     { label: "Messages", href: `${basePath}/messages`, icon: MessageSquare },
   ];
   if (!hideBudgetTab) {
-    sidebarItems.splice(4, 0, { label: "Budget", href: `${basePath}/budget`, icon: Wallet });
+    sidebarItems.splice(5, 0, { label: "Budget", href: `${basePath}/budget`, icon: Wallet });
   }
 
   function isPathActive(href: string) {

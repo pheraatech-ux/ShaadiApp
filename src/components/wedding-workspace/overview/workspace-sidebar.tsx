@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
+import "overlayscrollbars/overlayscrollbars.css";
 import {
   BookHeart,
+  CalendarDays,
   CheckSquare,
   File,
   FileText,
@@ -120,7 +123,16 @@ export function WorkspaceSidebar({
           <p className="hidden text-sm font-semibold group-data-[collapsible=icon]:block">S</p>
         </div>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="overflow-hidden">
+        <OverlayScrollbarsComponent
+          element="div"
+          className="h-full"
+          options={{
+            overflow: { x: "hidden", y: "scroll" },
+            scrollbars: { theme: "os-theme-dark", autoHide: "never", clickScroll: true },
+          }}
+          defer
+        >
         <SidebarGroup>
           <SidebarGroupLabel>App</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -149,6 +161,18 @@ export function WorkspaceSidebar({
                 >
                   <BookHeart className="size-4 shrink-0" />
                   <span className="group-data-[collapsible=icon]:hidden">All Weddings</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={<Link href={`${appRoot}/calendar`} />}
+                  isActive={pathname === `${appRoot}/calendar` || pathname.startsWith(`${appRoot}/calendar/`)}
+                  size="default"
+                  tooltip="Calendar"
+                  className="pl-2.5 h-9 before:-inset-y-2"
+                >
+                  <CalendarDays className="size-4 shrink-0" />
+                  <span className="group-data-[collapsible=icon]:hidden">Calendar</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -213,6 +237,7 @@ export function WorkspaceSidebar({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        </OverlayScrollbarsComponent>
       </SidebarContent>
       <SidebarFooter>
         <SidebarProfileMenu userName={userName} userEmail={userEmail} />

@@ -154,6 +154,13 @@
   }
 }
 
+/* OverlayScrollbars: thinner scrollbar globally */
+html .os-theme-dark,
+html .os-theme-light {
+  --os-size: 7px !important;
+  --os-padding-perpendicular: 0px !important;
+}
+
 /* FullCalendar theme overrides */
 .calendar-wrapper .fc {
   font-size: 0.875rem;

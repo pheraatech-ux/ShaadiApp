@@ -46,7 +46,8 @@
       "PowerShell(cd \"C:\\\\Users\\\\sandy\\\\Downloads\\\\ShaadiApp\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -notmatch \"\\\\.next\" -and $_ -ne \"\" } | Select-Object -First 20)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\sandy\\\\Downloads\\\\ShaadiApp\" -Recurse -Filter \"*dashboard*\" -ErrorAction SilentlyContinue)",
       "Bash(Select-Object FullName)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(dir /b C:\\\\Users\\\\sandy\\\\Downloads\\\\ShaadiApp)"
     ]
   },
   "enableAllProjectMcpServers": true,
