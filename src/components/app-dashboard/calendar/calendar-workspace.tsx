@@ -32,7 +32,6 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
   const [selectedDate, setSelectedDate] = useState<string | undefined>();
   const [selectedTime, setSelectedTime] = useState<string | undefined>();
   const [editingEvent, setEditingEvent] = useState<CalendarEventRow | null>(null);
-  const isReadOnly = editingEvent?.isAttendee ?? false;
 
   const isMutating = createEvent.isPending || updateEvent.isPending || deleteEvent.isPending;
 
@@ -171,9 +170,8 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
         event={editingEvent}
         weddings={view.weddings.map((w) => ({ id: w.id, name: w.name }))}
         employees={view.employees}
-        readOnly={isReadOnly}
         onSave={handleSave}
-        onDelete={!isReadOnly && editingEvent ? handleDelete : undefined}
+        onDelete={editingEvent ? handleDelete : undefined}
         isSaving={isMutating}
       />
     </div>

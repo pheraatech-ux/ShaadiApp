@@ -44,7 +44,6 @@ type Props = {
   event?: CalendarEventRow | null;
   weddings: { id: string; name: string }[];
   employees: CalendarEmployee[];
-  readOnly?: boolean;
   onSave: (data: {
     title: string;
     description: string | null;
@@ -78,7 +77,6 @@ export function EventFormDialog({
   event,
   weddings,
   employees,
-  readOnly = false,
   onSave,
   onDelete,
   isSaving,
@@ -210,12 +208,7 @@ export function EventFormDialog({
         <SheetHeader className="border-b border-border/60 px-5 py-4">
           <SheetTitle className="flex items-center gap-2 text-base">
             <CalendarDays className="size-4 text-muted-foreground" />
-            {readOnly ? "Event Details" : isEditing ? "Edit Event" : "New Event"}
-            {readOnly && (
-              <span className="ml-auto rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-medium text-indigo-600 dark:text-indigo-300">
-                You&apos;re invited
-              </span>
-            )}
+            {isEditing ? "Edit Event" : "New Event"}
           </SheetTitle>
         </SheetHeader>
 
@@ -224,14 +217,12 @@ export function EventFormDialog({
           <form id="event-sheet-form" onSubmit={handleSubmit} className="space-y-5">
             {/* Title */}
             <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">Title {!readOnly && "*"}</p>
+              <p className="text-xs font-medium text-muted-foreground">Title *</p>
               <Input
                 placeholder="Event title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                required={!readOnly}
-                readOnly={readOnly}
-                disabled={readOnly}
+                required
                 className="h-9"
               />
             </div>
@@ -242,12 +233,10 @@ export function EventFormDialog({
                 type="button"
                 role="switch"
                 aria-checked={allDay}
-                onClick={() => !readOnly && setAllDay((v) => !v)}
-                disabled={readOnly}
+                onClick={() => setAllDay((v) => !v)}
                 className={cn(
-                  "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
+                  "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
                   allDay ? "bg-primary" : "bg-muted",
-                  readOnly ? "cursor-default opacity-70" : "cursor-pointer",
                 )}
               >
                 <span
@@ -270,9 +259,7 @@ export function EventFormDialog({
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  required={!readOnly}
-                  readOnly={readOnly}
-                  disabled={readOnly}
+                  required
                   className="h-9"
                 />
                 {!allDay && (
@@ -280,8 +267,6 @@ export function EventFormDialog({
                     type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
-                    readOnly={readOnly}
-                    disabled={readOnly}
                     className="h-9"
                   />
                 )}
@@ -294,8 +279,6 @@ export function EventFormDialog({
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  readOnly={readOnly}
-                  disabled={readOnly}
                   className="h-9"
                 />
                 {!allDay && (
@@ -303,8 +286,6 @@ export function EventFormDialog({
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    readOnly={readOnly}
-                    disabled={readOnly}
                     className="h-9"
                   />
                 )}
@@ -312,21 +293,17 @@ export function EventFormDialog({
             </div>
 
             {/* Location */}
-            {(!readOnly || location) && (
-              <div className="space-y-1.5">
-                <p className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                  <MapPin className="size-3" /> Location
-                </p>
-                <Input
-                  placeholder="Add location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  readOnly={readOnly}
-                  disabled={readOnly}
-                  className="h-9"
-                />
-              </div>
-            )}
+            <div className="space-y-1.5">
+              <p className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                <MapPin className="size-3" /> Location
+              </p>
+              <Input
+                placeholder="Add location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="h-9"
+              />
+            </div>
 
             {/* Attendees */}
             {employees.length > 0 && (
@@ -421,21 +398,18 @@ export function EventFormDialog({
             )}
 
             {/* Guest Emails */}
-            {(!readOnly || guestEmails.length > 0) && (
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">Guest Emails</p>
-              {!readOnly && (
-                <Input
-                  ref={emailInputRef}
-                  type="email"
-                  placeholder="Add email and press Enter…"
-                  value={guestEmailInput}
-                  onChange={(e) => setGuestEmailInput(e.target.value)}
-                  onKeyDown={handleGuestEmailKeyDown}
-                  className="h-9"
-                  autoComplete="off"
-                />
-              )}
+              <Input
+                ref={emailInputRef}
+                type="email"
+                placeholder="Add email and press Enter…"
+                value={guestEmailInput}
+                onChange={(e) => setGuestEmailInput(e.target.value)}
+                onKeyDown={handleGuestEmailKeyDown}
+                className="h-9"
+                autoComplete="off"
+              />
               {guestEmails.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-0.5">
                   {guestEmails.map((email) => (
@@ -457,7 +431,6 @@ export function EventFormDialog({
                 </div>
               )}
             </div>
-            )}
 
             {/* Wedding link */}
             {weddings.length > 0 && (
@@ -484,90 +457,71 @@ export function EventFormDialog({
             )}
 
             {/* Description */}
-            {(!readOnly || description) && (
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground">Description</p>
-                <textarea
-                  placeholder="Optional notes…"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  readOnly={readOnly}
-                  disabled={readOnly}
-                  rows={3}
-                  className="w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-default disabled:opacity-70"
-                />
-              </div>
-            )}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">Description</p>
+              <textarea
+                placeholder="Optional notes…"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className="w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
 
             {/* Color */}
-            {!readOnly && (
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground">Color</p>
-                <div className="flex gap-2.5">
-                  {PRESET_COLORS.map((c) => (
-                    <button
-                      key={c.value}
-                      type="button"
-                      title={c.label}
-                      onClick={() => setColor(c.value)}
-                      className={cn(
-                        "size-6 rounded-full border-2 transition-transform hover:scale-110",
-                        color === c.value ? "border-foreground scale-110" : "border-transparent",
-                      )}
-                      style={{ backgroundColor: c.value }}
-                    />
-                  ))}
-                </div>
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">Color</p>
+              <div className="flex gap-2.5">
+                {PRESET_COLORS.map((c) => (
+                  <button
+                    key={c.value}
+                    type="button"
+                    title={c.label}
+                    onClick={() => setColor(c.value)}
+                    className={cn(
+                      "size-6 rounded-full border-2 transition-transform hover:scale-110",
+                      color === c.value ? "border-foreground scale-110" : "border-transparent",
+                    )}
+                    style={{ backgroundColor: c.value }}
+                  />
+                ))}
               </div>
-            )}
+            </div>
           </form>
         </div>
 
         {/* Footer */}
         <SheetFooter className="border-t border-border/60 px-5 py-3 flex-row items-center gap-2">
-          {readOnly ? (
+          {isEditing && onDelete && (
             <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={() => onOpenChange(false)}
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="mr-auto shrink-0 text-destructive hover:text-destructive"
+              onClick={onDelete}
+              disabled={isSaving}
             >
-              Close
+              <Trash2 className="size-4" />
             </Button>
-          ) : (
-            <>
-              {isEditing && onDelete && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="mr-auto shrink-0 text-destructive hover:text-destructive"
-                  onClick={onDelete}
-                  disabled={isSaving}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => onOpenChange(false)}
-                disabled={isSaving}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                form="event-sheet-form"
-                size="sm"
-                className="flex-1"
-                disabled={isSaving || !title.trim()}
-              >
-                {isSaving ? "Saving…" : isEditing ? "Save Changes" : "Create Event"}
-              </Button>
-            </>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={() => onOpenChange(false)}
+            disabled={isSaving}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="event-sheet-form"
+            size="sm"
+            className="flex-1"
+            disabled={isSaving || !title.trim()}
+          >
+            {isSaving ? "Saving…" : isEditing ? "Save Changes" : "Create Event"}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

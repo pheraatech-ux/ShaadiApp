@@ -52,33 +52,18 @@ export function CalendarView({
     const items: EventInput[] = [];
 
     for (const e of personalEvents) {
-      if (e.isAttendee) {
-        items.push({
-          id: e.id,
-          title: e.title,
-          start: e.startAt,
-          end: e.endAt ?? undefined,
-          allDay: e.allDay,
-          backgroundColor: (e.color ?? PERSONAL_COLOR) + "80",
-          borderColor: e.color ?? PERSONAL_COLOR,
-          textColor: "#ffffff",
-          editable: false,
-          classNames: ["fc-attendee-event"],
-          extendedProps: { source: "attendee", raw: e },
-        });
-      } else {
-        items.push({
-          id: e.id,
-          title: e.title,
-          start: e.startAt,
-          end: e.endAt ?? undefined,
-          allDay: e.allDay,
-          backgroundColor: e.color ?? PERSONAL_COLOR,
-          borderColor: e.color ?? PERSONAL_COLOR,
-          editable: true,
-          extendedProps: { source: "personal", raw: e },
-        });
-      }
+      items.push({
+        id: e.id,
+        title: e.title,
+        start: e.startAt,
+        end: e.endAt ?? undefined,
+        allDay: e.allDay,
+        backgroundColor: e.isAttendee ? (e.color ?? PERSONAL_COLOR) + "80" : (e.color ?? PERSONAL_COLOR),
+        borderColor: e.color ?? PERSONAL_COLOR,
+        textColor: "#ffffff",
+        editable: true,
+        extendedProps: { source: e.isAttendee ? "attendee" : "personal", raw: e },
+      });
     }
 
     for (const w of weddingDates) {
