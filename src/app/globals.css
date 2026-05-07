@@ -162,8 +162,45 @@ html .os-theme-light {
 }
 
 /* FullCalendar theme overrides */
+.calendar-wrapper {
+  overflow: hidden;
+}
 .calendar-wrapper .fc {
   font-size: 0.875rem;
+}
+/* Round the inner scrollgrid to match wrapper's rounded-xl */
+.calendar-wrapper .fc-scrollgrid {
+  border-radius: 0.625rem !important;
+  overflow: hidden !important;
+}
+/* Custom week/day header — two-line layout */
+.calendar-wrapper .fc-timegrid .fc-col-header-cell .fc-scrollgrid-sync-inner {
+  padding: 6px 4px;
+}
+/* Make the cushion link a flex column so our inner spans stack */
+.calendar-wrapper .fc-timegrid .fc-col-header-cell-cushion {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 2px !important;
+  padding: 0 !important;
+  line-height: 1.2 !important;
+}
+/* Day name — big and bold */
+.calendar-wrapper .cal-day-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--foreground);
+  letter-spacing: 0.01em;
+}
+.calendar-wrapper .fc-col-header-cell.fc-day-today .cal-day-name {
+  color: var(--primary);
+}
+/* Date — small and muted */
+.calendar-wrapper .cal-day-date {
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--muted-foreground);
 }
 /* Apply app font to all text elements — exclude pseudo-elements (they carry chevron icons) */
 .calendar-wrapper .fc :not(i):not(span[class*="icon"]) {
@@ -188,7 +225,7 @@ html .os-theme-light {
   color: var(--foreground);
 }
 .calendar-wrapper .fc-day-today {
-  background-color: oklch(from var(--primary) l c h / 8%) !important;
+  background-color: oklch(from var(--primary) l c h / 4%) !important;
 }
 .calendar-wrapper .fc-button-primary {
   background-color: var(--secondary) !important;
@@ -254,12 +291,45 @@ html .os-theme-light {
 .calendar-wrapper .fc-daygrid-event-dot {
   border-color: currentColor;
 }
+/* Now indicator — red full-width line + pill label */
 .calendar-wrapper .fc-timegrid-now-indicator-line {
-  border-color: var(--primary) !important;
+  border-color: #ef4444 !important;
+  border-width: 1.5px !important;
+  /* Span all columns by bleeding outside the today td */
+  left: -9999px !important;
+  right: -9999px !important;
+  z-index: 5 !important;
 }
+/* Allow the line to bleed outside the today column */
+.calendar-wrapper .fc-timegrid-col-frame {
+  overflow: visible !important;
+}
+/* Replace default CSS triangle arrow with our pill */
 .calendar-wrapper .fc-timegrid-now-indicator-arrow {
-  border-top-color: var(--primary) !important;
-  border-bottom-color: var(--primary) !important;
+  border: none !important;
+  background: transparent !important;
+  overflow: visible !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  width: 100% !important;
+  height: 18px !important;
+  margin-top: -9px !important;
+}
+/* Pill rendered via nowIndicatorContent */
+.calendar-wrapper .fc-now-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 6;
 }
 .calendar-wrapper .fc-highlight {
   background: oklch(from var(--primary) l c h / 12%) !important;

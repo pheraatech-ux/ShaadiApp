@@ -10,6 +10,8 @@ import type {
   EventDropArg,
   DateSelectArg,
   EventInput,
+  NowIndicatorContentArg,
+  DayHeaderContentArg,
 } from "@fullcalendar/core";
 import type { EventResizeDoneArg } from "@fullcalendar/interaction";
 
@@ -37,6 +39,13 @@ const CEREMONY_COLOR = "#ec4899";
 const TASK_COLOR = "#f59e0b";
 const WEDDING_COLOR = "#10b981";
 
+function formatNowTime(d: Date): string {
+  const h = d.getHours() % 12 || 12;
+  const m = d.getMinutes();
+  const ampm = d.getHours() < 12 ? "am" : "pm";
+  return m === 0 ? `${h}${ampm}` : `${h}:${String(m).padStart(2, "0")}${ampm}`;
+}
+
 export function CalendarView({
   personalEvents,
   weddingDates,
@@ -48,6 +57,24 @@ export function CalendarView({
   onEventResize,
 }: Props) {
   const calRef = useRef<FullCalendar>(null);
+
+  const renderDayHeader = useCallback((arg: DayHeaderContentArg) => {
+    if (!arg.view.type.startsWith("timeGrid")) return <>{arg.text}</>;
+    const day = arg.date.toLocaleDateString("en-US", { weekday: "long" });
+    const dd = String(arg.date.getDate()).padStart(2, "0");
+    const mm = String(arg.date.getMonth() + 1).padStart(2, "0");
+    return (
+      <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+        <span className="cal-day-name">{day}</span>
+        <span className="cal-day-date">{dd}.{mm}</span>
+      </span>
+    );
+  }, []);
+
+  const renderNowIndicator = useCallback((arg: NowIndicatorContentArg) => {
+    if (!arg.isAxis) return null;
+    return <span className="fc-now-pill">{formatNowTime(arg.date)}</span>;
+  }, []);
 
   const events: EventInput[] = useMemo(() => {
     const items: EventInput[] = [];
@@ -189,6 +216,8 @@ export function CalendarView({
         dayMaxEvents={3}
         weekends={true}
         nowIndicator={true}
+        nowIndicatorContent={renderNowIndicator}
+        dayHeaderContent={renderDayHeader}
         dateClick={handleDateClick}
         select={handleSelect}
         eventClick={handleEventClick}
