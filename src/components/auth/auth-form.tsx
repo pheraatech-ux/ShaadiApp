@@ -98,6 +98,7 @@ export function AuthForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -225,6 +226,31 @@ export function AuthForm() {
       });
       router.refresh();
       router.replace(postAuthDestination);
+    }
+  }
+
+  async function handleGoogleAuth() {
+    setError(null);
+    setMessage(null);
+    setGoogleLoading(true);
+
+    const callbackUrl = new URL("/auth/callback", window.location.origin);
+    callbackUrl.searchParams.set(
+      "next",
+      mode === "signup" ? onboardingDestination : postAuthDestination
+    );
+
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: callbackUrl.toString(),
+      },
+    });
+
+    if (oauthError) {
+      setGoogleLoading(false);
+      setError(oauthError.message);
+      return;
     }
   }
 
@@ -899,6 +925,8 @@ export function AuthForm() {
                   type="button"
                   variant="outline"
                   className="h-12 gap-2.5 rounded-xl text-sm font-semibold"
+                  onClick={() => void handleGoogleAuth()}
+                  disabled={googleLoading}
                 >
                   <svg className="size-4" viewBox="0 0 24 24">
                     <path
@@ -918,7 +946,7 @@ export function AuthForm() {
                       fill="#EA4335"
                     />
                   </svg>
-                  Google
+                  {googleLoading ? "Redirecting..." : "Google"}
                 </Button>
                 <Button
                   type="button"
