@@ -942,7 +942,7 @@ export function AuthForm() {
               </div>
 
               {/* Footer */}
-              <p className="mt-8 text-center text-xs text-muted-foreground">
+              <p className="mt-8 mb-6 text-center text-xs text-muted-foreground sm:mb-8">
                 By continuing, you agree to our{" "}
                 <button
                   type="button"
