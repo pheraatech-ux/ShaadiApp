@@ -21,7 +21,7 @@ import type {
 import type { WeddingMessageParticipant, WeddingMessagesWorkspaceViewModel } from "@/components/wedding-workspace/messages/types";
 import type { WeddingVendorsWorkspaceViewModel } from "@/components/wedding-workspace/vendors/types";
 import type { WeddingWorkspaceViewModel } from "@/components/wedding-workspace/overview/types";
-import { buildTimeOfDayGreeting } from "@/lib/planner-display";
+import { buildTimeOfDayGreeting, resolvePlannerDisplayName } from "@/lib/planner-display";
 import {
   BUDGET_BUCKETS,
   buildRecommendedBudgetSplit,
@@ -315,9 +315,7 @@ async function getPlannerContextFromSupabase(supabase: SupabaseClient<Database>)
     .eq("id", user.id)
     .maybeSingle();
 
-  const firstName = profile?.first_name?.trim() ?? "";
-  const lastName = profile?.last_name?.trim() ?? "";
-  const displayName = [firstName, lastName].filter(Boolean).join(" ") || user.email || "Planner";
+  const displayName = resolvePlannerDisplayName(profile ?? null, user);
   const workspaceName = profile?.business_name?.trim() || "ShaadiOS Workspace";
 
   return {

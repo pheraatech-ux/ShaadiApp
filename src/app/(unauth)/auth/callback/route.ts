@@ -3,6 +3,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { deriveProfileNameFieldsFromUser } from "@/lib/auth/profile-name";
 import { getSupabaseEnv } from "@/lib/env";
 import { Database } from "@/types/database";
 
@@ -46,6 +47,32 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     return NextResponse.redirect(new URL("/auth", requestUrl.origin));
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const metadata = (user.user_metadata ?? {}) as Record<string, unknown>;
+    const { firstName, lastName } = deriveProfileNameFieldsFromUser(user);
+    const businessName =
+      typeof metadata.business_name === "string" && metadata.business_name.trim()
+        ? metadata.business_name.trim()
+        : null;
+    const phone =
+      typeof metadata.phone === "string" && metadata.phone.trim() ? metadata.phone.trim() : null;
+
+    await supabase.from("profiles").upsert(
+      {
+        id: user.id,
+        first_name: firstName,
+        last_name: lastName,
+        business_name: businessName,
+        phone,
+      },
+      { onConflict: "id" },
+    );
   }
 
   return NextResponse.redirect(new URL(next, requestUrl.origin));

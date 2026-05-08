@@ -320,25 +320,45 @@ export function AuthForm() {
     }
 
     const displayBusinessName = businessName.trim() || "your business";
+    const metadataPayload = {
+      first_name: firstName || null,
+      last_name: lastName || null,
+      business_name: businessName || null,
+      phone: phone || null,
+      onboarding_city: city || null,
+      onboarding_business_type: businessType || null,
+      onboarding_team_size: teamSize || null,
+      onboarding_logo_file_name: logoFile?.name ?? null,
+      onboarding_completed: true,
+      onboarding_completed_at: new Date().toISOString(),
+      onboarding_title: `Let's make ${displayBusinessName} scalable!`,
+      onboarding_welcome_pending: true,
+    };
     const { error: updateError } = await supabase.auth.updateUser({
       data: {
-        first_name: firstName || null,
-        last_name: lastName || null,
-        business_name: businessName || null,
-        phone: phone || null,
-        onboarding_city: city || null,
-        onboarding_business_type: businessType || null,
-        onboarding_team_size: teamSize || null,
-        onboarding_logo_file_name: logoFile?.name ?? null,
-        onboarding_completed: true,
-        onboarding_completed_at: new Date().toISOString(),
-        onboarding_title: `Let's make ${displayBusinessName} scalable!`,
-        onboarding_welcome_pending: true,
+        ...metadataPayload,
       },
     });
 
     if (updateError) {
       setError(updateError.message);
+      setProfileLoading(false);
+      return;
+    }
+
+    const { error: profileSyncError } = await supabase.from("profiles").upsert(
+      {
+        id: user.id,
+        first_name: firstName || null,
+        last_name: lastName || null,
+        business_name: businessName || null,
+        phone: phone || null,
+      },
+      { onConflict: "id" }
+    );
+
+    if (profileSyncError) {
+      setError(profileSyncError.message);
       setProfileLoading(false);
       return;
     }

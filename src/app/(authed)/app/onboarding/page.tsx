@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { OnboardingFlow } from "@/components/onboarding/onboarding-flow";
+import { deriveProfileNameFieldsFromUser } from "@/lib/auth/profile-name";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasPendingWelcome, needsPlannerOnboarding } from "@/lib/auth/onboarding";
 
@@ -27,10 +28,11 @@ export default async function OnboardingPage() {
   }
 
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  const { firstName } = deriveProfileNameFieldsFromUser(user);
 
   return (
     <OnboardingFlow
-      firstName={readMetaString(meta, "first_name")}
+      firstName={firstName ?? ""}
       businessName={readMetaString(meta, "business_name")}
       city={readMetaString(meta, "onboarding_city")}
       businessType={readMetaString(meta, "onboarding_business_type")}

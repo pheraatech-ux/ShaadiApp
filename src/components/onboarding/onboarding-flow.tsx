@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { deriveProfileNameFieldsFromUser } from "@/lib/auth/profile-name";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const BUSINESS_TYPES = [
@@ -86,23 +87,61 @@ export function OnboardingFlow({
     setError(null);
     setIsSubmitting(true);
 
+    const metadataPayload = {
+      business_name: onboardingBusinessName.trim() || null,
+      onboarding_city: onboardingCity.trim() || null,
+      onboarding_business_type: onboardingBusinessType || null,
+      onboarding_team_size: onboardingTeamSize || null,
+      onboarding_completed: true,
+      onboarding_completed_at: new Date().toISOString(),
+      onboarding_title: `Let's make ${
+        (onboardingBusinessName || "your business").trim() || "your business"
+      } scalable!`,
+      onboarding_welcome_pending: true,
+    };
+
     const { error: updateError } = await supabase.auth.updateUser({
       data: {
-        business_name: onboardingBusinessName.trim() || null,
-        onboarding_city: onboardingCity.trim() || null,
-        onboarding_business_type: onboardingBusinessType || null,
-        onboarding_team_size: onboardingTeamSize || null,
-        onboarding_completed: true,
-        onboarding_completed_at: new Date().toISOString(),
-        onboarding_title: `Let's make ${
-          (onboardingBusinessName || "your business").trim() || "your business"
-        } scalable!`,
-        onboarding_welcome_pending: true,
+        ...metadataPayload,
       },
     });
 
     if (updateError) {
       setError(updateError.message);
+      setIsSubmitting(false);
+      return;
+    }
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setError("Profile saved but we could not sync your workspace profile. Please retry.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const { firstName: profileFirstName, lastName: profileLastName } =
+      deriveProfileNameFieldsFromUser(user);
+    const userMeta = (user.user_metadata ?? {}) as Record<string, unknown>;
+    const profilePhone =
+      typeof userMeta.phone === "string" && userMeta.phone.trim() ? userMeta.phone.trim() : null;
+
+    const { error: profileSyncError } = await supabase.from("profiles").upsert(
+      {
+        id: user.id,
+        first_name: profileFirstName,
+        last_name: profileLastName,
+        business_name: onboardingBusinessName.trim() || null,
+        phone: profilePhone,
+      },
+      { onConflict: "id" }
+    );
+
+    if (profileSyncError) {
+      setError(profileSyncError.message);
       setIsSubmitting(false);
       return;
     }

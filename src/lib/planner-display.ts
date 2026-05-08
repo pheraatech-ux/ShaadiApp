@@ -1,5 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 
+import { deriveProfileNameFieldsFromUser } from "@/lib/auth/profile-name";
+
 type ProfileNames = {
   first_name: string | null;
   last_name: string | null;
@@ -18,12 +20,12 @@ function nameFromProfile(profile: ProfileNames): string | null {
 }
 
 function nameFromUserMetadata(user: User | null): string | null {
-  if (!user?.user_metadata) return null;
-  const meta = user.user_metadata as Record<string, unknown>;
-  const first = typeof meta.first_name === "string" ? meta.first_name.trim() : "";
-  const last = typeof meta.last_name === "string" ? meta.last_name.trim() : "";
+  const { firstName, lastName } = deriveProfileNameFieldsFromUser(user);
+  const first = firstName?.trim() ?? "";
+  const last = lastName?.trim() ?? "";
   const combined = [first, last].filter(Boolean).join(" ").trim();
-  return combined || null;
+  if (combined) return combined;
+  return null;
 }
 
 function nameFromEmail(email: string | undefined): string | null {
