@@ -338,12 +338,13 @@ export function AuthForm() {
 
   return (
     <div
-      className="relative flex overflow-hidden bg-neutral-950 text-white"
-      style={{ zoom: 0.9, height: "calc(100vh / 0.9)", width: "calc(100vw / 0.9)" }}
+      className="relative flex overflow-hidden bg-neutral-950"
+      style={{ zoom: "0.9", height: "calc(100vh / 0.9)", width: "calc(100vw / 0.9)" }}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_75%_55%_at_15%_5%,rgba(16,185,129,0.2),transparent),radial-gradient(ellipse_60%_60%_at_85%_95%,rgba(255,255,255,0.08),transparent)]" />
       {/* ── Left Panel: Brand / Hero ── */}
       <div className="relative z-10 hidden h-full w-1/2 flex-col items-start overflow-hidden px-14 lg:flex xl:px-20">
+
         <div className="relative z-10 flex h-full w-full flex-col py-12">
           {/* Logo */}
           <div className="flex items-center gap-3">
@@ -465,7 +466,7 @@ export function AuthForm() {
       {/* ── Right Panel: Auth Form ── */}
       <OverlayScrollbarsComponent
         element="section"
-        className="relative z-10 m-3 h-[calc(100%-1.5rem)] w-full flex-1 rounded-3xl border border-black/10 bg-white text-foreground shadow-2xl sm:px-0 lg:ml-0 lg:mr-4 lg:w-1/2"
+        className="relative z-10 m-3 h-[calc(100%-1.5rem)] w-full flex-1 rounded-3xl border border-border/60 bg-white shadow-2xl lg:ml-0 lg:mr-4 lg:w-1/2 dark:bg-neutral-950"
         options={{
           overflow: { x: "hidden", y: "scroll" },
           scrollbars: {
@@ -477,7 +478,7 @@ export function AuthForm() {
         }}
         defer
       >
-        <div className="px-6 py-10 sm:px-10">
+      <div className="relative h-full w-full px-6 py-12 sm:px-12">
         {/* Mobile logo */}
         <div className="mb-10 flex items-center gap-2.5 lg:hidden">
           <div className="flex size-9 items-center justify-center rounded-xl bg-neutral-900">
@@ -488,14 +489,8 @@ export function AuthForm() {
 
         <div className="mx-auto flex min-h-full w-full max-w-[520px] flex-col justify-center">
           {/* Header */}
-          <div
-            className={`mb-10 space-y-3 ${
-              step === "auth" && authScreen === "credentials"
-                ? "mt-6 text-center"
-                : ""
-            }`}
-          >
-            <h2 className="text-3xl font-bold tracking-tight">
+          <div className="mb-10 space-y-3">
+            <h2 className="text-4xl font-bold tracking-tight">
               {step === "profile"
                 ? "Set up your business profile"
                 : authScreen === "phoneOtp"
@@ -967,7 +962,7 @@ export function AuthForm() {
             </>
           )}
         </div>
-        </div>
+      </div>
       </OverlayScrollbarsComponent>
     </div>
   );
