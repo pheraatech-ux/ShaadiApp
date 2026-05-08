@@ -1,4 +1,5 @@
 import { Suspense, type ReactNode } from "react";
+import { redirect } from "next/navigation";
 
 import { DashboardShell } from "@/components/app-dashboard/dashboard/dashboard-shell";
 import {
@@ -11,11 +12,24 @@ import { TourWrapper } from "@/components/onboarding/tour-wrapper";
 import { KnockClientProvider } from "@/components/notifications/knock-client-provider";
 import { generateKnockUserToken } from "@/lib/knock";
 import { getKnockPublicKey } from "@/lib/env";
+import { hasPendingWelcome, needsPlannerOnboarding } from "@/lib/auth/onboarding";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function MainAppShellLayout({ children }: { children: ReactNode }) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/auth?next=/app/dashboard");
+  }
+
+  if (needsPlannerOnboarding(user)) {
+    redirect("/app/onboarding");
+  }
+
+  if (hasPendingWelcome(user)) {
+    redirect("/app/welcome");
+  }
 
   const userId = user?.id ?? null;
   const [userToken, publicKey] = userId

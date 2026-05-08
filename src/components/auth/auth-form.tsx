@@ -14,6 +14,8 @@ import {
   Building2,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
+import "overlayscrollbars/overlayscrollbars.css";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +39,6 @@ const authSignUpSchema = z
   .object({
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().min(1, "Last name is required"),
-    businessName: z.string().optional(),
     email: z.string().email("Please enter a valid email address"),
     password: passwordSchema,
     confirmPassword: z.string(),
@@ -78,9 +79,10 @@ export function AuthForm() {
   const searchParams = useSearchParams();
   const [isProfileNavPending, startProfileNav] = useTransition();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const onboardingDestination = "/app/onboarding";
   const postAuthDestination = useMemo(() => {
     const next = searchParams.get("next");
-    return next && next.startsWith("/") ? next : "/app/dashboard";
+    return next && next.startsWith("/") ? next : "/app";
   }, [searchParams]);
   const [mode, setMode] = useState<AuthMode>("login");
   const [step, setStep] = useState<AuthStep>("auth");
@@ -177,6 +179,12 @@ export function AuthForm() {
   }, [postAuthDestination, router, supabase]);
 
   useEffect(() => {
+    const shouldAutoRedirect = mode === "login" && step === "auth";
+
+    if (!shouldAutoRedirect) {
+      return;
+    }
+
     void (async () => {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
@@ -195,7 +203,7 @@ export function AuthForm() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [postAuthDestination, router, supabase]);
+  }, [mode, postAuthDestination, router, step, supabase]);
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -224,16 +232,18 @@ export function AuthForm() {
     setLoading(true);
     setMessage(null);
     setError(null);
+    setFirstName(data.firstName);
+    setLastName(data.lastName);
+    setBusinessName("");
 
     const signUpStartedAt = Date.now();
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
         data: {
           first_name: data.firstName || null,
           last_name: data.lastName || null,
-          business_name: data.businessName || null,
           phone: phone || null,
         },
       },
@@ -249,10 +259,17 @@ export function AuthForm() {
     if (signUpError) {
       setError(signUpError.message);
     } else {
-      setMessage(null);
-      setError(null);
-      setAccountCreatedPulse(true);
-      setStep("profile");
+      if (!signUpData.session) {
+        setMessage("Check your email to verify your account, then sign in.");
+        setError(null);
+      } else {
+        setMessage(null);
+        setError(null);
+        setStep("auth");
+        setAccountCreatedPulse(true);
+        router.refresh();
+        router.replace(onboardingDestination);
+      }
     }
     setLoading(false);
   }
@@ -320,11 +337,13 @@ export function AuthForm() {
   }
 
   return (
-    <div className="flex overflow-hidden" style={{ zoom: 0.9, height: 'calc(100vh / 0.9)', width: 'calc(100vw / 0.9)' }}>
+    <div
+      className="relative flex overflow-hidden bg-neutral-950 text-white"
+      style={{ zoom: 0.9, height: "calc(100vh / 0.9)", width: "calc(100vw / 0.9)" }}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_75%_55%_at_15%_5%,rgba(16,185,129,0.2),transparent),radial-gradient(ellipse_60%_60%_at_85%_95%,rgba(255,255,255,0.08),transparent)]" />
       {/* ── Left Panel: Brand / Hero ── */}
-      <div className="relative hidden h-full w-1/2 flex-col items-start overflow-hidden bg-neutral-950 px-14 lg:flex xl:px-20">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_10%_0%,rgba(16,185,129,0.15),transparent),radial-gradient(ellipse_50%_60%_at_100%_100%,rgba(255,255,255,0.04),transparent)]" />
-
+      <div className="relative z-10 hidden h-full w-1/2 flex-col items-start overflow-hidden px-14 lg:flex xl:px-20">
         <div className="relative z-10 flex h-full w-full flex-col py-12">
           {/* Logo */}
           <div className="flex items-center gap-3">
@@ -444,7 +463,21 @@ export function AuthForm() {
       </div>
 
       {/* ── Right Panel: Auth Form ── */}
-      <div className="relative h-full w-full flex-1 overflow-y-auto px-6 py-12 sm:px-12 lg:w-1/2">
+      <OverlayScrollbarsComponent
+        element="section"
+        className="relative z-10 m-3 h-[calc(100%-1.5rem)] w-full flex-1 rounded-3xl border border-black/10 bg-white text-foreground shadow-2xl sm:px-0 lg:ml-0 lg:mr-4 lg:w-1/2"
+        options={{
+          overflow: { x: "hidden", y: "scroll" },
+          scrollbars: {
+            theme: "os-theme-dark",
+            autoHide: "never",
+            autoHideSuspend: false,
+            clickScroll: true,
+          },
+        }}
+        defer
+      >
+        <div className="px-6 py-10 sm:px-10">
         {/* Mobile logo */}
         <div className="mb-10 flex items-center gap-2.5 lg:hidden">
           <div className="flex size-9 items-center justify-center rounded-xl bg-neutral-900">
@@ -455,8 +488,14 @@ export function AuthForm() {
 
         <div className="mx-auto flex min-h-full w-full max-w-[520px] flex-col justify-center">
           {/* Header */}
-          <div className="mb-10 space-y-3">
-            <h2 className="text-4xl font-bold tracking-tight">
+          <div
+            className={`mb-10 space-y-3 ${
+              step === "auth" && authScreen === "credentials"
+                ? "mt-6 text-center"
+                : ""
+            }`}
+          >
+            <h2 className="text-3xl font-bold tracking-tight">
               {step === "profile"
                 ? "Set up your business profile"
                 : authScreen === "phoneOtp"
@@ -471,7 +510,7 @@ export function AuthForm() {
                 : authScreen === "phoneOtp"
                   ? "Enter your account phone number and the one-time code."
                 : mode === "login"
-                  ? "Sign in to your planner account to continue."
+                  ? ""
                   : "Set up your planner profile in 30 seconds."}
             </p>
           </div>
@@ -569,6 +608,7 @@ export function AuthForm() {
               </Button>
 
               {error && <p className="text-center text-sm font-medium text-destructive">{error}</p>}
+              {message && <p className="text-center text-sm font-medium text-emerald-600">{message}</p>}
             </form>
             ) : (
             /* ── Sign-up Form (RHF + Zod) ── */
@@ -599,17 +639,6 @@ export function AuthForm() {
                     <p className="text-xs text-destructive">{signupForm.formState.errors.lastName.message}</p>
                   )}
                 </div>
-              </div>
-
-              {/* Business Name */}
-              <div className="space-y-2">
-                <label htmlFor="business_name" className={labelClass}>Business Name</label>
-                <Input
-                  id="business_name"
-                  placeholder="Meera Events"
-                  className={inputClass}
-                  {...signupForm.register("businessName")}
-                />
               </div>
 
               {/* Email */}
@@ -697,6 +726,9 @@ export function AuthForm() {
 
               {error && (
                 <p className="text-center text-sm font-medium text-destructive">{error}</p>
+              )}
+              {message && (
+                <p className="text-center text-sm font-medium text-emerald-600">{message}</p>
               )}
             </form>
             )
@@ -935,7 +967,8 @@ export function AuthForm() {
             </>
           )}
         </div>
-      </div>
+        </div>
+      </OverlayScrollbarsComponent>
     </div>
   );
 }

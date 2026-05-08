@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get("code");
   const tokenHash = requestUrl.searchParams.get("token_hash");
   const tokenType = requestUrl.searchParams.get("type");
-  const next = requestUrl.searchParams.get("next") ?? "/app/dashboard";
+  const next = requestUrl.searchParams.get("next") ?? "/app";
   const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
   const cookieStore = await cookies();
 
