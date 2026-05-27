@@ -1,10 +1,13 @@
 {
   "mcpServers": {
     "code-review-graph": {
-      "command": "code-review-graph",
+      "command": "/Users/krishnaraman/.local/pipx/venvs/code-review-graph/bin/python",
       "args": [
+        "-m",
+        "code_review_graph",
         "serve"
       ],
+      "cwd": "/Users/krishnaraman/ShaadiApp",
       "type": "stdio"
     }
   }
