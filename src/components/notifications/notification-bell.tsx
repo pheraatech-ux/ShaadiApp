@@ -1,20 +1,74 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Bell } from "lucide-react";
 import {
   KnockFeedProvider,
-  NotificationIconButton,
   NotificationFeedPopover,
   useKnockFeed,
+  useNotificationStore,
 } from "@knocklabs/react";
 
-function FeedListener() {
+import { Button } from "@/components/ui/button";
+
+function NotificationButton({
+  onClick,
+  buttonRef,
+}: {
+  onClick: () => void;
+  buttonRef: React.RefObject<HTMLButtonElement | null>;
+}) {
   const { feedClient } = useKnockFeed();
+  const { metadata } = useNotificationStore(feedClient);
+  const unread = metadata?.unread_count ?? 0;
+
   useEffect(() => {
     feedClient.listenForUpdates();
     return () => feedClient.teardown();
   }, [feedClient]);
-  return null;
+
+  return (
+    <Button
+      ref={buttonRef}
+      type="button"
+      variant="outline"
+      size="icon-sm"
+      aria-label="Notifications"
+      onClick={onClick}
+      className="relative"
+    >
+      <Bell />
+      {unread > 0 && (
+        <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-semibold text-white">
+          {unread > 9 ? "9+" : unread}
+        </span>
+      )}
+    </Button>
+  );
+}
+
+function PopoverPortal({
+  buttonRef,
+  isOpen,
+  onClose,
+}: {
+  buttonRef: React.RefObject<HTMLButtonElement | null>;
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+
+  return createPortal(
+    <NotificationFeedPopover
+      buttonRef={buttonRef}
+      isVisible={isOpen}
+      onClose={onClose}
+    />,
+    document.body
+  );
 }
 
 type NotificationBellProps = {
@@ -27,14 +81,13 @@ export function NotificationBell({ feedChannelId }: NotificationBellProps) {
 
   return (
     <KnockFeedProvider feedId={feedChannelId}>
-      <FeedListener />
-      <NotificationIconButton
-        ref={buttonRef}
+      <NotificationButton
+        buttonRef={buttonRef}
         onClick={() => setIsOpen((prev) => !prev)}
       />
-      <NotificationFeedPopover
+      <PopoverPortal
         buttonRef={buttonRef}
-        isVisible={isOpen}
+        isOpen={isOpen}
         onClose={() => setIsOpen(false)}
       />
     </KnockFeedProvider>

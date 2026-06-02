@@ -41,7 +41,7 @@ export function UrgentTasksWidget({
       <OverlayScrollbarsComponent
         element="div"
         className="min-h-0 flex-1"
-        options={{
+options={{
           overflow: { x: "hidden", y: "scroll" },
           scrollbars: { theme: "os-theme-dark", autoHide: "scroll", autoHideSuspend: true, clickScroll: true },
         }}

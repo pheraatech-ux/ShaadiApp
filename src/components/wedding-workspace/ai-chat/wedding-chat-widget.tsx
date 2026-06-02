@@ -239,6 +239,7 @@ export function WeddingChatWidget({ weddingSlug }: { weddingSlug: string }) {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
 
   const fetchSessions = useCallback(async (): Promise<{
     activeSession: Session | null;
@@ -258,8 +259,10 @@ export function WeddingChatWidget({ weddingSlug }: { weddingSlug: string }) {
     if (data) setSessions(data.sessions);
   }, [fetchSessions]);
 
-  // On mount: load existing sessions. If none exist, create the first one.
+  // On first open: load existing sessions. If none exist, create the first one.
   useEffect(() => {
+    if (!open || hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
     (async () => {
       const data = await fetchSessions();
       if (data && data.sessions.length > 0) {
@@ -287,7 +290,7 @@ export function WeddingChatWidget({ weddingSlug }: { weddingSlug: string }) {
 
       setInitializing(false);
     })();
-  }, [weddingSlug, fetchSessions]);
+  }, [open, weddingSlug, fetchSessions]);
 
   const handleNewChat = async () => {
     try {

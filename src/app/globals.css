@@ -157,7 +157,7 @@
 /* OverlayScrollbars: thinner scrollbar globally */
 html .os-theme-dark,
 html .os-theme-light {
-  --os-size: 7px !important;
+  --os-size: 4px !important;
   --os-padding-perpendicular: 0px !important;
 }
 

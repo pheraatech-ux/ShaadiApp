@@ -406,7 +406,7 @@ function buildUrgentTaskItems(
       ? (eventTitleById.get(task.linked_event_id) ?? "General")
       : "General";
 
-    const href = slug ? `${tasksAppRoot}/weddings/${encodeURIComponent(slug)}/tasks` : undefined;
+    const href = slug ? `${tasksAppRoot}/weddings/${encodeURIComponent(slug)}/tasks?task=${task.id}` : undefined;
 
     return {
       id: task.id,

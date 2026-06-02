@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useInvalidateTasks, useTasksQuery } from "@/components/wedding-workspace/tasks/use-tasks-query";
@@ -35,12 +36,28 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
   const { data: tasks } = useTasksQuery(view.weddingSlug, view.tasks);
   const invalidateTasks = useInvalidateTasks(view.weddingSlug);
 
+  const searchParams = useSearchParams();
+
   const [optimisticStatus, setOptimisticStatus] = useState<Record<string, WeddingTasksBoardStatus>>({});
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dragOverLaneId, setDragOverLaneId] = useState<TaskLaneId | null>(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(
+    () => searchParams.get("task")
+  );
+
+  function openTask(id: string | null) {
+    setSelectedTaskId(id);
+    const params = new URLSearchParams(searchParams.toString());
+    if (id) {
+      params.set("task", id);
+    } else {
+      params.delete("task");
+    }
+    const qs = params.toString();
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+  }
   const [activeFilter, setActiveFilter] = useState<TopFilter>("all");
   const [assigneeFilter, setAssigneeFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -173,10 +190,10 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
           weddingSlug={view.weddingSlug}
           task={selectedTask}
           members={view.members}
-          onBack={() => setSelectedTaskId(null)}
+          onBack={() => openTask(null)}
           onTaskUpdated={() => { void invalidateTasks(); }}
           onTaskDeleted={() => {
-            setSelectedTaskId(null);
+            openTask(null);
             void invalidateTasks();
           }}
         />
@@ -313,7 +330,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
 
       {displayMode === "list" ? (
         <div className="mt-4">
-          <TaskListView tasks={filteredTasks} onTaskClick={setSelectedTaskId} />
+          <TaskListView tasks={filteredTasks} onTaskClick={openTask} />
         </div>
       ) : (
         <section className="mt-4 flex divide-x divide-dashed divide-border/50 overflow-x-auto">
@@ -341,7 +358,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
             onDragLeaveLane={(lane) => {
               setDragOverLaneId((current) => (current === lane ? null : current));
             }}
-            onTaskClick={setSelectedTaskId}
+            onTaskClick={openTask}
           />
           <TaskKanbanColumn
             laneId="in_progress"
@@ -367,7 +384,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
             onDragLeaveLane={(lane) => {
               setDragOverLaneId((current) => (current === lane ? null : current));
             }}
-            onTaskClick={setSelectedTaskId}
+            onTaskClick={openTask}
           />
           <TaskKanbanColumn
             laneId="needs_review"
@@ -393,7 +410,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
             onDragLeaveLane={(lane) => {
               setDragOverLaneId((current) => (current === lane ? null : current));
             }}
-            onTaskClick={setSelectedTaskId}
+            onTaskClick={openTask}
           />
           <TaskKanbanColumn
             laneId="done"
@@ -419,7 +436,7 @@ export function WeddingTasksWorkspace({ view }: WeddingTasksWorkspaceProps) {
             onDragLeaveLane={(lane) => {
               setDragOverLaneId((current) => (current === lane ? null : current));
             }}
-            onTaskClick={setSelectedTaskId}
+            onTaskClick={openTask}
           />
         </section>
       )}
