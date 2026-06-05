@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 
-import { AppPageHeader } from "@/components/app-dashboard/dashboard/app-page-header";
 import { Badge } from "@/components/ui/badge";
 
 import { OverviewTab } from "./overview-tab";
 import { OpsExpensesTab } from "./ops-expenses-tab";
 import { ForecastingTab } from "./forecasting-tab";
 import { ExpensesPanel } from "./expenses-panel";
+import { FinancialsToolbar, type FinancialsTab } from "./financials-toolbar";
 import type { PeriodFilter } from "./types";
+import { useToolbarScrollExpand } from "./use-toolbar-scroll-expand";
 
 type WeddingRow = {
   id: string;
@@ -31,15 +32,6 @@ type Props = {
   totalSpentPaise: number;
   portfolioUtilizationPercent: number;
 };
-
-type Tab = "overview" | "expenses" | "forecasting" | "wedding-portfolio";
-
-const TABS: { id: Tab; label: string }[] = [
-  { id: "overview", label: "Business Overview" },
-  { id: "expenses", label: "Ops Expenses" },
-  { id: "forecasting", label: "Forecasting" },
-  { id: "wedding-portfolio", label: "Wedding Portfolio" },
-];
 
 function toInr(paise: number) {
   return `₹${Math.round(paise / 100).toLocaleString("en-IN")}`;
@@ -121,9 +113,11 @@ export function BusinessFinancialsDashboard({
   totalSpentPaise,
   portfolioUtilizationPercent,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
-  const [forecastPeriod] = useState<PeriodFilter>("ytd");
+  const [activeTab, setActiveTab] = useState<FinancialsTab>("overview");
+  const [period, setPeriod] = useState<PeriodFilter>("ytd");
   const [showExpensesPanel, setShowExpensesPanel] = useState(false);
+  const { shellRef, barRef, progress, layout, barHeight, isFloating, floatStyle } =
+    useToolbarScrollExpand();
 
   // Full-screen expenses panel — same takeover pattern as tasks and vendors
   if (showExpensesPanel) {
@@ -136,35 +130,32 @@ export function BusinessFinancialsDashboard({
 
   return (
     <div className="space-y-5">
-      <AppPageHeader
-        title="Financials"
-        description="Business revenue, operations expenses, forecasting and wedding portfolio"
-      />
+      <div ref={shellRef}>
+        {isFloating && barHeight > 0 ? (
+          <div aria-hidden className="pointer-events-none" style={{ height: barHeight }} />
+        ) : null}
+        <div
+          ref={barRef}
+          className={isFloating ? undefined : "sticky top-0 z-30"}
+          style={floatStyle}
+        >
+          <FinancialsToolbar
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            period={period}
+            onPeriodChange={setPeriod}
+            expandProgress={progress}
+            contentPaddingX={layout.paddingX}
+          />
+        </div>
+      </div>
 
-      {/* Tab bar */}
-      <nav className="flex gap-1 overflow-x-auto rounded-xl border border-border/70 bg-muted/40 p-1">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-
-      {/* Tab content */}
-      {activeTab === "overview" && <OverviewTab totalWeddings={totalWeddings} />}
+      {activeTab === "overview" && <OverviewTab totalWeddings={totalWeddings} period={period} />}
       {activeTab === "expenses" && (
-        <OpsExpensesTab onShowAllEntries={() => setShowExpensesPanel(true)} />
+        <OpsExpensesTab period={period} onShowAllEntries={() => setShowExpensesPanel(true)} />
       )}
       {activeTab === "forecasting" && (
-        <ForecastingTab totalWeddings={totalWeddings} period={forecastPeriod} />
+        <ForecastingTab totalWeddings={totalWeddings} period={period} />
       )}
       {activeTab === "wedding-portfolio" && (
         <WeddingPortfolioTab

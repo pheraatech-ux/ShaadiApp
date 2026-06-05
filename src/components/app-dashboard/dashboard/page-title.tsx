@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 const PATH_LABELS: { prefix: string; label: string }[] = [
   { prefix: "/app/weddings", label: "Weddings" },
   { prefix: "/app/tasks",    label: "Tasks" },
-  { prefix: "/app/budget",   label: "Budget" },
+  { prefix: "/app/employee/budget", label: "Financials" },
+  { prefix: "/app/budget", label: "Financials" },
   { prefix: "/app/team",     label: "Team" },
   { prefix: "/app/messages", label: "Messages" },
   { prefix: "/app/calendar", label: "Calendar" },

@@ -59,3 +59,9 @@ export type BusinessFinancialsData = {
 };
 
 export type PeriodFilter = "ytd" | "quarter" | "month";
+
+export const PERIOD_SHORT_LABELS: Record<PeriodFilter, string> = {
+  ytd: "YTD",
+  quarter: "Quarter",
+  month: "Month",
+};

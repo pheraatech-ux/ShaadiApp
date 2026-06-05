@@ -6,16 +6,10 @@ import { BotIcon, SendIcon, SparklesIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-import { REVENUE_CATEGORIES, DEFAULT_EXPENSE_CATEGORIES, type PeriodFilter } from "./types";
+import { REVENUE_CATEGORIES, DEFAULT_EXPENSE_CATEGORIES, PERIOD_SHORT_LABELS, type PeriodFilter } from "./types";
 import { filterByPeriod, sumRupees, useFinancialData } from "./use-financial-data";
 
 const INR = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
-
-const PERIOD_LABELS: Record<PeriodFilter, string> = {
-  ytd: "Year to Date",
-  quarter: "This Quarter",
-  month: "This Month",
-};
 
 function renderMarkdown(text: string): string {
   return text
@@ -89,7 +83,7 @@ export function ForecastingTab({
           expensesByCategory,
           overdueReceivables,
           activeWeddings: totalWeddings,
-          period: PERIOD_LABELS[period],
+          period: PERIOD_SHORT_LABELS[period],
           userMessage: message ?? "",
         }),
       });
@@ -112,18 +106,18 @@ export function ForecastingTab({
       <div>
         <h2 className="text-sm font-semibold">Financial Forecasting</h2>
         <p className="text-xs text-muted-foreground">
-          AI-powered analysis based on your revenue and expense data ({PERIOD_LABELS[period]})
+          AI-powered analysis based on your revenue and expense data ({PERIOD_SHORT_LABELS[period]})
         </p>
       </div>
 
       {/* Current snapshot */}
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <article className="rounded-xl border border-border/70 bg-card p-4">
-          <p className="text-xs text-muted-foreground">Revenue ({PERIOD_LABELS[period]})</p>
+          <p className="text-xs text-muted-foreground">Revenue ({PERIOD_SHORT_LABELS[period]})</p>
           <p className="mt-1 text-xl font-semibold text-green-600 dark:text-green-400">{INR(totalRevenue)}</p>
         </article>
         <article className="rounded-xl border border-border/70 bg-card p-4">
-          <p className="text-xs text-muted-foreground">Expenses ({PERIOD_LABELS[period]})</p>
+          <p className="text-xs text-muted-foreground">Expenses ({PERIOD_SHORT_LABELS[period]})</p>
           <p className="mt-1 text-xl font-semibold">{INR(totalExpenses)}</p>
         </article>
         <article className="rounded-xl border border-border/70 bg-card p-4">

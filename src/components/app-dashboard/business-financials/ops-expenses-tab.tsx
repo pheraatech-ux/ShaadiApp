@@ -1,198 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowRightIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { ArrowRightIcon, Trash2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 
-import { DEFAULT_EXPENSE_CATEGORIES, type PeriodFilter } from "./types";
+import { DEFAULT_EXPENSE_CATEGORIES, PERIOD_SHORT_LABELS, type PeriodFilter } from "./types";
 import { filterByPeriod, sumRupees, useFinancialData } from "./use-financial-data";
 
 const INR = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
-function getPeriodLabels(): Record<PeriodFilter, string> {
-  const now = new Date();
-  const quarter = Math.floor(now.getMonth() / 3) + 1;
-  const year = now.getFullYear();
-  const monthName = now.toLocaleString("en-IN", { month: "long" });
-  return {
-    ytd: `${year} Year to Date`,
-    quarter: `This Quarter Q${quarter}`,
-    month: `This Month (${monthName})`,
-  };
-}
-
-function PeriodToggle({
-  value,
-  onChange,
+export function OpsExpensesTab({
+  period,
+  onShowAllEntries,
 }: {
-  value: PeriodFilter;
-  onChange: (v: PeriodFilter) => void;
+  period: PeriodFilter;
+  onShowAllEntries: () => void;
 }) {
-  return (
-    <div className="flex items-center gap-1 rounded-lg border border-border/70 bg-muted/40 p-1">
-      {(["ytd", "quarter", "month"] as PeriodFilter[]).map((p) => (
-        <button
-          key={p}
-          onClick={() => onChange(p)}
-          className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-            value === p
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {p === "ytd" ? "YTD" : p === "quarter" ? "Quarter" : "Month"}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function AddExpenseDialog({
-  allCategories,
-}: {
-  allCategories: { id: string; label: string }[];
-}) {
-  const { addExpenseEntry } = useFinancialData();
-  const [open, setOpen] = useState(false);
-  const [categoryId, setCategoryId] = useState(DEFAULT_EXPENSE_CATEGORIES[0].id);
-  const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [description, setDescription] = useState("");
-
-  const handleSubmit = () => {
-    const amt = parseFloat(amount);
-    if (!amt || amt <= 0) return;
-    const cat = allCategories.find((c) => c.id === categoryId);
-    void addExpenseEntry({
-      categoryId,
-      categoryLabel: cat?.label ?? categoryId,
-      amountRupees: amt,
-      date,
-      description,
-    });
-    setAmount("");
-    setDescription("");
-    setOpen(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" />}>
-        <PlusIcon className="h-3.5 w-3.5" />
-        Add Expense
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add Expense Entry</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Category</label>
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="w-full rounded-lg border border-border/70 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              {allCategories.map((c) => (
-                <option key={c.id} value={c.id}>{c.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Amount (₹)</label>
-            <Input
-              type="number"
-              placeholder="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              min={0}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Date</label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Description (optional)
-            </label>
-            <Input
-              placeholder="e.g. Riya — May salary"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-        </div>
-        <DialogFooter showCloseButton>
-          <Button onClick={handleSubmit} disabled={!amount || parseFloat(amount) <= 0}>
-            Add Entry
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function AddCategoryDialog() {
-  const { addCustomExpenseCategory } = useFinancialData();
-  const [open, setOpen] = useState(false);
-  const [label, setLabel] = useState("");
-
-  const handleSubmit = () => {
-    if (!label.trim()) return;
-    void addCustomExpenseCategory(label);
-    setLabel("");
-    setOpen(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" variant="outline" />}>
-        <PlusIcon className="h-3.5 w-3.5" />
-        New Category
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Add Expense Category</DialogTitle>
-        </DialogHeader>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">Category Name</label>
-          <Input
-            placeholder="e.g. Equipment Rental"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-          />
-        </div>
-        <DialogFooter showCloseButton>
-          <Button onClick={handleSubmit} disabled={!label.trim()}>
-            Add
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-export function OpsExpensesTab({ onShowAllEntries }: { onShowAllEntries: () => void }) {
-  const [period, setPeriod] = useState<PeriodFilter>("ytd");
   const { data, ready, deleteCustomExpenseCategory } = useFinancialData();
 
   if (!ready) {
     return <div className="h-32 animate-pulse rounded-xl bg-muted/40" />;
   }
-
-  const PERIOD_LABELS = getPeriodLabels();
 
   const allCategories = [
     ...DEFAULT_EXPENSE_CATEGORIES,
@@ -219,22 +47,9 @@ export function OpsExpensesTab({ onShowAllEntries }: { onShowAllEntries: () => v
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-sm font-semibold">Operations Expenses</h2>
-          <p className="text-xs text-muted-foreground">{PERIOD_LABELS[period]}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <PeriodToggle value={period} onChange={setPeriod} />
-          <AddCategoryDialog />
-          <AddExpenseDialog allCategories={allCategories} />
-        </div>
-      </div>
-
       {/* Summary */}
       <article className="rounded-xl border border-border/70 bg-card p-4">
-        <p className="text-xs text-muted-foreground">Total Ops Spend — {PERIOD_LABELS[period]}</p>
+        <p className="text-xs text-muted-foreground">Total Ops Spend — {PERIOD_SHORT_LABELS[period]}</p>
         <p className="mt-1 text-3xl font-semibold">{INR(totalExpenses)}</p>
         <p className="mt-1 text-xs text-muted-foreground">
           {expensesInPeriod.length} entr{expensesInPeriod.length !== 1 ? "ies" : "y"} in period
@@ -250,7 +65,7 @@ export function OpsExpensesTab({ onShowAllEntries }: { onShowAllEntries: () => v
         <section className="overflow-hidden rounded-xl border border-border/70">
           <div className="border-b border-border/70 bg-muted/40 px-4 py-3">
             <h3 className="text-sm font-semibold">By Category</h3>
-            <p className="text-xs text-muted-foreground">{PERIOD_LABELS[period]}</p>
+            <p className="text-xs text-muted-foreground">{PERIOD_SHORT_LABELS[period]}</p>
           </div>
           <table className="w-full text-sm">
             <thead className="border-b border-border/70 bg-muted/20">

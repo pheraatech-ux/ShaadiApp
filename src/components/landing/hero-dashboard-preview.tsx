@@ -10,8 +10,8 @@ import {
   PanelLeft,
   Search,
   Sparkles,
+  DollarSign,
   Users,
-  Wallet,
 } from "lucide-react";
 import { useCallback } from "react";
 
@@ -108,7 +108,7 @@ const NAV = [
   { label: "All Weddings", icon: BookHeart, active: false, badge: 4 },
   { label: "Teams", icon: Users, active: false, badge: 2 },
   { label: "Tasks", icon: ClipboardList, active: false, badge: 7 },
-  { label: "Budget", icon: Wallet, active: false, badge: undefined },
+  { label: "Financials", icon: DollarSign, active: false, badge: undefined },
   { label: "Messages", icon: MessageSquare, active: false, badge: 1 },
 ] as const;
 

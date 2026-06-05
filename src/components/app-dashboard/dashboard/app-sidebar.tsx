@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookHeart, CalendarDays, ClipboardList, LayoutGrid, MessageSquare, Users, Wallet } from "lucide-react";
+import { BookHeart, CalendarDays, ClipboardList, DollarSign, LayoutGrid, MessageSquare, Users } from "lucide-react";
 import { ComponentType } from "react";
 
 import { SidebarProfileMenu } from "@/components/app-dashboard/dashboard/sidebar-profile-menu";
@@ -57,7 +57,7 @@ export function AppSidebar({
     { label: "Messages", href: `${basePath}/messages`, icon: MessageSquare },
   ];
   if (!hideBudgetTab) {
-    sidebarItems.splice(5, 0, { label: "Budget", href: `${basePath}/budget`, icon: Wallet });
+    sidebarItems.splice(5, 0, { label: "Financials", href: `${basePath}/budget`, icon: DollarSign });
   }
 
   function isPathActive(href: string) {
@@ -90,8 +90,8 @@ export function AppSidebar({
                   ? "onborda-nav-tasks"
                   : item.label === "Messages"
                   ? "onborda-nav-messages"
-                  : item.label === "Budget"
-                  ? "onborda-nav-budget"
+                  : item.label === "Financials"
+                  ? "onborda-nav-financials"
                   : item.label === "Teams"
                   ? "onborda-nav-teams"
                   : item.label === "Calendar"
