@@ -88,7 +88,7 @@ export function GlobalSearch() {
   }
 
   return (
-    <div ref={containerRef} className="relative hidden w-full max-w-sm items-center sm:flex">
+    <div ref={containerRef} className="relative hidden w-52 items-center sm:flex lg:w-76">
       <Search className="pointer-events-none absolute left-3 size-4 text-muted-foreground" />
       {loading && (
         <Loader2 className="pointer-events-none absolute right-3 size-4 animate-spin text-muted-foreground" />

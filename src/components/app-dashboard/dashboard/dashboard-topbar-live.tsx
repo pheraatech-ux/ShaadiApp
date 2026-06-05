@@ -11,6 +11,7 @@ export async function DashboardTopbarLive() {
   return (
     <DashboardTopbar
       greeting={greeting}
+      workspaceName={planner.workspaceName}
       actions={feedChannelId ? <NotificationBell feedChannelId={feedChannelId} /> : null}
     />
   );

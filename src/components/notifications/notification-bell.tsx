@@ -33,7 +33,7 @@ function NotificationButton({
       ref={buttonRef}
       type="button"
       variant="outline"
-      size="icon-sm"
+      size="icon"
       aria-label="Notifications"
       onClick={onClick}
       className="relative"

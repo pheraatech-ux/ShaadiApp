@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 
 import { REVENUE_CATEGORIES, type PeriodFilter } from "./types";
 import { filterByPeriod, sumRupees, useFinancialData } from "./use-financial-data";
+import { IncomeBreakdownPanel } from "./income-breakdown-panel";
+import { TopExpensesPanel } from "./top-expenses-panel";
 
 const INR = (n: number) =>
   `₹${Math.round(n).toLocaleString("en-IN")}`;
@@ -252,6 +254,43 @@ export function OverviewTab({ totalWeddings }: { totalWeddings: number }) {
         </article>
       </section>
 
+      {/* Donut charts + Revenue by Category — 3-column row */}
+      <section className="grid gap-4 lg:grid-cols-3">
+        <IncomeBreakdownPanel period={period} />
+
+        {/* Revenue by Category */}
+        <article className="rounded-xl border border-border/70 bg-card p-4">
+          <h3 className="text-sm font-semibold">Revenue by Category</h3>
+          <hr className="my-3 border-border/70" />
+          <div className="space-y-3">
+            {categoryTotals.map((cat) => {
+              const pct = totalRevenue > 0 ? (cat.total / totalRevenue) * 100 : 0;
+              const entries = revenueInPeriod.filter((e) => e.category === cat.id);
+              return (
+                <div key={cat.id}>
+                  <div className="mb-1.5 flex items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">{cat.label}</p>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <p className="text-xs text-muted-foreground">{pct.toFixed(0)}%</p>
+                      <p className="w-24 text-right text-xs font-semibold">{INR(cat.total)}</p>
+                      <p className="w-14 text-right text-xs text-muted-foreground">{entries.length} entr{entries.length !== 1 ? "ies" : "y"}</p>
+                    </div>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${Math.min(pct, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </article>
+
+        <TopExpensesPanel period={period} />
+      </section>
+
       {/* Overdue receivables detail */}
       {data.overdueReceivables.length > 0 && (
         <section className="rounded-xl border border-red-200 bg-red-50/50 p-4 dark:border-red-900/30 dark:bg-red-950/20">
@@ -281,54 +320,30 @@ export function OverviewTab({ totalWeddings }: { totalWeddings: number }) {
         </section>
       )}
 
-      {/* Revenue by Category */}
-      <section>
-        <h3 className="mb-3 text-sm font-semibold">Revenue by Category</h3>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {categoryTotals.map((cat) => {
-            const pct = totalRevenue > 0 ? (cat.total / totalRevenue) * 100 : 0;
-            const entries = revenueInPeriod.filter((e) => e.category === cat.id);
-            return (
-              <div key={cat.id} className="rounded-xl border border-border/70 bg-card p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-xs text-muted-foreground">{cat.label}</p>
-                    <p className="mt-1 text-xl font-semibold">{INR(cat.total)}</p>
-                  </div>
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                    {pct.toFixed(0)}%
-                  </span>
-                </div>
-                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${Math.min(pct, 100)}%` }}
-                  />
-                </div>
-                <p className="mt-1.5 text-xs text-muted-foreground">{entries.length} entr{entries.length !== 1 ? "ies" : "y"}</p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
 
       {/* Revenue entries list */}
-      {revenueInPeriod.length > 0 && (
-        <section>
-          <h3 className="mb-3 text-sm font-semibold">Revenue Entries — {PERIOD_LABELS[period]}</h3>
-          <div className="overflow-hidden rounded-xl border border-border/70">
-            <table className="w-full text-sm">
-              <thead className="border-b border-border/70 bg-muted/40">
+      <section>
+        <h3 className="mb-3 text-sm font-semibold">Revenue Entries — {PERIOD_LABELS[period]}</h3>
+        <div className="overflow-hidden rounded-xl border border-border/70">
+          <table className="w-full text-sm">
+            <thead className="border-b border-border/70 bg-muted/40">
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Category</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Description</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Date</th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Amount</th>
+                <th className="w-10 px-4 py-2" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/70">
+              {revenueInPeriod.length === 0 ? (
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Category</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Description</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Date</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Amount</th>
-                  <th className="w-10 px-4 py-2" />
+                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                    No revenue entries yet. Add your first one above.
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-border/70">
-                {revenueInPeriod
+              ) : (
+                revenueInPeriod
                   .slice()
                   .sort((a, b) => b.date.localeCompare(a.date))
                   .map((e) => (
@@ -350,18 +365,12 @@ export function OverviewTab({ totalWeddings }: { totalWeddings: number }) {
                         </button>
                       </td>
                     </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      {data.revenueEntries.length === 0 && (
-        <div className="rounded-xl border border-dashed border-border/70 py-12 text-center">
-          <p className="text-sm text-muted-foreground">No revenue entries yet. Add your first one above.</p>
+                  ))
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </section>
     </div>
   );
 }
