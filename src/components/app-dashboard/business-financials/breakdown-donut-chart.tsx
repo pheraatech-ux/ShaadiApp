@@ -144,22 +144,20 @@ export function BreakdownDonutChart({
           <div className="mx-4 self-stretch w-px bg-border/70" />
 
           {/* Legend */}
-          <div className="min-w-0 flex-1 space-y-3">
+          <div className="min-w-0 flex-1">
             {items.map((item, i) => {
               const pct = total > 0 ? Math.round((item.value / total) * 100) : 0;
               return (
-                <div key={i} className="flex items-start gap-2">
-                  <span
-                    className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <div className="min-w-0">
+                <div key={i} className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3 py-1.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    />
                     <p className="truncate text-xs text-muted-foreground">{item.label}</p>
-                    <p className="text-xs font-semibold">
-                      {INR(item.value)}
-                      <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">{pct}%</span>
-                    </p>
                   </div>
+                  <p className="text-right text-[11px] text-muted-foreground tabular-nums">{pct}%</p>
+                  <p className="text-right text-xs font-semibold tabular-nums">{INR(item.value)}</p>
                 </div>
               );
             })}
