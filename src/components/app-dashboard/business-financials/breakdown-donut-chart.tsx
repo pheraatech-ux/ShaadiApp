@@ -84,7 +84,7 @@ export function BreakdownDonutChart({
           <p className="text-xs text-muted-foreground">No data for this period</p>
         </div>
       ) : (
-        <div className="flex items-center">
+        <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-0">
           {/* Donut */}
           <div className="h-[200px] w-[200px] shrink-0">
             <ChartContainer config={chartConfig} className="h-full w-full">
@@ -141,24 +141,24 @@ export function BreakdownDonutChart({
           </div>
 
           {/* Vertical separator */}
-          <div className="mx-4 self-stretch w-px bg-border/70" />
+          <div className="hidden sm:block mx-4 self-stretch w-px bg-border/70" />
 
           {/* Legend */}
-          <div className="min-w-0 flex-1">
+          <div className="shrink-0 grid grid-cols-[auto_auto_auto] items-center gap-x-3">
             {items.map((item, i) => {
               const pct = total > 0 ? Math.round((item.value / total) * 100) : 0;
               return (
-                <div key={i} className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3 py-1.5">
-                  <div className="flex items-center gap-2 min-w-0">
+                <React.Fragment key={i}>
+                  <div className="flex items-center gap-2 py-1.5">
                     <span
                       className="h-2.5 w-2.5 shrink-0 rounded-full"
                       style={{ backgroundColor: item.color }}
                     />
-                    <p className="truncate text-xs text-muted-foreground">{item.label}</p>
+                    <p className="text-xs text-muted-foreground">{item.label}</p>
                   </div>
-                  <p className="text-right text-[11px] text-muted-foreground tabular-nums">{pct}%</p>
-                  <p className="text-right text-xs font-semibold tabular-nums">{INR(item.value)}</p>
-                </div>
+                  <p className="py-1.5 text-right text-[11px] text-muted-foreground tabular-nums">{pct}%</p>
+                  <p className="py-1.5 text-right text-xs font-semibold tabular-nums">{INR(item.value)}</p>
+                </React.Fragment>
               );
             })}
           </div>
