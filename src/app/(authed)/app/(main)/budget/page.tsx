@@ -1,8 +1,9 @@
 import { BusinessFinancialsDashboard } from "@/components/app-dashboard/business-financials/business-financials-dashboard";
 import { getBudgetPortfolioView } from "@/lib/data/app-data";
+import { USE_MOCK_FINANCIALS, getMockBudgetPortfolioView } from "@/lib/data/mock-budget-portfolio";
 
 export default async function BudgetPage() {
-  const view = await getBudgetPortfolioView();
+  const view = USE_MOCK_FINANCIALS ? getMockBudgetPortfolioView() : await getBudgetPortfolioView();
 
   return (
     <BusinessFinancialsDashboard

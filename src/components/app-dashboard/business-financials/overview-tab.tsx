@@ -185,11 +185,6 @@ export function OverviewTab({ totalWeddings }: { totalWeddings: number }) {
   const grossMargin = totalRevenue > 0 ? ((totalRevenue - totalExpenses) / totalRevenue) * 100 : 0;
   const totalOverdue = sumRupees(data.overdueReceivables);
 
-  const categoryTotals = REVENUE_CATEGORIES.map((cat) => ({
-    ...cat,
-    total: sumRupees(revenueInPeriod.filter((e) => e.category === cat.id)),
-  }));
-
   const now = new Date();
   const quarter = Math.floor(now.getMonth() / 3) + 1;
   const year = now.getFullYear();
@@ -254,40 +249,9 @@ export function OverviewTab({ totalWeddings }: { totalWeddings: number }) {
         </article>
       </section>
 
-      {/* Donut charts + Revenue by Category — 3-column row */}
-      <section className="grid gap-4 lg:grid-cols-3">
+      {/* Donut charts row */}
+      <section className="grid gap-4 lg:grid-cols-2">
         <IncomeBreakdownPanel period={period} />
-
-        {/* Revenue by Category */}
-        <article className="rounded-xl border border-border/70 bg-card p-4">
-          <h3 className="text-sm font-semibold">Revenue by Category</h3>
-          <hr className="my-3 border-border/70" />
-          <div className="space-y-3">
-            {categoryTotals.map((cat) => {
-              const pct = totalRevenue > 0 ? (cat.total / totalRevenue) * 100 : 0;
-              const entries = revenueInPeriod.filter((e) => e.category === cat.id);
-              return (
-                <div key={cat.id}>
-                  <div className="mb-1.5 flex items-center justify-between gap-3">
-                    <p className="text-xs text-muted-foreground">{cat.label}</p>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <p className="text-xs text-muted-foreground">{pct.toFixed(0)}%</p>
-                      <p className="w-24 text-right text-xs font-semibold">{INR(cat.total)}</p>
-                      <p className="w-14 text-right text-xs text-muted-foreground">{entries.length} entr{entries.length !== 1 ? "ies" : "y"}</p>
-                    </div>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: `${Math.min(pct, 100)}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </article>
-
         <TopExpensesPanel period={period} />
       </section>
 

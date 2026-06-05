@@ -11,6 +11,7 @@ import type {
   OverdueReceivable,
   RevenueEntry,
 } from "./types";
+import { USE_MOCK_FINANCIALS, cloneMockFinancials } from "./mock-financial-data";
 
 // ─── Query keys ─────────────────────────────────────────────────────────────
 
@@ -46,24 +47,32 @@ function mapReceivable(r: DbReceivableRow): OverdueReceivable {
 // ─── Fetch fns ───────────────────────────────────────────────────────────────
 
 async function fetchRevenue(): Promise<RevenueEntry[]> {
+  if (USE_MOCK_FINANCIALS) return cloneMockFinancials().revenueEntries;
   const res = await fetch("/api/business/revenue");
   if (!res.ok) throw new Error("Failed to fetch revenue");
   return ((await res.json()) as DbRevenueRow[]).map(mapRevenue);
 }
 async function fetchExpenses(): Promise<ExpenseEntry[]> {
+  if (USE_MOCK_FINANCIALS) return cloneMockFinancials().expenseEntries;
   const res = await fetch("/api/business/expenses");
   if (!res.ok) throw new Error("Failed to fetch expenses");
   return ((await res.json()) as DbExpenseRow[]).map(mapExpense);
 }
 async function fetchCategories(): Promise<CustomExpenseCategory[]> {
+  if (USE_MOCK_FINANCIALS) return cloneMockFinancials().customExpenseCategories;
   const res = await fetch("/api/business/expense-categories");
   if (!res.ok) throw new Error("Failed to fetch categories");
   return ((await res.json()) as DbCategoryRow[]).map(mapCategory);
 }
 async function fetchReceivables(): Promise<OverdueReceivable[]> {
+  if (USE_MOCK_FINANCIALS) return cloneMockFinancials().overdueReceivables;
   const res = await fetch("/api/business/receivables");
   if (!res.ok) throw new Error("Failed to fetch receivables");
   return ((await res.json()) as DbReceivableRow[]).map(mapReceivable);
+}
+
+function mockId(prefix: string) {
+  return `mock-${prefix}-${Date.now()}`;
 }
 
 // ─── Main hook ───────────────────────────────────────────────────────────────
@@ -71,10 +80,10 @@ async function fetchReceivables(): Promise<OverdueReceivable[]> {
 export function useFinancialData() {
   const queryClient = useQueryClient();
 
-  const revenueQ    = useQuery({ queryKey: QUERY_KEYS.revenue,           queryFn: fetchRevenue,     staleTime: 30_000 });
-  const expensesQ   = useQuery({ queryKey: QUERY_KEYS.expenses,          queryFn: fetchExpenses,    staleTime: 30_000 });
-  const categoriesQ = useQuery({ queryKey: QUERY_KEYS.expenseCategories, queryFn: fetchCategories,  staleTime: 30_000 });
-  const receivablesQ= useQuery({ queryKey: QUERY_KEYS.receivables,       queryFn: fetchReceivables, staleTime: 30_000 });
+  const revenueQ    = useQuery({ queryKey: QUERY_KEYS.revenue,           queryFn: fetchRevenue,     staleTime: USE_MOCK_FINANCIALS ? Infinity : 30_000 });
+  const expensesQ   = useQuery({ queryKey: QUERY_KEYS.expenses,          queryFn: fetchExpenses,    staleTime: USE_MOCK_FINANCIALS ? Infinity : 30_000 });
+  const categoriesQ = useQuery({ queryKey: QUERY_KEYS.expenseCategories, queryFn: fetchCategories,  staleTime: USE_MOCK_FINANCIALS ? Infinity : 30_000 });
+  const receivablesQ= useQuery({ queryKey: QUERY_KEYS.receivables,       queryFn: fetchReceivables, staleTime: USE_MOCK_FINANCIALS ? Infinity : 30_000 });
 
   const data: BusinessFinancialsData = {
     revenueEntries:           revenueQ.data     ?? [],
@@ -89,6 +98,7 @@ export function useFinancialData() {
 
   const addRevenueMut = useMutation({
     mutationFn: async (entry: Omit<RevenueEntry, "id">) => {
+      if (USE_MOCK_FINANCIALS) return { ...entry, id: mockId("rev") };
       const res = await fetch("/api/business/revenue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -119,11 +129,14 @@ export function useFinancialData() {
         old.map((e) => (e.id === ctx?.tempId ? real : e)),
       );
     },
-    onSettled: () => { void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.revenue }); },
+    onSettled: () => {
+      if (!USE_MOCK_FINANCIALS) void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.revenue });
+    },
   });
 
   const deleteRevenueMut = useMutation({
     mutationFn: async (id: string) => {
+      if (USE_MOCK_FINANCIALS) return;
       const res = await fetch(`/api/business/revenue/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete entry");
     },
@@ -138,13 +151,16 @@ export function useFinancialData() {
       if (ctx?.previous) queryClient.setQueryData(QUERY_KEYS.revenue, ctx.previous);
       toast.error("Failed to delete revenue entry");
     },
-    onSettled: () => { void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.revenue }); },
+    onSettled: () => {
+      if (!USE_MOCK_FINANCIALS) void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.revenue });
+    },
   });
 
   // ── Expenses ───────────────────────────────────────────────────────────────
 
   const addExpenseMut = useMutation({
     mutationFn: async (entry: Omit<ExpenseEntry, "id">) => {
+      if (USE_MOCK_FINANCIALS) return { ...entry, id: mockId("exp") };
       const res = await fetch("/api/business/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -175,11 +191,14 @@ export function useFinancialData() {
         old.map((e) => (e.id === ctx?.tempId ? real : e)),
       );
     },
-    onSettled: () => { void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenses }); },
+    onSettled: () => {
+      if (!USE_MOCK_FINANCIALS) void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenses });
+    },
   });
 
   const deleteExpenseMut = useMutation({
     mutationFn: async (id: string) => {
+      if (USE_MOCK_FINANCIALS) return;
       const res = await fetch(`/api/business/expenses/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete expense");
     },
@@ -194,13 +213,16 @@ export function useFinancialData() {
       if (ctx?.previous) queryClient.setQueryData(QUERY_KEYS.expenses, ctx.previous);
       toast.error("Failed to delete expense");
     },
-    onSettled: () => { void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenses }); },
+    onSettled: () => {
+      if (!USE_MOCK_FINANCIALS) void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenses });
+    },
   });
 
   // ── Custom expense categories ──────────────────────────────────────────────
 
   const addCategoryMut = useMutation({
     mutationFn: async (label: string) => {
+      if (USE_MOCK_FINANCIALS) return { id: mockId("cat"), label };
       const res = await fetch("/api/business/expense-categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -231,11 +253,14 @@ export function useFinancialData() {
         old.map((c) => (c.id === ctx?.tempId ? real : c)),
       );
     },
-    onSettled: () => { void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenseCategories }); },
+    onSettled: () => {
+      if (!USE_MOCK_FINANCIALS) void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenseCategories });
+    },
   });
 
   const deleteCategoryMut = useMutation({
     mutationFn: async (id: string) => {
+      if (USE_MOCK_FINANCIALS) return;
       const res = await fetch(`/api/business/expense-categories/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete category");
     },
@@ -256,6 +281,7 @@ export function useFinancialData() {
       toast.error("Failed to delete category");
     },
     onSettled: () => {
+      if (USE_MOCK_FINANCIALS) return;
       void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenseCategories });
       void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.expenses });
     },
@@ -265,6 +291,7 @@ export function useFinancialData() {
 
   const addReceivableMut = useMutation({
     mutationFn: async (entry: Omit<OverdueReceivable, "id">) => {
+      if (USE_MOCK_FINANCIALS) return { ...entry, id: mockId("recv") };
       const res = await fetch("/api/business/receivables", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -295,11 +322,14 @@ export function useFinancialData() {
         old.map((r) => (r.id === ctx?.tempId ? real : r)),
       );
     },
-    onSettled: () => { void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.receivables }); },
+    onSettled: () => {
+      if (!USE_MOCK_FINANCIALS) void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.receivables });
+    },
   });
 
   const deleteReceivableMut = useMutation({
     mutationFn: async (id: string) => {
+      if (USE_MOCK_FINANCIALS) return;
       const res = await fetch(`/api/business/receivables/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete receivable");
     },
@@ -315,7 +345,9 @@ export function useFinancialData() {
       if (ctx?.previous) queryClient.setQueryData(QUERY_KEYS.receivables, ctx.previous);
       toast.error("Failed to remove receivable");
     },
-    onSettled: () => { void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.receivables }); },
+    onSettled: () => {
+      if (!USE_MOCK_FINANCIALS) void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.receivables });
+    },
   });
 
   // ── Stable callback wrappers (same shape as before) ───────────────────────
