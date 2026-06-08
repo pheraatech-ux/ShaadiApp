@@ -1,13 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Filter, MapPinIcon, MoreHorizontal, Plus, SlidersHorizontal } from "lucide-react";
+import { CalendarDays, Filter, Info, MapPinIcon, MoreHorizontal, Plus, SlidersHorizontal } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EventInfoDialog } from "@/components/wedding-workspace/overview/event-info-dialog";
+import { findEventTemplate } from "@/components/wedding-workspace/overview/event-template-lookup";
 import { EventSheet } from "@/components/wedding-workspace/overview/event-sheet";
 import { useEventsQuery, type EventData } from "@/components/wedding-workspace/overview/use-events-query";
 import { WeddingWorkspaceViewModel } from "@/components/wedding-workspace/overview/types";
+import type { WeddingEvent } from "../../../../weddingCultures";
 import { cn } from "@/lib/utils";
 
 type Tab = "all" | "upcoming" | "completed";
@@ -56,6 +59,8 @@ export function TimelinePanel({ workspace }: TimelinePanelProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetMode, setSheetMode] = useState<"add" | "edit">("add");
   const [selectedEvent, setSelectedEvent] = useState<EventData | null>(null);
+  const [infoTemplate, setInfoTemplate] = useState<WeddingEvent | null>(null);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [sortAsc, setSortAsc] = useState(true);
 
   const counts = useMemo(() => {
@@ -89,11 +94,25 @@ export function TimelinePanel({ workspace }: TimelinePanelProps) {
     setSheetOpen(true);
   }
 
+  function openInfo(event: EventData) {
+    const template = findEventTemplate(event.title, event.cultureLabel);
+    if (!template) return;
+    setInfoTemplate(template);
+    setInfoOpen(true);
+  }
+
   return (
-    <section className="flex flex-col rounded-xl border border-border/70 bg-card">
+    <section className="relative flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent dark:via-white/10" />
+
       {/* Top header */}
-      <header className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3">
-        <h2 className="text-sm font-semibold text-foreground">Event timeline</h2>
+      <header className="flex items-center justify-between gap-3 border-b border-border/70 bg-gradient-to-b from-muted/40 to-transparent px-4 py-2.5 sm:px-5">
+        <div className="flex items-center gap-2">
+          <div className="flex size-5 items-center justify-center rounded-md bg-violet-500/15">
+            <CalendarDays className="size-3 text-violet-500" aria-hidden />
+          </div>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">Event timeline</h2>
+        </div>
         <div className="flex items-center gap-1.5">
           <Button
             variant="ghost"
@@ -162,6 +181,7 @@ export function TimelinePanel({ workspace }: TimelinePanelProps) {
           visible.map((event) => {
             const { month, day, weekday } = formatDateParts(event.eventDate);
             const past = !isUpcoming(event.eventDate);
+            const eventTemplate = findEventTemplate(event.title, event.cultureLabel);
 
             return (
               <article
@@ -225,6 +245,19 @@ export function TimelinePanel({ workspace }: TimelinePanelProps) {
                 )}
 
                 {/* Actions */}
+                {eventTemplate ? (
+                  <button
+                    type="button"
+                    onClick={() => openInfo(event)}
+                    className="shrink-0 border-0 bg-transparent p-0 leading-none shadow-none outline-none transition-[filter] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-amber-400/60 focus-visible:ring-offset-1"
+                    aria-label={`About ${event.title}`}
+                  >
+                    <Info
+                      className="size-4 fill-amber-500 stroke-white text-white drop-shadow-[0_0_1px_rgba(251,191,36,0.9),0_0_8px_rgba(251,191,36,0.65)]"
+                      strokeWidth={2}
+                    />
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => openEdit(event)}
@@ -246,6 +279,12 @@ export function TimelinePanel({ workspace }: TimelinePanelProps) {
         event={selectedEvent}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+      />
+
+      <EventInfoDialog
+        template={infoTemplate}
+        open={infoOpen}
+        onOpenChange={setInfoOpen}
       />
     </section>
   );
