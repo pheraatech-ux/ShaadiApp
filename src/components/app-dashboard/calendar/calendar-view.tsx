@@ -20,6 +20,7 @@ import type {
   CalendarCeremonyEvent,
   CalendarTaskDeadline,
   CalendarWeddingDate,
+  GoogleCalCachedEvent,
   AnyCalendarEvent,
 } from "@/components/app-dashboard/calendar/types";
 
@@ -28,6 +29,7 @@ type Props = {
   weddingDates: CalendarWeddingDate[];
   ceremonyEvents: CalendarCeremonyEvent[];
   taskDeadlines: CalendarTaskDeadline[];
+  googleCalEvents?: GoogleCalCachedEvent[];
   onSelectSlot: (date: string, time?: string) => void;
   onEventClick: (event: AnyCalendarEvent, anchorEl: Element) => void;
   onEventDrop: (id: string, startAt: string, endAt: string | null) => void;
@@ -38,6 +40,7 @@ const PERSONAL_COLOR = "#6366f1";
 const CEREMONY_COLOR = "#ec4899";
 const TASK_COLOR = "#f59e0b";
 const WEDDING_COLOR = "#10b981";
+const GCAL_COLOR = "#4285F4";
 
 function formatNowTime(d: Date): string {
   const h = d.getHours() % 12 || 12;
@@ -51,6 +54,7 @@ export function CalendarView({
   weddingDates,
   ceremonyEvents,
   taskDeadlines,
+  googleCalEvents = [],
   onSelectSlot,
   onEventClick,
   onEventDrop,
@@ -78,6 +82,21 @@ export function CalendarView({
 
   const events: EventInput[] = useMemo(() => {
     const items: EventInput[] = [];
+
+    for (const e of googleCalEvents) {
+      items.push({
+        id: `gcal-${e.id}`,
+        title: e.title,
+        start: e.startAt,
+        end: e.endAt ?? undefined,
+        allDay: e.allDay,
+        backgroundColor: GCAL_COLOR + "cc",
+        borderColor: GCAL_COLOR,
+        textColor: "#ffffff",
+        editable: false,
+        extendedProps: { source: "gcal", raw: e },
+      });
+    }
 
     for (const e of personalEvents) {
       items.push({
@@ -137,7 +156,7 @@ export function CalendarView({
     }
 
     return items;
-  }, [personalEvents, weddingDates, ceremonyEvents, taskDeadlines]);
+  }, [personalEvents, weddingDates, ceremonyEvents, taskDeadlines, googleCalEvents]);
 
   const handleDateClick = useCallback(
     (arg: DateClickArg) => {

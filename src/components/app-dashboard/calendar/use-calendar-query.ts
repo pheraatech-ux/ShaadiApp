@@ -5,6 +5,8 @@ import type {
   CalendarEventRow,
   CreateCalendarEventInput,
   UpdateCalendarEventInput,
+  GoogleCalCachedEvent,
+  GoogleCalStatus,
 } from "@/components/app-dashboard/calendar/types";
 
 export const calendarQueryKey = () => ["calendar-events"] as const;
@@ -61,6 +63,7 @@ export function useCreateCalendarEvent() {
         location: input.location ?? null,
         attendeeIds: input.attendeeIds ?? [],
         guestEmails: input.guestEmails ?? [],
+        gcalEventId: null,
         isAttendee: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -136,6 +139,110 @@ export function useUpdateCalendarEvent() {
       queryClient.invalidateQueries({ queryKey: calendarQueryKey() });
     },
   });
+}
+
+// ── Google Calendar ────────────────────────────────────────────────────────────
+
+export const gcalStatusQueryKey = () => ["gcal-status"] as const;
+export const gcalEventsQueryKey = () => ["gcal-events"] as const;
+
+export function useGoogleCalStatus(initialStatus: GoogleCalStatus) {
+  return useQuery({
+    queryKey: gcalStatusQueryKey(),
+    queryFn: async (): Promise<GoogleCalStatus> => {
+      const res = await fetch("/api/auth/google-calendar/status", { credentials: "include" });
+      if (!res.ok) return { connected: false, email: null, connectedAt: null };
+      return res.json() as Promise<GoogleCalStatus>;
+    },
+    initialData: initialStatus,
+    initialDataUpdatedAt: Date.now(),
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useGoogleCalSync(initialEvents: GoogleCalCachedEvent[]) {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: gcalEventsQueryKey(),
+    queryFn: async (): Promise<GoogleCalCachedEvent[]> => {
+      // Return cached data — actual sync is triggered imperatively
+      return queryClient.getQueryData<GoogleCalCachedEvent[]>(gcalEventsQueryKey()) ?? initialEvents;
+    },
+    initialData: initialEvents,
+    initialDataUpdatedAt: Date.now(),
+    staleTime: Infinity,
+  });
+
+  const sync = useMutation({
+    mutationFn: async (): Promise<{
+      pulled: number;
+      pushed: number;
+      removed: number;
+      syncedAt: string;
+      events: GoogleCalCachedEvent[];
+    }> => {
+      const res = await fetch("/api/calendar/google/sync", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: string };
+        throw new Error(err.error ?? "Sync failed");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      type RawRow = {
+        id: string; user_id: string; title: string; description: string | null;
+        start_at: string; end_at: string | null; all_day: boolean;
+        location: string | null; html_link: string | null;
+        calendar_id: string; synced_at: string;
+      };
+      const mapped: GoogleCalCachedEvent[] = (data.events as unknown as RawRow[]).map((r) => ({
+        id: r.id,
+        userId: r.user_id,
+        title: r.title,
+        description: r.description,
+        startAt: r.start_at,
+        endAt: r.end_at,
+        allDay: r.all_day,
+        location: r.location,
+        htmlLink: r.html_link,
+        calendarId: r.calendar_id,
+        syncedAt: r.synced_at,
+      }));
+      queryClient.setQueryData<GoogleCalCachedEvent[]>(gcalEventsQueryKey(), mapped);
+      void queryClient.invalidateQueries({ queryKey: calendarQueryKey() });
+      const parts = [`${data.pulled} from Google Calendar`];
+      if (data.pushed > 0) parts.push(`${data.pushed} pushed`);
+      if (data.removed > 0) parts.push(`${data.removed} removed`);
+      toast.success(`Synced: ${parts.join(", ")}`);
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
+    },
+  });
+
+  const disconnect = useMutation({
+    mutationFn: async (): Promise<void> => {
+      const res = await fetch("/api/auth/google-calendar/disconnect", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to disconnect");
+    },
+    onSuccess: () => {
+      queryClient.setQueryData<GoogleCalCachedEvent[]>(gcalEventsQueryKey(), []);
+      queryClient.invalidateQueries({ queryKey: gcalStatusQueryKey() });
+      toast.success("Google Calendar disconnected");
+    },
+    onError: () => {
+      toast.error("Failed to disconnect Google Calendar");
+    },
+  });
+
+  return { events: query.data ?? initialEvents, sync, disconnect };
 }
 
 export function useDeleteCalendarEvent() {

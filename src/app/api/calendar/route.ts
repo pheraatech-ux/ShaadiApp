@@ -1,13 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
+import { pushNewEventToGcal } from "@/lib/google-calendar/push-helpers";
 import type { CreateCalendarEventInput } from "@/components/app-dashboard/calendar/types";
 
 function mapRow(r: {
   id: string; user_id: string; title: string; description: string | null;
   start_at: string; end_at: string | null; all_day: boolean; color: string | null;
   wedding_id: string | null; event_type: string; location: string | null;
-  attendee_ids: string[]; guest_emails: string[]; created_at: string; updated_at: string;
+  attendee_ids: string[]; guest_emails: string[]; gcal_event_id?: string | null;
+  created_at: string; updated_at: string;
 }, isAttendee = false) {
   return {
     id: r.id,
@@ -23,6 +25,7 @@ function mapRow(r: {
     location: r.location,
     attendeeIds: r.attendee_ids ?? [],
     guestEmails: r.guest_emails ?? [],
+    gcalEventId: r.gcal_event_id ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     isAttendee,
@@ -105,6 +108,18 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // Fire-and-forget: push to Google Calendar if the user has it connected
+    void pushNewEventToGcal(supabase, user.id, {
+      id: data.id,
+      title: data.title,
+      description: data.description,
+      start_at: data.start_at,
+      end_at: data.end_at,
+      all_day: data.all_day,
+      location: data.location,
+      gcal_event_id: data.gcal_event_id ?? null,
+    }, request.url).catch(() => {});
 
     return NextResponse.json({ event: mapRow(data) }, { status: 201 });
   } catch {

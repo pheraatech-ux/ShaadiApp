@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CalendarDays, CalendarCheck, ClipboardList, BookHeart, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 
@@ -9,11 +11,13 @@ import { CalendarAiInput } from "@/components/app-dashboard/calendar/calendar-ai
 import { CalendarView } from "@/components/app-dashboard/calendar/calendar-view";
 import { EventFormDialog } from "@/components/app-dashboard/calendar/event-form-dialog";
 import { EventDetailModal } from "@/components/app-dashboard/calendar/event-detail-modal";
+import { GoogleCalBanner } from "@/components/app-dashboard/calendar/google-cal-banner";
 import {
   useCalendarQuery,
   useCreateCalendarEvent,
   useUpdateCalendarEvent,
   useDeleteCalendarEvent,
+  useGoogleCalSync,
 } from "@/components/app-dashboard/calendar/use-calendar-query";
 import type { AnyCalendarEvent, CalendarEventRow, CalendarViewModel } from "@/components/app-dashboard/calendar/types";
 
@@ -23,7 +27,9 @@ type Props = {
 };
 
 export function CalendarWorkspace({ view, showAiInput = true }: Props) {
+  const searchParams = useSearchParams();
   const { data: personalEvents } = useCalendarQuery(view.personalEvents);
+  const { events: googleCalEvents, sync, disconnect } = useGoogleCalSync(view.googleCalEvents);
 
   const createEvent = useCreateCalendarEvent();
   const updateEvent = useUpdateCalendarEvent();
@@ -38,6 +44,20 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
   const [anchorEl, setAnchorEl] = useState<Element | null>(null);
 
   const isMutating = createEvent.isPending || updateEvent.isPending || deleteEvent.isPending;
+
+  const syncMutate = sync.mutate;
+
+  // Show toast when Google Calendar connects/errors via OAuth redirect
+  useEffect(() => {
+    if (searchParams.get("gcal_connected") === "1") {
+      toast.success("Google Calendar connected!");
+      window.history.replaceState({}, "", window.location.pathname);
+      syncMutate();
+    } else if (searchParams.get("gcal_error")) {
+      toast.error("Google Calendar connection failed. Please try again.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [searchParams, syncMutate]);
 
   const today = new Date().toISOString().slice(0, 10);
   const oneWeekOut = new Date(Date.now() + 7 * 86_400_000).toISOString();
@@ -150,12 +170,22 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
           <LegendDot color="#10b981" label="Wedding days" />
           <LegendDot color="#ec4899" label="Ceremony events" />
           <LegendDot color="#f59e0b" label="Task deadlines" />
+          {view.googleCalStatus.connected && (
+            <LegendDot color="#4285F4" label="Google Calendar" />
+          )}
         </div>
         <Button size="sm" className="h-8 rounded-xl gap-1.5 shrink-0" onClick={openNewEventDialog}>
           <Plus className="size-3.5" />
           New Event
         </Button>
       </div>
+
+      {/* Google Calendar connect/sync banner */}
+      <GoogleCalBanner
+        initialStatus={view.googleCalStatus}
+        sync={sync}
+        disconnect={disconnect}
+      />
 
       {/* AI natural language input — hidden in workspace (chat modal handles it) */}
       {showAiInput && <CalendarAiInput
@@ -173,6 +203,7 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
         weddingDates={view.weddingDates}
         ceremonyEvents={view.ceremonyEvents}
         taskDeadlines={view.taskDeadlines}
+        googleCalEvents={googleCalEvents}
         onSelectSlot={handleSelectSlot}
         onEventClick={handleEventClick}
         onEventDrop={handleEventDrop}

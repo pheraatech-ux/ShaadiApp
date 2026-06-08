@@ -12,10 +12,32 @@ export type CalendarEventRow = {
   location: string | null;
   attendeeIds: string[];
   guestEmails: string[];
+  gcalEventId: string | null;
   createdAt: string;
   updatedAt: string;
   /** True when the current user is an invitee, not the owner. Read-only on the calendar. */
   isAttendee: boolean;
+};
+
+/** A Google Calendar event pulled from the user's GCal and cached locally. */
+export type GoogleCalCachedEvent = {
+  id: string;
+  userId: string;
+  title: string;
+  description: string | null;
+  startAt: string;
+  endAt: string | null;
+  allDay: boolean;
+  location: string | null;
+  htmlLink: string | null;
+  calendarId: string;
+  syncedAt: string;
+};
+
+export type GoogleCalStatus = {
+  connected: boolean;
+  email: string | null;
+  connectedAt: string | null;
 };
 
 export type CalendarCeremonyEvent = {
@@ -60,6 +82,8 @@ export type CalendarViewModel = {
   weddings: { id: string; slug: string; name: string }[];
   vendors: CalendarVendorContext[];
   employees: CalendarEmployee[];
+  googleCalEvents: GoogleCalCachedEvent[];
+  googleCalStatus: GoogleCalStatus;
 };
 
 export type CalendarVendorContext = {
@@ -90,4 +114,5 @@ export type AnyCalendarEvent =
   | { source: "attendee"; event: CalendarEventRow }
   | { source: "wedding"; event: CalendarWeddingDate }
   | { source: "ceremony"; event: CalendarCeremonyEvent }
-  | { source: "task"; event: CalendarTaskDeadline };
+  | { source: "task"; event: CalendarTaskDeadline }
+  | { source: "gcal"; event: GoogleCalCachedEvent };

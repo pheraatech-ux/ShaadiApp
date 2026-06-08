@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
+import { updateGcalEvent, deleteGcalEvent } from "@/lib/google-calendar/push-helpers";
 import type { UpdateCalendarEventInput } from "@/components/app-dashboard/calendar/types";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -9,7 +10,8 @@ function mapRow(r: {
   id: string; user_id: string; title: string; description: string | null;
   start_at: string; end_at: string | null; all_day: boolean; color: string | null;
   wedding_id: string | null; event_type: string; location: string | null;
-  attendee_ids: string[]; guest_emails: string[]; created_at: string; updated_at: string;
+  attendee_ids: string[]; guest_emails: string[]; gcal_event_id?: string | null;
+  created_at: string; updated_at: string;
 }) {
   return {
     id: r.id,
@@ -76,6 +78,20 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     if (error) throw error;
     if (!data) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
+    // Fire-and-forget: update in Google Calendar if the event was previously pushed
+    if (data.gcal_event_id) {
+      void updateGcalEvent(supabase, user.id, {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        start_at: data.start_at,
+        end_at: data.end_at,
+        all_day: data.all_day,
+        location: data.location,
+        gcal_event_id: data.gcal_event_id ?? null,
+      }, request.url).catch(() => {});
+    }
+
     return NextResponse.json({ event: mapRow(data) });
   } catch {
     return NextResponse.json({ error: "Unable to update calendar event." }, { status: 500 });
@@ -89,12 +105,25 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
+    // Grab gcal_event_id before deleting
+    const { data: existing } = await supabase
+      .from("calendar_events")
+      .select("gcal_event_id")
+      .eq("id", id)
+      .maybeSingle();
+
     const { error } = await supabase
       .from("calendar_events")
       .delete()
       .eq("id", id);
 
     if (error) throw error;
+
+    // Fire-and-forget: remove from Google Calendar if it was pushed there
+    if (existing?.gcal_event_id) {
+      void deleteGcalEvent(supabase, user.id, existing.gcal_event_id, request.url).catch(() => {});
+    }
+
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Unable to delete calendar event." }, { status: 500 });

@@ -106,6 +106,7 @@ export type Database = {
           location: string | null
           attendee_ids: string[]
           guest_emails: string[]
+          gcal_event_id: string | null
           created_at: string
           updated_at: string
         }
@@ -123,6 +124,7 @@ export type Database = {
           location?: string | null
           attendee_ids?: string[]
           guest_emails?: string[]
+          gcal_event_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -140,6 +142,7 @@ export type Database = {
           location?: string | null
           attendee_ids?: string[]
           guest_emails?: string[]
+          gcal_event_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -159,6 +162,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      google_calendar_tokens: {
+        Row: {
+          user_id: string
+          access_token: string
+          refresh_token: string | null
+          expiry_date: number | null
+          scope: string | null
+          token_type: string | null
+          calendar_id: string
+          connected_email: string | null
+          connected_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          access_token: string
+          refresh_token?: string | null
+          expiry_date?: number | null
+          scope?: string | null
+          token_type?: string | null
+          calendar_id?: string
+          connected_email?: string | null
+          connected_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          access_token?: string
+          refresh_token?: string | null
+          expiry_date?: number | null
+          scope?: string | null
+          token_type?: string | null
+          calendar_id?: string
+          connected_email?: string | null
+          connected_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      google_calendar_cached_events: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          description: string | null
+          start_at: string
+          end_at: string | null
+          all_day: boolean
+          location: string | null
+          html_link: string | null
+          calendar_id: string
+          synced_at: string
+        }
+        Insert: {
+          id: string
+          user_id: string
+          title?: string
+          description?: string | null
+          start_at: string
+          end_at?: string | null
+          all_day?: boolean
+          location?: string | null
+          html_link?: string | null
+          calendar_id?: string
+          synced_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          description?: string | null
+          start_at?: string
+          end_at?: string | null
+          all_day?: boolean
+          location?: string | null
+          html_link?: string | null
+          calendar_id?: string
+          synced_at?: string
+        }
+        Relationships: []
       }
       budget_expenses: {
         Row: {

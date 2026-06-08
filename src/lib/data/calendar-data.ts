@@ -8,7 +8,8 @@ function mapRow(r: {
   id: string; user_id: string; title: string; description: string | null;
   start_at: string; end_at: string | null; all_day: boolean; color: string | null;
   wedding_id: string | null; event_type: string; location: string | null;
-  attendee_ids: string[]; guest_emails: string[]; created_at: string; updated_at: string;
+  attendee_ids: string[]; guest_emails: string[]; gcal_event_id?: string | null;
+  created_at: string; updated_at: string;
 }, isAttendee = false) {
   return {
     id: r.id,
@@ -24,6 +25,7 @@ function mapRow(r: {
     location: r.location ?? null,
     attendeeIds: r.attendee_ids ?? [],
     guestEmails: r.guest_emails ?? [],
+    gcalEventId: r.gcal_event_id ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     isAttendee,
@@ -46,6 +48,8 @@ export const getCalendarView = cache(async (): Promise<CalendarViewModel> => {
     { data: vendorRows },
     { data: employeeRows },
     { data: myEmployeeRecord },
+    { data: gcalTokenRow },
+    { data: gcalCachedRows },
   ] = await Promise.all([
     supabase
       .from("weddings")
@@ -82,6 +86,16 @@ export const getCalendarView = cache(async (): Promise<CalendarViewModel> => {
       .select("id, owner_user_id")
       .eq("user_id", planner.userId)
       .maybeSingle(),
+    supabase
+      .from("google_calendar_tokens")
+      .select("connected_email, connected_at")
+      .eq("user_id", planner.userId)
+      .maybeSingle(),
+    supabase
+      .from("google_calendar_cached_events")
+      .select("*")
+      .eq("user_id", planner.userId)
+      .order("start_at", { ascending: true }),
   ]);
 
   // If the user is an employee, show all peers from that company (not just their own employees)
@@ -165,5 +179,23 @@ export const getCalendarView = cache(async (): Promise<CalendarViewModel> => {
         return true;
       });
     })(),
+    googleCalEvents: (gcalCachedRows ?? []).map((r) => ({
+      id: r.id,
+      userId: r.user_id,
+      title: r.title,
+      description: r.description,
+      startAt: r.start_at,
+      endAt: r.end_at,
+      allDay: r.all_day,
+      location: r.location,
+      htmlLink: r.html_link,
+      calendarId: r.calendar_id,
+      syncedAt: r.synced_at,
+    })),
+    googleCalStatus: {
+      connected: Boolean(gcalTokenRow),
+      email: gcalTokenRow?.connected_email ?? null,
+      connectedAt: gcalTokenRow?.connected_at ?? null,
+    },
   };
 });
