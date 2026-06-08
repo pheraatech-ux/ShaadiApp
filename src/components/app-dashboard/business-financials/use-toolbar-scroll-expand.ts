@@ -109,7 +109,9 @@ export function useToolbarScrollExpand() {
       typeof ResizeObserver !== "undefined" && inset
         ? new ResizeObserver(onScroll)
         : null;
-    resizeObserver?.observe(inset);
+    if (resizeObserver && inset) {
+      resizeObserver.observe(inset);
+    }
 
     measure();
 
