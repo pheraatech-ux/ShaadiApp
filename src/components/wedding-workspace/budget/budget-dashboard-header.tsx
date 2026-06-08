@@ -55,9 +55,7 @@ export function BudgetDashboardHeader({
 
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
-      <div className="space-y-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Wedding budget</h1>
-
+      <div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
             {initials}

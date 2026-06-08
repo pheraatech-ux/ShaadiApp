@@ -67,13 +67,13 @@ export function BreakdownDonutChart({
   } satisfies ChartConfig;
 
   return (
-    <article className="rounded-xl border border-border/70 bg-card p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-          <h3 className="text-sm font-semibold">{title}</h3>
+    <article className="min-w-0 rounded-xl border border-border/70 bg-card p-4">
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          {Icon && <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />}
+          <h3 className="truncate text-sm font-semibold">{title}</h3>
         </div>
-        <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+        <span className="shrink-0 rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
           {period}
         </span>
       </div>
@@ -84,9 +84,9 @@ export function BreakdownDonutChart({
           <p className="text-xs text-muted-foreground">No data for this period</p>
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-0">
+        <div className="flex w-full min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
           {/* Donut */}
-          <div className="h-[200px] w-[200px] shrink-0">
+          <div className="h-[200px] w-[200px] shrink-0 self-start">
             <ChartContainer config={chartConfig} className="h-full w-full">
               <PieChart>
                 <ChartTooltip
@@ -141,23 +141,29 @@ export function BreakdownDonutChart({
           </div>
 
           {/* Vertical separator */}
-          <div className="hidden sm:block mx-4 self-stretch w-px bg-border/70" />
+          <div className="mx-4 hidden w-px shrink-0 self-stretch bg-border/70 sm:block" />
 
           {/* Legend */}
-          <div className="shrink-0 grid grid-cols-[auto_auto_auto] items-center gap-x-3">
+          <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 sm:gap-x-4">
             {items.map((item, i) => {
               const pct = total > 0 ? Math.round((item.value / total) * 100) : 0;
               return (
                 <React.Fragment key={i}>
-                  <div className="flex items-center gap-2 py-1.5">
+                  <div className="flex min-w-0 items-center gap-2 py-1.5">
                     <span
                       className="h-2.5 w-2.5 shrink-0 rounded-full"
                       style={{ backgroundColor: item.color }}
                     />
-                    <p className="text-xs text-muted-foreground">{item.label}</p>
+                    <p className="truncate text-xs text-muted-foreground" title={item.label}>
+                      {item.label}
+                    </p>
                   </div>
-                  <p className="py-1.5 text-right text-[11px] text-muted-foreground tabular-nums">{pct}%</p>
-                  <p className="py-1.5 text-right text-xs font-semibold tabular-nums">{INR(item.value)}</p>
+                  <p className="shrink-0 py-1.5 text-right text-[11px] text-muted-foreground tabular-nums">
+                    {pct}%
+                  </p>
+                  <p className="shrink-0 py-1.5 text-right text-xs font-semibold tabular-nums">
+                    {INR(item.value)}
+                  </p>
                 </React.Fragment>
               );
             })}
