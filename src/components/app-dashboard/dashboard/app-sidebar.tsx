@@ -67,11 +67,15 @@ export function AppSidebar({
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader id="onborda-sidebar-header" className="min-h-[63px] shrink-0 justify-center gap-0 border-b border-sidebar-border/60 p-0 px-2 py-3 sm:px-3">
-        <div className="flex h-[39px] w-full min-w-0 items-center justify-center rounded-xl border border-sidebar-border/70 bg-sidebar-accent/60 px-3 py-0 group-data-[collapsible=icon]:px-1">
-          <p className="truncate text-sm font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
+        <div className={[
+          "flex h-[39px] w-full min-w-0 items-center justify-center rounded-xl px-3 py-0 group-data-[collapsible=icon]:px-1",
+          "bg-gradient-to-b from-sidebar-accent to-sidebar-accent/40 border border-sidebar-border/60",
+          "shadow-[0_1px_2px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.06)]",
+        ].join(" ")}>
+          <p className="truncate text-sm font-bold tracking-tight group-data-[collapsible=icon]:hidden">
             ShaadiOS
           </p>
-          <p className="hidden text-sm font-semibold group-data-[collapsible=icon]:block">S</p>
+          <p className="hidden text-sm font-bold group-data-[collapsible=icon]:block">S</p>
         </div>
       </SidebarHeader>
       <SidebarContent>

@@ -1,4 +1,4 @@
-import { ArrowRight, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -17,9 +17,8 @@ export function WeddingHeaderActions({
         <Plus />
         New wedding
       </Button>
-      <Button variant="ghost" size="sm" className="rounded-xl" onClick={onViewAll}>
+      <Button variant="ghost" size="sm" className="rounded-full" onClick={onViewAll}>
         View all
-        <ArrowRight />
       </Button>
     </>
   );

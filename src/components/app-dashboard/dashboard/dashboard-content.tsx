@@ -14,24 +14,27 @@ export async function DashboardContent() {
   const dateLabel = `${_d.toLocaleDateString("en-GB", { weekday: "long" })}, ${_d.getDate()} ${_d.toLocaleDateString("en-GB", { month: "long" })}`;
 
   return (
-    <div className="space-y-4 sm:space-y-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-16">
-        <div className="shrink-0">
-          <p className="text-sm text-muted-foreground">
-            {salutation || "Welcome"},
+    <div className="space-y-5 sm:space-y-6">
+      {/* Greeting + Stats Row */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-14">
+        <div className="shrink-0 db-fade-up">
+          <p className="text-xs font-medium tracking-wide text-muted-foreground/70 uppercase">
+            {salutation || "Welcome"}
           </p>
           {greetedName ? (
-            <p className="mt-0.5 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+            <p className="mt-1 text-[2.25rem] font-extrabold tracking-tight leading-none text-foreground sm:text-[2.5rem]">
               {greetedName}
             </p>
           ) : (
-            <p className="mt-0.5 text-lg text-muted-foreground">{data.greeting}</p>
+            <p className="mt-1 text-lg font-semibold text-muted-foreground">{data.greeting}</p>
           )}
-          <p className="mt-0.5 text-sm text-muted-foreground">{dateLabel}</p>
+          <p className="mt-1.5 text-sm text-muted-foreground/60 font-medium">{dateLabel}</p>
         </div>
-        <StatsGrid items={data.stats} variant="bar" className="flex-1" />
+        <StatsGrid items={data.stats} variant="bar" className="flex-1 db-fade-up-1" />
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
+
+      {/* Main widgets */}
+      <div className="grid gap-4 lg:grid-cols-2 db-fade-up-2">
         <div className="h-[400px]">
           <UrgentTasksWidget items={data.urgentTasks} />
         </div>
@@ -39,7 +42,9 @@ export async function DashboardContent() {
           <AiInsightsWidget insights={data.aiInsights} />
         </div>
       </div>
-      <div className="mt-8 grid gap-4 lg:grid-cols-2">
+
+      {/* Secondary widgets */}
+      <div className="grid gap-4 lg:grid-cols-2 db-fade-up-3">
         <div className="h-[340px]">
           <WeddingGlanceWidget items={data.weddings} />
         </div>
