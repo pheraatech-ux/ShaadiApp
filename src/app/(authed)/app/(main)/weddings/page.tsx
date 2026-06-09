@@ -1,6 +1,8 @@
 import { AllWeddingsPage } from "@/components/app-dashboard/all-weddings/all-weddings-page";
 import { getAllWeddingsPageView } from "@/lib/data/app-data";
 
+export const metadata = { title: "All Weddings" };
+
 export default async function WeddingsPage() {
   const view = await getAllWeddingsPageView();
 

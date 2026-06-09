@@ -84,35 +84,56 @@ export function WeddingGlanceWidget({ items, basePath = "/app" }: WeddingGlanceW
       </div>
 
       {/* Column labels */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-border/50 bg-muted/20 px-4 py-1.5 sm:px-5">
-        <span className="flex-1 text-[9.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">
-          Weddings
-        </span>
-        <div className="grid w-48 shrink-0 grid-cols-3 text-center">
-          <span className="text-[9.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">Tasks</span>
-          <span className="text-[9.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">Overdue</span>
-          <span className="text-[9.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">Budget</span>
+      {sorted.length > 0 && (
+        <div className="flex shrink-0 items-center gap-3 border-b border-border/50 bg-muted/20 px-4 py-1.5 sm:px-5">
+          <span className="flex-1 text-[9.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">
+            Weddings
+          </span>
+          <div className="grid w-48 shrink-0 grid-cols-3 text-center">
+            <span className="text-[9.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">Tasks</span>
+            <span className="text-[9.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">Overdue</span>
+            <span className="text-[9.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">Budget</span>
+          </div>
+          <div className="w-4 shrink-0" />
         </div>
-        <div className="w-4 shrink-0" />
-      </div>
+      )}
 
       {/* Rows */}
-      <OverlayScrollbarsComponent
-        element="div"
-        className="min-h-0 flex-1"
-        options={{
-          overflow: { x: "hidden", y: "scroll" },
-          scrollbars: { theme: "os-theme-dark", autoHide: "scroll", autoHideSuspend: true, clickScroll: true },
-        }}
-        defer
-      >
-        <div className="flex flex-col gap-1.5 px-3 py-3">
-          {sorted.length === 0 ? (
-            <p className="rounded-xl border border-border/70 bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
-              No weddings yet.
-            </p>
-          ) : (
-            sorted.map((item, i) => {
+      {sorted.length === 0 ? (
+        <div className="flex min-h-0 flex-1 flex-col px-3 py-3">
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/70 bg-muted/15 px-6 py-8 text-center">
+            <span className="flex size-10 items-center justify-center rounded-full border border-dashed border-rose-400/40 bg-rose-500/10">
+              <Heart className="size-4 text-rose-500" aria-hidden />
+            </span>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">No weddings yet</p>
+              <p className="max-w-[260px] text-xs leading-relaxed text-muted-foreground">
+                Add your first couple to start planning tasks, budgets, and timelines in one place.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-1 rounded-xl text-xs"
+              onClick={() => setAddWeddingOpen(true)}
+            >
+              <Plus />
+              Add your first wedding
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <OverlayScrollbarsComponent
+          element="div"
+          className="min-h-0 flex-1"
+          options={{
+            overflow: { x: "hidden", y: "scroll" },
+            scrollbars: { theme: "os-theme-dark", autoHide: "scroll", autoHideSuspend: true, clickScroll: true },
+          }}
+          defer
+        >
+          <div className="flex flex-col gap-1.5 px-3 py-3">
+            {sorted.map((item, i) => {
               const palette = AVATAR_PALETTES[i % AVATAR_PALETTES.length];
               return (
                 <Link
@@ -175,10 +196,10 @@ export function WeddingGlanceWidget({ items, basePath = "/app" }: WeddingGlanceW
                   <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/40 transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden />
                 </Link>
               );
-            })
-          )}
-        </div>
-      </OverlayScrollbarsComponent>
+            })}
+          </div>
+        </OverlayScrollbarsComponent>
+      )}
 
       <AddWeddingFlowDialog open={addWeddingOpen} onOpenChange={setAddWeddingOpen} />
     </div>

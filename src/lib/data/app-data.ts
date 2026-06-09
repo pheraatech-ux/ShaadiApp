@@ -32,6 +32,7 @@ import { resolvePersonaFromUser, type AppPersona } from "@/lib/employee/persona"
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { taskTouchesWorkspaceUser } from "@/lib/wedding-task-scope";
 import type { Database } from "@/types/database";
+import type { UpcomingEventItem } from "@/components/app-dashboard/upcoming-events/types";
 
 export type WorkspaceSidebarBadgeCounts = {
   teamCount: number;
@@ -2814,3 +2815,103 @@ export const getWeddingDocumentsViewBySlug = cache(
     return { weddingId: wedding.id, weddingSlug: wedding.slug, documents, counts };
   }
 );
+
+export const getUpcomingEventsPanelData = cache(async (): Promise<UpcomingEventItem[]> => {
+  const planner = await getPlannerContext();
+  const supabase = await createSupabaseServerClient();
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const in7Days = new Date(today);
+  in7Days.setDate(in7Days.getDate() + 7);
+  in7Days.setHours(23, 59, 59, 999);
+
+  const todayStr = today.toISOString().slice(0, 10);
+  const in7DaysStr = in7Days.toISOString().slice(0, 10);
+
+  const weddings = await getAccessibleWeddings(planner.userId);
+  const weddingIds = weddings.map((w) => w.id);
+  const weddingById = new Map(weddings.map((w) => [w.id, w]));
+
+  const [{ data: calRows }, { data: ceremonyRows }] = await Promise.all([
+    supabase
+      .from("calendar_events")
+      .select("id, title, start_at, all_day, color, wedding_id")
+      .eq("user_id", planner.userId)
+      .gte("start_at", today.toISOString())
+      .lte("start_at", in7Days.toISOString())
+      .order("start_at", { ascending: true }),
+    weddingIds.length
+      ? supabase
+          .from("wedding_events")
+          .select("id, title, event_date, culture_label, wedding_id")
+          .in("wedding_id", weddingIds)
+          .gte("event_date", todayStr)
+          .lte("event_date", in7DaysStr)
+          .order("event_date", { ascending: true })
+      : Promise.resolve({ data: [] as { id: string; title: string; event_date: string | null; culture_label: string | null; wedding_id: string }[] }),
+  ]);
+
+  const items: UpcomingEventItem[] = [];
+
+  for (const r of calRows ?? []) {
+    const wedding = r.wedding_id ? weddingById.get(r.wedding_id) : null;
+    items.push({
+      id: `cal-${r.id}`,
+      kind: "calendar",
+      title: r.title,
+      dateStr: r.start_at.slice(0, 10),
+      startAt: r.all_day ? null : r.start_at,
+      allDay: r.all_day,
+      color: r.color,
+      weddingName: wedding?.couple_name ?? null,
+      weddingSlug: wedding?.slug ?? null,
+      cultureLabel: null,
+    });
+  }
+
+  for (const r of ceremonyRows ?? []) {
+    if (!r.event_date) continue;
+    const wedding = weddingById.get(r.wedding_id);
+    items.push({
+      id: `ceremony-${r.id}`,
+      kind: "ceremony",
+      title: r.title,
+      dateStr: r.event_date,
+      startAt: null,
+      allDay: true,
+      color: null,
+      weddingName: wedding?.couple_name ?? null,
+      weddingSlug: wedding?.slug ?? null,
+      cultureLabel: r.culture_label,
+    });
+  }
+
+  for (const w of weddings) {
+    if (!w.wedding_date) continue;
+    if (w.wedding_date < todayStr || w.wedding_date > in7DaysStr) continue;
+    items.push({
+      id: `wedding-${w.id}`,
+      kind: "wedding",
+      title: w.couple_name,
+      dateStr: w.wedding_date,
+      startAt: null,
+      allDay: true,
+      color: null,
+      weddingName: w.couple_name,
+      weddingSlug: w.slug,
+      cultureLabel: null,
+    });
+  }
+
+  const kindOrder: Record<UpcomingEventItem["kind"], number> = { wedding: 0, ceremony: 1, calendar: 2 };
+  items.sort((a, b) => {
+    if (a.dateStr !== b.dateStr) return a.dateStr.localeCompare(b.dateStr);
+    if (a.startAt && b.startAt) return a.startAt.localeCompare(b.startAt);
+    if (a.startAt && !b.startAt) return 1;
+    if (!a.startAt && b.startAt) return -1;
+    return kindOrder[a.kind] - kindOrder[b.kind];
+  });
+
+  return items;
+});

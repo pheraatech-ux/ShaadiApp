@@ -1,1 +1,1 @@
-export { default } from "../../../(main)/budget/page";
+export { default, metadata } from "../../../(main)/budget/page";

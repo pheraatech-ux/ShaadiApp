@@ -1,8 +1,9 @@
 "use client";
 
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
-import { Pencil, Trash2, MapPin, Clock, Users, Mail, AlignLeft, BookHeart, ClipboardList, Tag, X } from "lucide-react";
+import { Pencil, Trash2, MapPin, Clock, Users, Mail, AlignLeft, BookHeart, ClipboardList, Tag, X, ExternalLink } from "lucide-react";
 
+import { GoogleIcon } from "@/components/app-dashboard/calendar/google-cal-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -33,25 +34,54 @@ function timeLabel(d: Date, withMeridiem: boolean): string {
   return m === 0 ? `${h}${suffix}` : `${h}:${String(m).padStart(2, "0")}${suffix}`;
 }
 
-function formatEventTime(startIso: string, endIso: string | null, allDay: boolean): string {
+function getEventTimeLines(
+  startIso: string,
+  endIso: string | null,
+  allDay: boolean,
+): { date: string; time: string | null } {
   const start = new Date(startIso);
-  const label = dateLabel(start);
+  const date = dateLabel(start);
 
-  if (allDay) return `${label} • All day`;
+  if (allDay) return { date, time: "All day" };
 
   if (!endIso) {
-    return `${label} • ${timeLabel(start, true)}`;
+    return { date, time: timeLabel(start, true) };
   }
 
   const end = new Date(endIso);
   const sameDay = start.toDateString() === end.toDateString();
 
   if (!sameDay) {
-    return `${label} ${timeLabel(start, true)} → ${dateLabel(end)} ${timeLabel(end, true)}`;
+    return {
+      date,
+      time: `${timeLabel(start, true)} → ${dateLabel(end)} ${timeLabel(end, true)}`,
+    };
   }
 
   const sameMeridiem = (start.getHours() < 12) === (end.getHours() < 12);
-  return `${label} • ${timeLabel(start, !sameMeridiem)} - ${timeLabel(end, true)}`;
+  return {
+    date,
+    time: `${timeLabel(start, !sameMeridiem)} - ${timeLabel(end, true)}`,
+  };
+}
+
+function EventTimeContent({
+  startIso,
+  endIso,
+  allDay,
+}: {
+  startIso: string;
+  endIso: string | null;
+  allDay: boolean;
+}) {
+  const { date, time } = getEventTimeLines(startIso, endIso, allDay);
+
+  return (
+    <>
+      <span className="block">{date}</span>
+      {time ? <span className="block">{time}</span> : null}
+    </>
+  );
 }
 
 function formatDate(iso: string): string {
@@ -105,6 +135,9 @@ export function EventDetailModal({
     if (source === "task") {
       return (clickedEvent!.event as import("./types").CalendarTaskDeadline).title;
     }
+    if (source === "gcal") {
+      return (clickedEvent!.event as import("./types").GoogleCalCachedEvent).title;
+    }
     return "";
   }
 
@@ -112,14 +145,15 @@ export function EventDetailModal({
     if (source === "personal" || source === "attendee") {
       return (clickedEvent!.event as import("./types").CalendarEventRow).description ?? null;
     }
+    if (source === "gcal") {
+      return (clickedEvent!.event as import("./types").GoogleCalCachedEvent).description ?? null;
+    }
     return null;
   }
 
   function renderRows() {
     if (source === "personal" || source === "attendee") {
       const e = clickedEvent!.event as import("./types").CalendarEventRow;
-
-      const timeStr = formatEventTime(e.startAt, e.endAt, e.allDay);
 
       const attendeeNames = e.attendeeIds
         .map((id) => employeeMap[id] ?? id)
@@ -131,7 +165,9 @@ export function EventDetailModal({
             <Badge variant="secondary" className="text-xs">Invited</Badge>
           )}
 
-          <Row icon={<Clock className="size-3.5" />}>{timeStr}</Row>
+          <Row icon={<Clock className="size-3.5" />}>
+            <EventTimeContent startIso={e.startAt} endIso={e.endAt} allDay={e.allDay} />
+          </Row>
 
           {e.location && (
             <Row icon={<MapPin className="size-3.5" />}>{e.location}</Row>
@@ -204,6 +240,32 @@ export function EventDetailModal({
       );
     }
 
+    if (source === "gcal") {
+      const e = clickedEvent!.event as import("./types").GoogleCalCachedEvent;
+      return (
+        <div className="space-y-2.5">
+          <Row icon={<Clock className="size-3.5" />}>
+            <EventTimeContent startIso={e.startAt} endIso={e.endAt} allDay={e.allDay} />
+          </Row>
+          {e.location && (
+            <Row icon={<MapPin className="size-3.5" />}>{e.location}</Row>
+          )}
+          {e.htmlLink && (
+            <Row icon={<ExternalLink className="size-3.5" />}>
+              <a
+                href={e.htmlLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                Open in Google Calendar
+              </a>
+            </Row>
+          )}
+        </div>
+      );
+    }
+
     return null;
   }
 
@@ -234,7 +296,16 @@ export function EventDetailModal({
             {/* Header */}
             <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-3">
               <div className="min-w-0 flex-1">
-                <p className="text-base font-semibold leading-snug">{title}</p>
+                {source === "gcal" ? (
+                  <p className="flex gap-2 text-base font-semibold leading-5">
+                    <span className="flex h-5 shrink-0 items-center">
+                      <GoogleIcon className="size-4" />
+                    </span>
+                    <span className="min-w-0">{title}</span>
+                  </p>
+                ) : (
+                  <p className="text-base font-semibold leading-snug">{title}</p>
+                )}
                 {description && (
                   <div className="mt-1.5 flex items-start gap-2">
                     <AlignLeft className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />

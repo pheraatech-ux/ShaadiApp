@@ -21,7 +21,10 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Shaadi Wedding Planner",
+  title: {
+    default: "Shaadi Wedding Planner",
+    template: "%s | Shaadi Wedding Planner",
+  },
   description: "Plan events, coordinate vendors, and manage wedding tasks in one platform.",
 };
 

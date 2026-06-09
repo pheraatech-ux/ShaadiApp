@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail, Phone, Trash2 } from "lucide-react";
+import { Mail, Phone, Trash2, UserPlus, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -81,9 +81,27 @@ export function TeamMembersTable({
       </CardHeader>
       <CardContent className="space-y-0 p-0">
         {members.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-            No team members yet. Invite your first teammate to start collaborating.
-          </p>
+          <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 px-6 py-14 m-4 rounded-xl border border-dashed border-border/70 bg-muted/15 text-center">
+            <span className="flex size-10 items-center justify-center rounded-full border border-dashed border-emerald-400/40 bg-emerald-500/10">
+              <Users className="size-4 text-emerald-500" aria-hidden />
+            </span>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">No team members yet</p>
+              <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
+                Invite your first teammate to start collaborating.
+              </p>
+            </div>
+            {onInviteClick ? (
+              <Button
+                size="sm"
+                className="mt-1 rounded-xl bg-emerald-600 text-xs text-white hover:bg-emerald-600/90"
+                onClick={onInviteClick}
+              >
+                <UserPlus className="size-4" />
+                Invite teammate
+              </Button>
+            ) : null}
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[58rem] border-collapse text-sm">

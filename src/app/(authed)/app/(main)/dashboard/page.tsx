@@ -6,6 +6,8 @@ import { DashboardSkeleton } from "@/components/app-dashboard/dashboard/dashboar
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
+export const metadata = { title: "Dashboard" };
+
 export default async function DashboardPage() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();

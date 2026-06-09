@@ -10,9 +10,10 @@ type DashboardShellProps = {
   sidebar: ReactNode;
   topbar: ReactNode;
   children: ReactNode;
+  rightPanel?: ReactNode;
 };
 
-export function DashboardShell({ sidebar, topbar, children }: DashboardShellProps) {
+export function DashboardShell({ sidebar, topbar, children, rightPanel }: DashboardShellProps) {
   return (
     <SidebarProvider defaultOpen>
       {sidebar}
@@ -21,17 +22,20 @@ export function DashboardShell({ sidebar, topbar, children }: DashboardShellProp
           <SidebarTrigger className="-ml-1" />
           <div className="min-w-0 flex-1">{topbar}</div>
         </header>
-        <OverlayScrollbarsComponent
-          element="main"
-          className="min-h-0 flex-1 bg-muted/90"
-          options={{
-            overflow: { x: "hidden", y: "scroll" },
-            scrollbars: { theme: "os-theme-dark", autoHide: "scroll", autoHideSuspend: true, clickScroll: true },
-          }}
-          defer
-        >
-          <div className="px-4 py-5 sm:px-6 sm:py-6">{children}</div>
-        </OverlayScrollbarsComponent>
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <OverlayScrollbarsComponent
+            element="main"
+            className="min-h-0 flex-1 bg-muted/90"
+            options={{
+              overflow: { x: "hidden", y: "scroll" },
+              scrollbars: { theme: "os-theme-dark", autoHide: "scroll", autoHideSuspend: true, clickScroll: true },
+            }}
+            defer
+          >
+            <div className="px-4 py-5 sm:px-6 sm:py-6">{children}</div>
+          </OverlayScrollbarsComponent>
+          {rightPanel}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

@@ -10,7 +10,7 @@ import { ForecastingTab } from "./forecasting-tab";
 import { ExpensesPanel } from "./expenses-panel";
 import { FinancialsToolbar, type FinancialsTab } from "./financials-toolbar";
 import type { PeriodFilter } from "./types";
-import { useToolbarScrollExpand } from "./use-toolbar-scroll-expand";
+import { useToolbarScrollExpand } from "@/components/app-dashboard/use-toolbar-scroll-expand";
 
 type WeddingRow = {
   id: string;

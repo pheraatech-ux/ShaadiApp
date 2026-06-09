@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -12,6 +13,8 @@ import type {
   EventInput,
   NowIndicatorContentArg,
   DayHeaderContentArg,
+  DatesSetArg,
+  EventContentArg,
 } from "@fullcalendar/core";
 import type { EventResizeDoneArg } from "@fullcalendar/interaction";
 
@@ -21,8 +24,30 @@ import type {
   CalendarTaskDeadline,
   CalendarWeddingDate,
   GoogleCalCachedEvent,
+  GoogleCalStatus,
   AnyCalendarEvent,
 } from "@/components/app-dashboard/calendar/types";
+import {
+  CalendarViewModeSelector,
+  type CalendarViewMode,
+} from "@/components/app-dashboard/calendar/calendar-view-mode-selector";
+import {
+  CalendarEventFilter,
+  getDefaultEventFilters,
+  type CalendarEventFilterType,
+} from "@/components/app-dashboard/calendar/calendar-event-filter";
+import { GoogleCalMenu, GoogleIcon } from "@/components/app-dashboard/calendar/google-cal-menu";
+import { useToolbarScrollExpand } from "@/components/app-dashboard/use-toolbar-scroll-expand";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import type { UseMutationResult } from "@tanstack/react-query";
+
+type GcalSyncResult = {
+  pulled: number;
+  pushed: number;
+  removed: number;
+  syncedAt: string;
+};
 
 type Props = {
   personalEvents: CalendarEventRow[];
@@ -30,6 +55,11 @@ type Props = {
   ceremonyEvents: CalendarCeremonyEvent[];
   taskDeadlines: CalendarTaskDeadline[];
   googleCalEvents?: GoogleCalCachedEvent[];
+  googleCalStatus: GoogleCalStatus;
+  sync: UseMutationResult<GcalSyncResult, Error, void, unknown>;
+  disconnect: UseMutationResult<void, Error, void, unknown>;
+  headerActions?: React.ReactNode;
+  onNewEvent?: () => void;
   onSelectSlot: (date: string, time?: string) => void;
   onEventClick: (event: AnyCalendarEvent, anchorEl: Element) => void;
   onEventDrop: (id: string, startAt: string, endAt: string | null) => void;
@@ -49,18 +79,75 @@ function formatNowTime(d: Date): string {
   return m === 0 ? `${h}${ampm}` : `${h}:${String(m).padStart(2, "0")}${ampm}`;
 }
 
+function formatGcalEventLabel(start: Date, allDay: boolean): string {
+  if (allDay) {
+    return start.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  }
+  return start.toLocaleTimeString("en-GB", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 export function CalendarView({
   personalEvents,
   weddingDates,
   ceremonyEvents,
   taskDeadlines,
   googleCalEvents = [],
+  googleCalStatus,
+  sync,
+  disconnect,
+  headerActions,
+  onNewEvent,
   onSelectSlot,
   onEventClick,
   onEventDrop,
   onEventResize,
 }: Props) {
   const calRef = useRef<FullCalendar>(null);
+  const { shellRef, barRef, progress, layout, barHeight, isFloating, floatStyle } =
+    useToolbarScrollExpand();
+  const [currentView, setCurrentView] = useState<CalendarViewMode>("dayGridMonth");
+  const [viewTitle, setViewTitle] = useState("");
+  const [eventFilters, setEventFilters] = useState(() =>
+    getDefaultEventFilters(googleCalStatus.connected),
+  );
+
+  const gcalVisible = eventFilters.has("gcal");
+
+  const handleGcalVisibleChange = useCallback((visible: boolean) => {
+    setEventFilters((prev) => {
+      const next = new Set(prev);
+      if (visible) {
+        next.add("gcal");
+      } else {
+        next.delete("gcal");
+      }
+      return next;
+    });
+  }, []);
+
+  const handleViewChange = useCallback((view: CalendarViewMode) => {
+    calRef.current?.getApi().changeView(view);
+  }, []);
+
+  const handleDatesSet = useCallback((arg: DatesSetArg) => {
+    setViewTitle(arg.view.title);
+    const viewType = arg.view.type;
+    if (
+      viewType === "dayGridMonth" ||
+      viewType === "timeGridWeek" ||
+      viewType === "timeGridDay"
+    ) {
+      setCurrentView(viewType);
+    }
+    // Let OverlayScrollbars recalculate main scroll height after grid resizes
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+  }, []);
 
   const renderDayHeader = useCallback((arg: DayHeaderContentArg) => {
     if (!arg.view.type.startsWith("timeGrid")) return <>{arg.text}</>;
@@ -80,25 +167,54 @@ export function CalendarView({
     return <span className="fc-now-pill">{formatNowTime(arg.date)}</span>;
   }, []);
 
+  const renderEventContent = useCallback((arg: EventContentArg) => {
+    if (arg.event.extendedProps.source !== "gcal") return true;
+
+    const start = arg.event.start;
+    if (!start) return true;
+
+    const dateLabel = formatGcalEventLabel(start, arg.event.allDay);
+    const title = arg.event.title;
+
+    return (
+      <div className="flex min-w-0 items-center gap-1 px-0.5 leading-tight">
+        <GoogleIcon className="size-2.5 shrink-0" />
+        <span className="min-w-0 truncate text-[0.68rem] font-medium">
+          <span className="opacity-90">{dateLabel}</span>
+          {" · "}
+          {title}
+        </span>
+      </div>
+    );
+  }, []);
+
   const events: EventInput[] = useMemo(() => {
     const items: EventInput[] = [];
+    const show = (type: CalendarEventFilterType) => eventFilters.has(type);
 
-    for (const e of googleCalEvents) {
-      items.push({
-        id: `gcal-${e.id}`,
-        title: e.title,
-        start: e.startAt,
-        end: e.endAt ?? undefined,
-        allDay: e.allDay,
-        backgroundColor: GCAL_COLOR + "cc",
-        borderColor: GCAL_COLOR,
-        textColor: "#ffffff",
-        editable: false,
-        extendedProps: { source: "gcal", raw: e },
-      });
+    if (show("gcal")) {
+      for (const e of googleCalEvents) {
+        items.push({
+          id: `gcal-${e.id}`,
+          title: e.title,
+          start: e.startAt,
+          end: e.endAt ?? undefined,
+          allDay: e.allDay,
+          backgroundColor: GCAL_COLOR + "cc",
+          borderColor: GCAL_COLOR,
+          textColor: "#ffffff",
+          editable: false,
+          classNames: ["cal-gcal-event"],
+          extendedProps: { source: "gcal", raw: e },
+        });
+      }
     }
 
     for (const e of personalEvents) {
+      const source = e.isAttendee ? "attendee" : "personal";
+      const filterType: CalendarEventFilterType = e.isAttendee ? "invited" : "personal";
+      if (!show(filterType)) continue;
+
       items.push({
         id: e.id,
         title: e.title,
@@ -109,54 +225,60 @@ export function CalendarView({
         borderColor: e.color ?? PERSONAL_COLOR,
         textColor: "#ffffff",
         editable: true,
-        extendedProps: { source: e.isAttendee ? "attendee" : "personal", raw: e },
+        extendedProps: { source, raw: e },
       });
     }
 
-    for (const w of weddingDates) {
-      items.push({
-        id: `wedding-${w.id}`,
-        title: w.title,
-        start: w.date,
-        allDay: true,
-        backgroundColor: WEDDING_COLOR,
-        borderColor: WEDDING_COLOR,
-        editable: false,
-        extendedProps: { source: "wedding", raw: w },
-      });
+    if (show("wedding")) {
+      for (const w of weddingDates) {
+        items.push({
+          id: `wedding-${w.id}`,
+          title: w.title,
+          start: w.date,
+          allDay: true,
+          backgroundColor: WEDDING_COLOR,
+          borderColor: WEDDING_COLOR,
+          editable: false,
+          extendedProps: { source: "wedding", raw: w },
+        });
+      }
     }
 
-    for (const c of ceremonyEvents) {
-      const start = c.startTime ? `${c.date}T${c.startTime}` : c.date;
-      const end = c.endTime ? `${c.date}T${c.endTime}` : undefined;
-      items.push({
-        id: `ceremony-${c.id}`,
-        title: c.cultureLabel ? `${c.cultureLabel}: ${c.title}` : c.title,
-        start,
-        end,
-        allDay: !c.startTime,
-        backgroundColor: CEREMONY_COLOR,
-        borderColor: CEREMONY_COLOR,
-        editable: false,
-        extendedProps: { source: "ceremony", raw: c },
-      });
+    if (show("ceremony")) {
+      for (const c of ceremonyEvents) {
+        const start = c.startTime ? `${c.date}T${c.startTime}` : c.date;
+        const end = c.endTime ? `${c.date}T${c.endTime}` : undefined;
+        items.push({
+          id: `ceremony-${c.id}`,
+          title: c.cultureLabel ? `${c.cultureLabel}: ${c.title}` : c.title,
+          start,
+          end,
+          allDay: !c.startTime,
+          backgroundColor: CEREMONY_COLOR,
+          borderColor: CEREMONY_COLOR,
+          editable: false,
+          extendedProps: { source: "ceremony", raw: c },
+        });
+      }
     }
 
-    for (const t of taskDeadlines) {
-      items.push({
-        id: `task-${t.id}`,
-        title: `📋 ${t.title}`,
-        start: t.dueDate,
-        allDay: true,
-        backgroundColor: TASK_COLOR,
-        borderColor: TASK_COLOR,
-        editable: false,
-        extendedProps: { source: "task", raw: t },
-      });
+    if (show("task")) {
+      for (const t of taskDeadlines) {
+        items.push({
+          id: `task-${t.id}`,
+          title: `📋 ${t.title}`,
+          start: t.dueDate,
+          allDay: true,
+          backgroundColor: TASK_COLOR,
+          borderColor: TASK_COLOR,
+          editable: false,
+          extendedProps: { source: "task", raw: t },
+        });
+      }
     }
 
     return items;
-  }, [personalEvents, weddingDates, ceremonyEvents, taskDeadlines, googleCalEvents]);
+  }, [personalEvents, weddingDates, ceremonyEvents, taskDeadlines, googleCalEvents, eventFilters]);
 
   const handleDateClick = useCallback(
     (arg: DateClickArg) => {
@@ -210,44 +332,155 @@ export function CalendarView({
     [onEventResize],
   );
 
+  const radius = 12 * (1 - progress);
+  const padX = 8 + progress * (layout.paddingX - 8);
+  const padY = 8 + progress * 4;
+  const stickyTop = isFloating ? layout.top + barHeight : barHeight;
+
   return (
-    <div className="calendar-wrapper rounded-xl border border-border/70 bg-card p-3 sm:p-4">
-      <FullCalendar
-        ref={calRef}
-        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-        initialView="dayGridMonth"
-        headerToolbar={{
-          left: "prev,next today",
-          center: "title",
-          right: "dayGridMonth,timeGridWeek,timeGridDay",
-        }}
-        buttonText={{
-          today: "Today",
-          month: "Month",
-          week: "Week",
-          day: "Day",
-        }}
-        height="auto"
-        events={events}
-        editable={true}
-        selectable={true}
-        selectMirror={true}
-        dayMaxEvents={3}
-        weekends={true}
-        nowIndicator={true}
-        nowIndicatorContent={renderNowIndicator}
-        dayHeaderContent={renderDayHeader}
-        dateClick={handleDateClick}
-        select={handleSelect}
-        eventClick={handleEventClick}
-        eventDrop={handleEventDrop}
-        eventResize={handleEventResize}
-        eventTimeFormat={{
-          hour: "numeric",
-          minute: "2-digit",
-          meridiem: "short",
-        }}
-      />
+    <div className="overflow-visible rounded-xl border border-border/70 bg-card">
+      <div ref={shellRef}>
+        {isFloating && barHeight > 0 ? (
+          <div aria-hidden className="pointer-events-none" style={{ height: barHeight }} />
+        ) : null}
+        <div
+          ref={barRef}
+          className={isFloating ? undefined : "sticky top-0 z-30"}
+          style={floatStyle}
+        >
+          <div
+            className={cn(
+              progress > 0 &&
+                "border border-border/70 bg-gradient-to-b from-card to-card/80 shadow-sm",
+              progress > 0.4 &&
+                "border-x-transparent bg-card/95 shadow-md backdrop-blur-md supports-[backdrop-filter]:bg-card/85",
+              progress > 0.85 && "rounded-none border-t-0 border-b-border/70",
+              progress === 0 && "px-3 pt-3 sm:px-4 sm:pt-4",
+            )}
+            style={
+              progress > 0
+                ? {
+                    borderRadius: progress > 0.85 ? 0 : radius,
+                    paddingLeft: padX,
+                    paddingRight: padX,
+                    paddingTop: padY,
+                    paddingBottom: padY,
+                  }
+                : undefined
+            }
+          >
+            <div className="grid min-h-9 grid-cols-[1fr_auto_1fr] items-center gap-2">
+              {/* Left — AI + event filters */}
+              <div className="flex items-center gap-2">
+                {headerActions}
+                <CalendarEventFilter
+                  selected={eventFilters}
+                  onChange={setEventFilters}
+                  googleCalConnected={googleCalStatus.connected}
+                />
+              </div>
+
+              {/* Center — date navigation */}
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-lg"
+                  className="shrink-0 rounded-lg shadow-none"
+                  onClick={() => calRef.current?.getApi().prev()}
+                  aria-label="Previous"
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+                <h2 className="truncate px-0.5 text-[1.0625rem] font-semibold leading-none text-foreground">
+                  {viewTitle}
+                </h2>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-lg"
+                  className="shrink-0 rounded-lg shadow-none"
+                  onClick={() => calRef.current?.getApi().next()}
+                  aria-label="Next"
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="shrink-0 rounded-lg px-3 text-xs font-medium shadow-none"
+                  onClick={() => calRef.current?.getApi().today()}
+                >
+                  Today
+                </Button>
+              </div>
+
+              {/* Right — Google, view mode, new event */}
+              <div className="flex items-center justify-end gap-2">
+                <GoogleCalMenu
+                  initialStatus={googleCalStatus}
+                  sync={sync}
+                  disconnect={disconnect}
+                  gcalVisible={gcalVisible}
+                  onGcalVisibleChange={handleGcalVisibleChange}
+                />
+                <CalendarViewModeSelector value={currentView} onChange={handleViewChange} />
+                {onNewEvent && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-9 shrink-0 rounded-lg gap-1.5 px-3 text-xs font-semibold"
+                    onClick={onNewEvent}
+                  >
+                    <Plus className="size-3.5" />
+                    New Event
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="calendar-wrapper mt-3 px-3 pb-3 sm:px-4 sm:pb-4"
+        style={{ "--calendar-sticky-top": `${stickyTop}px` } as React.CSSProperties}
+      >
+        <FullCalendar
+          ref={calRef}
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          initialView="dayGridMonth"
+          headerToolbar={false}
+          height="auto"
+          views={{
+            dayGridMonth: { dayMinHeight: 128 },
+            timeGridWeek: { slotMinHeight: 48 },
+            timeGridDay: { slotMinHeight: 48 },
+          }}
+          events={events}
+          editable={true}
+          selectable={true}
+          selectMirror={true}
+          dayMaxEvents={3}
+          weekends={true}
+          nowIndicator={true}
+          nowIndicatorContent={renderNowIndicator}
+          eventContent={renderEventContent}
+          dayHeaderContent={renderDayHeader}
+          datesSet={handleDatesSet}
+          dateClick={handleDateClick}
+          select={handleSelect}
+          eventClick={handleEventClick}
+          eventDrop={handleEventDrop}
+          eventResize={handleEventResize}
+          eventTimeFormat={{
+            hour: "numeric",
+            minute: "2-digit",
+            meridiem: "short",
+          }}
+        />
+      </div>
     </div>
   );
 }

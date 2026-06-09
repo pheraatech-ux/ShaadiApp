@@ -1,1 +1,1 @@
-export { default } from "../../../(main)/messages/page";
+export { default, metadata } from "../../../(main)/messages/page";

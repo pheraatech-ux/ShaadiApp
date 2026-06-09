@@ -214,15 +214,46 @@ html .os-theme-light {
 
 /* FullCalendar theme overrides */
 .calendar-wrapper {
-  overflow: hidden;
+  overflow: visible;
 }
 .calendar-wrapper .fc {
   font-size: 0.875rem;
+  height: auto !important;
 }
-/* Round the inner scrollgrid to match wrapper's rounded-xl */
+.calendar-wrapper .fc-view-harness {
+  height: auto !important;
+}
+.calendar-wrapper .fc-daygrid .fc-scroller {
+  overflow: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
+/* Round the inner scrollgrid — overflow visible so sticky column headers work */
 .calendar-wrapper .fc-scrollgrid {
   border-radius: 0.625rem !important;
-  overflow: hidden !important;
+  overflow: visible !important;
+}
+.calendar-wrapper .fc-scrollgrid-section-header > * {
+  overflow: visible !important;
+}
+/* Sticky day/date row below the calendar toolbar while page scrolls */
+.calendar-wrapper .fc-col-header-cell {
+  position: sticky;
+  top: var(--calendar-sticky-top, 0px);
+  z-index: 20;
+  background: var(--card);
+}
+.calendar-wrapper .fc-timegrid .fc-timegrid-axis {
+  position: sticky;
+  top: var(--calendar-sticky-top, 0px);
+  z-index: 21;
+  background: var(--card);
+}
+.calendar-wrapper .fc-daygrid-day-frame {
+  min-height: 8rem;
+}
+.calendar-wrapper .fc-timegrid-slot {
+  height: 3rem !important;
 }
 /* Custom week/day header — two-line layout */
 .calendar-wrapper .fc-timegrid .fc-col-header-cell .fc-scrollgrid-sync-inner {
@@ -335,6 +366,17 @@ html .os-theme-light {
   font-weight: 500 !important;
   padding: 1px 4px !important;
   cursor: pointer;
+}
+.calendar-wrapper .fc-daygrid-block-event .fc-event-main {
+  min-height: 1.125rem;
+  padding-block: 1px;
+}
+.calendar-wrapper .fc-event.cal-gcal-event .fc-event-main {
+  color: #ffffff;
+  min-height: 1.125rem;
+}
+.calendar-wrapper .fc-event.cal-gcal-event .fc-event-time {
+  display: none;
 }
 .calendar-wrapper .fc-event:hover {
   filter: brightness(1.1);

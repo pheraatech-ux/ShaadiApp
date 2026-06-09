@@ -1,1 +1,1 @@
-export { default } from "../../../(main)/calendar/page";
+export { default, metadata } from "../../../(main)/calendar/page";

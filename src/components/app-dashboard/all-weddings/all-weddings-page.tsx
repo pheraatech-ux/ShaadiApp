@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { LayoutGrid, List, Plus, Search } from "lucide-react";
+import { Heart, Plus } from "lucide-react";
 
 import { AddWeddingFlowDialog } from "@/components/app-dashboard/dashboard/add-wedding-flow-dialog";
 import { AllWeddingsCardView } from "@/components/app-dashboard/all-weddings/all-weddings-card-view";
 import { AllWeddingsListView } from "@/components/app-dashboard/all-weddings/all-weddings-list-view";
+import { WeddingsToolbar } from "@/components/app-dashboard/all-weddings/weddings-toolbar";
+import { useToolbarScrollExpand } from "@/components/app-dashboard/use-toolbar-scroll-expand";
 import type {
   AllWeddingsFilter,
   AllWeddingsPageView,
@@ -13,9 +15,6 @@ import type {
   AllWeddingsViewMode,
 } from "@/components/app-dashboard/all-weddings/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 
 type AllWeddingsPageProps = {
   initialData: AllWeddingsPageView;
@@ -40,6 +39,8 @@ export function AllWeddingsPage({
   const [viewMode, setViewMode] = useState<AllWeddingsViewMode>("cards");
   const [searchQuery, setSearchQuery] = useState("");
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
+  const { shellRef, barRef, progress, layout, barHeight, isFloating, floatStyle } =
+    useToolbarScrollExpand();
 
   const visibleItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -71,62 +72,58 @@ export function AllWeddingsPage({
   }, [filter, initialData.items, searchQuery, sortBy]);
 
   const slotsLeft = Math.max(0, initialData.planCap - initialData.usedSlots);
+  const hasNoWeddings = initialData.items.length === 0;
+  const hasActiveSearch = searchQuery.trim().length > 0;
+  const activeFilterLabel = filterTabs.find((tab) => tab.value === filter)?.label ?? "All";
+
+  const emptyState = hasNoWeddings
+    ? {
+        title: "No weddings yet",
+        description:
+          "Add your first couple to start planning tasks, budgets, and timelines in one place.",
+        ctaLabel: "Add your first wedding",
+      }
+    : hasActiveSearch
+      ? {
+          title: "No weddings found",
+          description:
+            filter !== "all"
+              ? "Nothing matched your search in this tab. Try clearing the search or switching tabs."
+              : "Nothing matched your search. Try different keywords.",
+          ctaLabel: null,
+        }
+      : {
+          title: `No ${activeFilterLabel.toLowerCase()} weddings yet`,
+          description: "Switch to All or create a new wedding workspace.",
+          ctaLabel: canCreateWedding ? "New wedding" : null,
+        };
 
   return (
-    <div className="space-y-5">
-      <div className="space-y-1.5">
-      <div className="flex flex-col gap-2 rounded-2xl border border-border/70 bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative w-full sm:max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="h-9 rounded-xl border-border/70 bg-muted/30 pl-9"
-              placeholder="Search couple, city, culture..."
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-            />
-          </div>
-          <Select value={sortBy} onValueChange={(value) => setSortBy(value as AllWeddingsSort)}>
-            <SelectTrigger className="h-9 w-full rounded-xl sm:w-[180px]">
-              <SelectValue>
-                {sortBy === "date-latest" ? "Date (latest first)" : sortBy === "date-earliest" ? "Date (earliest first)" : "Name (A–Z)"}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="date-latest">Date (latest first)</SelectItem>
-              <SelectItem value="date-earliest">Date (earliest first)</SelectItem>
-              <SelectItem value="name-a-z">Name (A-Z)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          {canCreateWedding && (
-            <Button size="sm" className="rounded-xl" onClick={() => setOpenCreateDialog(true)}>
-              <Plus />
-              New wedding
-            </Button>
-          )}
-          <div className="flex items-center gap-1 rounded-lg border border-border/70 p-1">
-            <Button
-              variant={viewMode === "cards" ? "secondary" : "ghost"}
-              size="icon-sm"
-              className="rounded-md"
-              onClick={() => setViewMode("cards")}
-              aria-label="Cards view"
-            >
-              <LayoutGrid className="size-4" />
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "secondary" : "ghost"}
-              size="icon-sm"
-              className="rounded-md"
-              onClick={() => setViewMode("list")}
-              aria-label="List view"
-            >
-              <List className="size-4" />
-            </Button>
-          </div>
+    <div className="space-y-5 pb-[100vh]">
+      <div ref={shellRef}>
+        {isFloating && barHeight > 0 ? (
+          <div aria-hidden className="pointer-events-none" style={{ height: barHeight }} />
+        ) : null}
+        <div
+          ref={barRef}
+          className={isFloating ? undefined : "sticky top-0 z-30"}
+          style={floatStyle}
+        >
+          <WeddingsToolbar
+            filter={filter}
+            onFilterChange={setFilter}
+            counts={initialData.counts}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            canCreateWedding={canCreateWedding}
+            onCreateWedding={() => setOpenCreateDialog(true)}
+            expandProgress={progress}
+            contentPaddingX={layout.paddingX}
+          />
         </div>
       </div>
 
@@ -135,29 +132,22 @@ export function AllWeddingsPage({
         <span className="font-medium text-foreground">{initialData.planCap}</span> weddings used.
         {slotsLeft > 0 ? ` ${slotsLeft} more slot${slotsLeft > 1 ? "s" : ""} remaining.` : " Upgrade for more slots."}
       </p>
-      </div>
-
-      <div className="flex w-fit gap-0.5 rounded-lg bg-muted/60 p-0.5">
-        {filterTabs.map((tab) => (
-          <button
-            key={tab.value}
-            type="button"
-            onClick={() => setFilter(tab.value)}
-            className={cn(
-              "rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
-              filter === tab.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {tab.label}
-            <span className="ml-1 text-[10px] opacity-80">{initialData.counts[tab.key]}</span>
-          </button>
-        ))}
-      </div>
 
       {visibleItems.length === 0 ? (
-        <section className="rounded-2xl border border-dashed border-border/70 bg-card px-5 py-10 text-center">
-          <p className="text-sm font-medium">No weddings match this filter yet.</p>
-          <p className="mt-1 text-xs text-muted-foreground">Try a different filter or create a new wedding workspace.</p>
+        <section className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 bg-card px-6 py-14 text-center">
+          <span className="flex size-10 items-center justify-center rounded-full border border-dashed border-rose-400/40 bg-rose-500/10">
+            <Heart className="size-4 text-rose-500" aria-hidden />
+          </span>
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">{emptyState.title}</p>
+            <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">{emptyState.description}</p>
+          </div>
+          {emptyState.ctaLabel && canCreateWedding ? (
+            <Button size="sm" className="mt-1 rounded-xl text-xs" onClick={() => setOpenCreateDialog(true)}>
+              <Plus />
+              {emptyState.ctaLabel}
+            </Button>
+          ) : null}
         </section>
       ) : viewMode === "cards" ? (
         <AllWeddingsCardView items={visibleItems} basePath={basePath} />

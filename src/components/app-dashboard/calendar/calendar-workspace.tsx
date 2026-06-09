@@ -1,17 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CalendarDays, CalendarCheck, ClipboardList, BookHeart, Plus } from "lucide-react";
+import { CalendarDays, CalendarCheck, ClipboardList, BookHeart } from "lucide-react";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
-
-import { Button } from "@/components/ui/button";
 
 import { CalendarAiInput } from "@/components/app-dashboard/calendar/calendar-ai-input";
 import { CalendarView } from "@/components/app-dashboard/calendar/calendar-view";
 import { EventFormDialog } from "@/components/app-dashboard/calendar/event-form-dialog";
 import { EventDetailModal } from "@/components/app-dashboard/calendar/event-detail-modal";
-import { GoogleCalBanner } from "@/components/app-dashboard/calendar/google-cal-banner";
 import {
   useCalendarQuery,
   useCreateCalendarEvent,
@@ -59,8 +56,12 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
     }
   }, [searchParams, syncMutate]);
 
-  const today = new Date().toISOString().slice(0, 10);
-  const oneWeekOut = new Date(Date.now() + 7 * 86_400_000).toISOString();
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+  const today = todayDate.toISOString().slice(0, 10);
+  const oneWeekOutDate = new Date(todayDate);
+  oneWeekOutDate.setDate(oneWeekOutDate.getDate() + 7);
+  const oneWeekOut = oneWeekOutDate.toISOString();
 
   const upcomingCount = personalEvents.filter((e) => e.startAt >= today).length;
   const thisWeekCount = personalEvents.filter((e) => e.startAt >= today && e.startAt <= oneWeekOut).length;
@@ -162,41 +163,6 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
         />
       </section>
 
-      {/* Legend + New Event button */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-          <LegendDot color="#6366f1" label="Personal events" />
-          <LegendDot color="#6366f180" label="Invited" opacity />
-          <LegendDot color="#10b981" label="Wedding days" />
-          <LegendDot color="#ec4899" label="Ceremony events" />
-          <LegendDot color="#f59e0b" label="Task deadlines" />
-          {view.googleCalStatus.connected && (
-            <LegendDot color="#4285F4" label="Google Calendar" />
-          )}
-        </div>
-        <Button size="sm" className="h-8 rounded-xl gap-1.5 shrink-0" onClick={openNewEventDialog}>
-          <Plus className="size-3.5" />
-          New Event
-        </Button>
-      </div>
-
-      {/* Google Calendar connect/sync banner */}
-      <GoogleCalBanner
-        initialStatus={view.googleCalStatus}
-        sync={sync}
-        disconnect={disconnect}
-      />
-
-      {/* AI natural language input — hidden in workspace (chat modal handles it) */}
-      {showAiInput && <CalendarAiInput
-        existingEvents={personalEvents}
-        vendors={view.vendors}
-        employees={view.employees}
-        weddings={view.weddings.map((w) => ({ id: w.id, name: w.name }))}
-        onConfirmCreate={(input) => createEvent.mutate(input)}
-        onConfirmUpdate={(id, input) => updateEvent.mutate({ id, ...input })}
-      />}
-
       {/* Calendar */}
       <CalendarView
         personalEvents={personalEvents}
@@ -204,6 +170,22 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
         ceremonyEvents={view.ceremonyEvents}
         taskDeadlines={view.taskDeadlines}
         googleCalEvents={googleCalEvents}
+        googleCalStatus={view.googleCalStatus}
+        sync={sync}
+        disconnect={disconnect}
+        onNewEvent={openNewEventDialog}
+        headerActions={
+          showAiInput ? (
+            <CalendarAiInput
+              existingEvents={personalEvents}
+              vendors={view.vendors}
+              employees={view.employees}
+              weddings={view.weddings.map((w) => ({ id: w.id, name: w.name }))}
+              onConfirmCreate={(input) => createEvent.mutate(input)}
+              onConfirmUpdate={(id, input) => updateEvent.mutate({ id, ...input })}
+            />
+          ) : undefined
+        }
         onSelectSlot={handleSelectSlot}
         onEventClick={handleEventClick}
         onEventDrop={handleEventDrop}
@@ -257,20 +239,5 @@ function StatCard({
       <p className="mt-2 text-2xl font-semibold tabular-nums">{value}</p>
       <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
     </article>
-  );
-}
-
-function LegendDot({ color, label, opacity }: { color: string; label: string; opacity?: boolean }) {
-  return (
-    <span className="flex items-center gap-1.5">
-      <span
-        className="size-2.5 rounded-full border"
-        style={{
-          backgroundColor: opacity ? "#6366f180" : color,
-          borderColor: opacity ? "#6366f1" : color,
-        }}
-      />
-      {label}
-    </span>
   );
 }

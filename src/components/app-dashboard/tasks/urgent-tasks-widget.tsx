@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ChevronRight } from "lucide-react";
+import { AlertTriangle, Check, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 import "overlayscrollbars/overlayscrollbars.css";
@@ -53,26 +53,28 @@ export function UrgentTasksWidget({
         )}
       </div>
 
-      <OverlayScrollbarsComponent
-        element="div"
-        className="min-h-0 flex-1"
-        options={{
-          overflow: { x: "hidden", y: "scroll" },
-          scrollbars: { theme: "os-theme-dark", autoHide: "scroll", autoHideSuspend: true, clickScroll: true },
-        }}
-        defer
-      >
-        <div className="flex flex-col gap-1.5 px-3 py-3">
-          {items.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 rounded-xl border border-border/60 bg-muted/15 px-4 py-8 text-center">
-              <div className="flex size-8 items-center justify-center rounded-full bg-emerald-500/15">
-                <span className="text-sm">✓</span>
-              </div>
-              <p className="text-sm font-medium text-foreground">All caught up!</p>
-              <p className="text-xs text-muted-foreground">No overdue tasks right now.</p>
-            </div>
-          ) : (
-            items.map((item) => {
+      {items.length === 0 ? (
+        <div className="flex min-h-0 flex-1 flex-col px-3 py-3">
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/15 px-4 py-8 text-center">
+            <span className="flex size-10 items-center justify-center rounded-full border border-dashed border-emerald-400/40 bg-emerald-500/10">
+              <Check className="size-4 text-emerald-500" aria-hidden />
+            </span>
+            <p className="text-sm font-medium text-foreground">All caught up!</p>
+            <p className="text-xs text-muted-foreground">No overdue tasks right now.</p>
+          </div>
+        </div>
+      ) : (
+        <OverlayScrollbarsComponent
+          element="div"
+          className="min-h-0 flex-1"
+          options={{
+            overflow: { x: "hidden", y: "scroll" },
+            scrollbars: { theme: "os-theme-dark", autoHide: "scroll", autoHideSuspend: true, clickScroll: true },
+          }}
+          defer
+        >
+          <div className="flex flex-col gap-1.5 px-3 py-3">
+            {items.map((item) => {
               const isOverdue = item.daysOverdue != null && item.daysOverdue > 0;
               const isDueSoon = !isOverdue && !!item.overdueLabel;
 
@@ -138,10 +140,10 @@ export function UrgentTasksWidget({
                   {rowContent}
                 </div>
               );
-            })
-          )}
-        </div>
-      </OverlayScrollbarsComponent>
+            })}
+          </div>
+        </OverlayScrollbarsComponent>
+      )}
     </div>
   );
 }

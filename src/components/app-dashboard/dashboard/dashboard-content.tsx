@@ -3,10 +3,11 @@ import { FinancialSnapshotWidget } from "@/components/app-dashboard/dashboard/fi
 import { StatsGrid } from "@/components/app-dashboard/dashboard/stats-grid";
 import { WeddingGlanceWidget } from "@/components/app-dashboard/dashboard/wedding-glance-widget";
 import { UrgentTasksWidget } from "@/components/app-dashboard/tasks/urgent-tasks-widget";
-import { getDashboardView } from "@/lib/data/app-data";
+import { UpcomingEventsWidget } from "@/components/app-dashboard/upcoming-events/upcoming-events-widget";
+import { getDashboardView, getUpcomingEventsPanelData } from "@/lib/data/app-data";
 
 export async function DashboardContent() {
-  const data = await getDashboardView();
+  const [data, upcomingItems] = await Promise.all([getDashboardView(), getUpcomingEventsPanelData()]);
   const [salutation, ...nameParts] = data.greeting.split(",");
   const fullName = nameParts.join(",").trim();
   const greetedName = fullName.split(/\s+/)[0] ?? fullName;
@@ -50,6 +51,17 @@ export async function DashboardContent() {
         </div>
         <div className="h-[340px]">
           <FinancialSnapshotWidget snapshot={data.financialSnapshot} />
+        </div>
+      </div>
+
+      {/* Upcoming events — half-width, below secondary widgets */}
+      <div className="grid gap-4 lg:grid-cols-2 db-fade-up-3">
+        <div className="h-[340px]">
+          <UpcomingEventsWidget
+            items={upcomingItems}
+            todayStr={new Date().toISOString().slice(0, 10)}
+            basePath="/app"
+          />
         </div>
       </div>
     </div>
