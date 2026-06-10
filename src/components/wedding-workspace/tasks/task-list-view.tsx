@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const PRIORITY_CLASS: Record<string, string> = {
   high: "bg-rose-500/10 text-rose-400",
   medium: "bg-amber-500/10 text-amber-400",
-  low: "bg-sky-500/10 text-sky-400",
+  low: "bg-emerald-500/10 text-emerald-400",
 };
 
 function DueCell({ task }: { task: WeddingTasksBoardTask }) {

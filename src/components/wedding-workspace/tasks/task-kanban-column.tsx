@@ -3,6 +3,7 @@
 import { Calendar, MessageCircle } from "lucide-react";
 
 import type { WeddingTasksBoardTask } from "@/components/wedding-workspace/tasks/types";
+import { cn } from "@/lib/utils";
 
 export type TaskLaneId = "todo" | "in_progress" | "needs_review" | "done";
 
@@ -22,6 +23,12 @@ type TaskKanbanColumnProps = {
   onDragLeaveLane: (laneId: TaskLaneId) => void;
   onTaskClick: (taskId: string) => void;
   showWeddingBadge?: boolean;
+};
+
+const PRIORITY_CLASS: Record<string, string> = {
+  high: "bg-rose-500/10 text-rose-400",
+  medium: "bg-amber-500/10 text-amber-400",
+  low: "bg-emerald-500/10 text-emerald-400",
 };
 
 const laneAccent: Record<TaskLaneId, string> = {
@@ -133,7 +140,12 @@ export function TaskKanbanColumn({
 
                 {/* tags */}
                 <div className={`flex flex-wrap items-center gap-1.5 ${task.description ? "mb-4" : "mb-3 mt-2"}`}>
-                  <span className="rounded-md bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-400">
+                  <span
+                    className={cn(
+                      "rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                      PRIORITY_CLASS[task.priority.toLowerCase()] ?? "bg-muted text-muted-foreground",
+                    )}
+                  >
                     {task.priority}
                   </span>
                   {task.linkedEventLabel && (

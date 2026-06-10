@@ -1,3 +1,7 @@
+import { AlertCircle, CalendarClock, CheckCircle2, ClipboardList } from "lucide-react";
+
+import { SummaryKpiCard } from "@/components/app-dashboard/dashboard/summary-kpi-card";
+
 type TaskKpiCardsProps = {
   total: number;
   completed: number;
@@ -8,27 +12,48 @@ type TaskKpiCardsProps = {
 
 export function TaskKpiCards({ total, completed, overdue, dueThisWeek, allWeddings }: TaskKpiCardsProps) {
   const cards = [
-    { id: "total", title: "Total tasks", value: total, helper: allWeddings ? "Across all weddings" : "Across this wedding", color: "text-foreground" },
-    { id: "completed", title: "Completed", value: completed, helper: total > 0 ? `${Math.round((completed / total) * 100)}% done` : "No tasks yet", color: "text-emerald-400" },
-    { id: "overdue", title: "Overdue", value: overdue, helper: "Needs immediate action", color: "text-rose-400" },
-    { id: "due-week", title: "Due this week", value: dueThisWeek, helper: "Upcoming commitments", color: "text-foreground" },
+    {
+      id: "total",
+      icon: ClipboardList,
+      iconClassName: "text-indigo-400",
+      iconBoxClassName: "border-indigo-500/20 bg-indigo-500/10",
+      label: "Total tasks",
+      value: total,
+      sub: allWeddings ? "Across all weddings" : "Across this wedding",
+    },
+    {
+      id: "completed",
+      icon: CheckCircle2,
+      iconClassName: "text-emerald-400",
+      iconBoxClassName: "border-emerald-500/20 bg-emerald-500/10",
+      label: "Completed",
+      value: completed,
+      sub: total > 0 ? `${Math.round((completed / total) * 100)}% done` : "No tasks yet",
+    },
+    {
+      id: "overdue",
+      icon: AlertCircle,
+      iconClassName: "text-rose-400",
+      iconBoxClassName: "border-rose-500/20 bg-rose-500/10",
+      label: "Overdue",
+      value: overdue,
+      sub: "Needs immediate action",
+    },
+    {
+      id: "due-week",
+      icon: CalendarClock,
+      iconClassName: "text-amber-400",
+      iconBoxClassName: "border-amber-500/20 bg-amber-500/10",
+      label: "Due this week",
+      value: dueThisWeek,
+      sub: "Upcoming commitments",
+    },
   ];
 
   return (
-    <section className="-mx-4 grid grid-cols-2 border-b border-border/60 sm:-mx-6 lg:grid-cols-4">
-      {cards.map((card, i) => (
-        <article
-          key={card.id}
-          className={[
-            "flex flex-col items-center justify-center px-4 py-4 text-center",
-            i < cards.length - 1 ? "border-r border-border/60" : "",
-            i >= 2 ? "border-t border-border/60 lg:border-t-0" : "",
-          ].join(" ")}
-        >
-          <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{card.title}</p>
-          <p className={`text-2xl font-bold tabular-nums ${card.color}`}>{card.value}</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">{card.helper}</p>
-        </article>
+    <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      {cards.map((card) => (
+        <SummaryKpiCard key={card.id} {...card} />
       ))}
     </section>
   );

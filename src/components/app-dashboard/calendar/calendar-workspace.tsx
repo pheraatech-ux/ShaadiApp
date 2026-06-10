@@ -9,6 +9,7 @@ import { CalendarAiInput } from "@/components/app-dashboard/calendar/calendar-ai
 import { CalendarView } from "@/components/app-dashboard/calendar/calendar-view";
 import { EventFormDialog } from "@/components/app-dashboard/calendar/event-form-dialog";
 import { EventDetailModal } from "@/components/app-dashboard/calendar/event-detail-modal";
+import { SummaryKpiCard } from "@/components/app-dashboard/dashboard/summary-kpi-card";
 import {
   useCalendarQuery,
   useCreateCalendarEvent,
@@ -137,26 +138,34 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
     <div className="space-y-3">
       {/* Summary cards */}
       <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <StatCard
-          icon={<CalendarDays className="size-4 text-indigo-400" />}
+        <SummaryKpiCard
+          icon={CalendarDays}
+          iconClassName="text-indigo-400"
+          iconBoxClassName="border-indigo-500/20 bg-indigo-500/10"
           label="Personal Events"
           value={upcomingCount}
           sub="upcoming"
         />
-        <StatCard
-          icon={<CalendarCheck className="size-4 text-sky-400" />}
+        <SummaryKpiCard
+          icon={CalendarCheck}
+          iconClassName="text-sky-400"
+          iconBoxClassName="border-sky-500/20 bg-sky-500/10"
           label="This Week"
           value={thisWeekCount}
           sub="events"
         />
-        <StatCard
-          icon={<ClipboardList className="size-4 text-amber-400" />}
+        <SummaryKpiCard
+          icon={ClipboardList}
+          iconClassName="text-amber-400"
+          iconBoxClassName="border-amber-500/20 bg-amber-500/10"
           label="Task Deadlines"
           value={view.taskDeadlines.length}
           sub="open tasks with dates"
         />
-        <StatCard
-          icon={<BookHeart className="size-4 text-emerald-400" />}
+        <SummaryKpiCard
+          icon={BookHeart}
+          iconClassName="text-emerald-400"
+          iconBoxClassName="border-emerald-500/20 bg-emerald-500/10"
           label="Weddings"
           value={view.weddingDates.length}
           sub="on your calendar"
@@ -216,28 +225,5 @@ export function CalendarWorkspace({ view, showAiInput = true }: Props) {
         isSaving={isMutating}
       />
     </div>
-  );
-}
-
-function StatCard({
-  icon,
-  label,
-  value,
-  sub,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  sub: string;
-}) {
-  return (
-    <article className="rounded-xl border border-border/70 bg-card p-4">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <p className="mt-2 text-2xl font-semibold tabular-nums">{value}</p>
-      <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
-    </article>
   );
 }
