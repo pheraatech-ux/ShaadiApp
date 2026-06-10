@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 
+import { FinancialKpiCard } from "./financial-kpi-card";
 import { OverviewTab } from "./overview-tab";
 import { OpsExpensesTab } from "./ops-expenses-tab";
 import { ForecastingTab } from "./forecasting-tab";
@@ -48,26 +49,26 @@ function WeddingPortfolioTab({
   return (
     <div className="space-y-5">
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <article className="rounded-xl border border-border/70 bg-card p-4">
-          <p className="text-xs text-muted-foreground">Portfolio total</p>
-          <p className="mt-1 text-2xl font-semibold">{toInr(totalBudgetPaise)}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Across all accessible weddings</p>
-        </article>
-        <article className="rounded-xl border border-border/70 bg-card p-4">
-          <p className="text-xs text-muted-foreground">Allocated</p>
-          <p className="mt-1 text-2xl font-semibold">{toInr(totalAllocatedPaise)}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Planner line items planned</p>
-        </article>
-        <article className="rounded-xl border border-border/70 bg-card p-4">
-          <p className="text-xs text-muted-foreground">Spent</p>
-          <p className="mt-1 text-2xl font-semibold">{toInr(totalSpentPaise)}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{portfolioUtilizationPercent}% utilization</p>
-        </article>
-        <article className="rounded-xl border border-border/70 bg-card p-4">
-          <p className="text-xs text-muted-foreground">Weddings at risk</p>
-          <p className="mt-1 text-2xl font-semibold">{weddingsAtRisk}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Watch and overrun status combined</p>
-        </article>
+        <FinancialKpiCard
+          label="Portfolio total"
+          value={toInr(totalBudgetPaise)}
+          sub="Across all accessible weddings"
+        />
+        <FinancialKpiCard
+          label="Allocated"
+          value={toInr(totalAllocatedPaise)}
+          sub="Planner line items planned"
+        />
+        <FinancialKpiCard
+          label="Spent"
+          value={toInr(totalSpentPaise)}
+          sub={`${portfolioUtilizationPercent}% utilization`}
+        />
+        <FinancialKpiCard
+          label="Weddings at risk"
+          value={weddingsAtRisk}
+          sub="Watch and overrun status combined"
+        />
       </section>
 
       <article className="rounded-xl border border-border/70 bg-card p-4">

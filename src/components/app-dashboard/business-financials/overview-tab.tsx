@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 
 import { PERIOD_SHORT_LABELS, REVENUE_CATEGORIES, type PeriodFilter } from "./types";
 import { filterByPeriod, sumRupees, useFinancialData } from "./use-financial-data";
+import { FinancialKpiCard } from "./financial-kpi-card";
 import { IncomeBreakdownPanel } from "./income-breakdown-panel";
 import { TopExpensesPanel } from "./top-expenses-panel";
 
@@ -93,49 +94,58 @@ export function OverviewTab({
     <div className="space-y-6">
       {/* KPI Cards */}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <article className="rounded-xl border border-border/70 bg-card p-4">
-          <p className="text-xs text-muted-foreground">Total Revenue</p>
-          <p className="mt-1 text-2xl font-semibold text-green-600 dark:text-green-400">{INR(totalRevenue)}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{PERIOD_SHORT_LABELS[period]}</p>
-        </article>
+        <FinancialKpiCard
+          label="Total Revenue"
+          value={INR(totalRevenue)}
+          sub={PERIOD_SHORT_LABELS[period]}
+          valueClassName="text-green-600 dark:text-green-400"
+        />
 
-        <article className="rounded-xl border border-border/70 bg-card p-4">
-          <p className="text-xs text-muted-foreground">Gross Margin</p>
-          <div className="mt-1 flex items-center gap-1.5">
-            <p className={`text-2xl font-semibold ${grossMargin >= 50 ? "text-green-600 dark:text-green-400" : grossMargin >= 25 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
-              {grossMargin.toFixed(1)}%
-            </p>
-            {grossMargin >= 50 ? (
-              <TrendingUpIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
-            ) : (
-              <TrendingDownIcon className="h-4 w-4 text-red-600 dark:text-red-400" />
-            )}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Revenue minus ops spend</p>
-        </article>
+        <FinancialKpiCard
+          label="Gross Margin"
+          value={
+            <span className="flex items-center gap-1.5">
+              <span
+                className={
+                  grossMargin >= 50
+                    ? "text-green-600 dark:text-green-400"
+                    : grossMargin >= 25
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-red-600 dark:text-red-400"
+                }
+              >
+                {grossMargin.toFixed(1)}%
+              </span>
+              {grossMargin >= 50 ? (
+                <TrendingUpIcon className="size-4 text-green-600 dark:text-green-400" />
+              ) : (
+                <TrendingDownIcon className="size-4 text-red-600 dark:text-red-400" />
+              )}
+            </span>
+          }
+          sub="Revenue minus ops spend"
+        />
 
-        <article className="rounded-xl border border-border/70 bg-card p-4">
-          <p className="text-xs text-muted-foreground">Ops Spend</p>
-          <p className="mt-1 text-2xl font-semibold">{INR(totalExpenses)}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{PERIOD_SHORT_LABELS[period]}</p>
-        </article>
+        <FinancialKpiCard
+          label="Ops Spend"
+          value={INR(totalExpenses)}
+          sub={PERIOD_SHORT_LABELS[period]}
+        />
 
-        <article className="rounded-xl border border-border/70 bg-card p-4">
-          <p className="text-xs text-muted-foreground">Active Weddings</p>
-          <p className="mt-1 text-2xl font-semibold">{totalWeddings}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Q{quarter} {year}</p>
-        </article>
+        <FinancialKpiCard
+          label="Active Weddings"
+          value={totalWeddings}
+          sub={`Q${quarter} ${year}`}
+        />
 
-        <article className="rounded-xl border border-border/70 bg-card p-4">
-          <p className="text-xs text-muted-foreground">Overdue Receivables</p>
-          <p className={`mt-1 text-2xl font-semibold ${totalOverdue > 0 ? "text-red-600 dark:text-red-400" : ""}`}>
-            {INR(totalOverdue)}
-          </p>
-          <div className="mt-1 flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">{data.overdueReceivables.length} client{data.overdueReceivables.length !== 1 ? "s" : ""}</p>
-            <AddOverdueDialog />
-          </div>
-        </article>
+        <FinancialKpiCard
+          className="relative"
+          label="Overdue Receivables"
+          value={INR(totalOverdue)}
+          sub={`${data.overdueReceivables.length} client${data.overdueReceivables.length !== 1 ? "s" : ""}`}
+          valueClassName={totalOverdue > 0 ? "text-red-600 dark:text-red-400" : undefined}
+          headerAction={<AddOverdueDialog />}
+        />
       </section>
 
       {/* Donut charts row */}

@@ -4,6 +4,7 @@ import { ArrowRightIcon, Trash2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
+import { FinancialKpiCard } from "./financial-kpi-card";
 import { DEFAULT_EXPENSE_CATEGORIES, PERIOD_SHORT_LABELS, type PeriodFilter } from "./types";
 import { filterByPeriod, sumRupees, useFinancialData } from "./use-financial-data";
 
@@ -48,16 +49,18 @@ export function OpsExpensesTab({
   return (
     <div className="space-y-6">
       {/* Summary */}
-      <article className="rounded-xl border border-border/70 bg-card p-4">
-        <p className="text-xs text-muted-foreground">Total Ops Spend — {PERIOD_SHORT_LABELS[period]}</p>
-        <p className="mt-1 text-3xl font-semibold">{INR(totalExpenses)}</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {expensesInPeriod.length} entr{expensesInPeriod.length !== 1 ? "ies" : "y"} in period
-          {data.expenseEntries.length !== expensesInPeriod.length
-            ? ` · ${data.expenseEntries.length} total`
-            : ""}
-        </p>
-      </article>
+      <FinancialKpiCard
+        label={`Total Ops Spend — ${PERIOD_SHORT_LABELS[period]}`}
+        value={INR(totalExpenses)}
+        sub={
+          <>
+            {expensesInPeriod.length} entr{expensesInPeriod.length !== 1 ? "ies" : "y"} in period
+            {data.expenseEntries.length !== expensesInPeriod.length
+              ? ` · ${data.expenseEntries.length} total`
+              : ""}
+          </>
+        }
+      />
 
       {/* Two-column: By Category + Recent Entries */}
       <div className="grid gap-4 xl:grid-cols-2">

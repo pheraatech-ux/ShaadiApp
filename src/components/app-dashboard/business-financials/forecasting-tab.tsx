@@ -6,6 +6,7 @@ import { BotIcon, SendIcon, SparklesIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
+import { FinancialKpiCard } from "./financial-kpi-card";
 import { REVENUE_CATEGORIES, DEFAULT_EXPENSE_CATEGORIES, PERIOD_SHORT_LABELS, type PeriodFilter } from "./types";
 import { filterByPeriod, sumRupees, useFinancialData } from "./use-financial-data";
 
@@ -103,36 +104,40 @@ export function ForecastingTab({
 
   return (
     <div className="space-y-6">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <FinancialKpiCard
+          label={`Revenue (${PERIOD_SHORT_LABELS[period]})`}
+          value={INR(totalRevenue)}
+          valueClassName="text-green-600 dark:text-green-400"
+        />
+        <FinancialKpiCard
+          label={`Expenses (${PERIOD_SHORT_LABELS[period]})`}
+          value={INR(totalExpenses)}
+        />
+        <FinancialKpiCard
+          label="Gross Margin"
+          value={`${grossMargin}%`}
+          valueClassName={
+            parseFloat(grossMargin) >= 50
+              ? "text-green-600 dark:text-green-400"
+              : parseFloat(grossMargin) >= 25
+                ? "text-amber-600 dark:text-amber-400"
+                : "text-red-600 dark:text-red-400"
+          }
+        />
+        <FinancialKpiCard
+          label="Overdue Receivables"
+          value={INR(overdueReceivables)}
+          valueClassName={overdueReceivables > 0 ? "text-red-600 dark:text-red-400" : undefined}
+        />
+      </section>
+
       <div>
         <h2 className="text-sm font-semibold">Financial Forecasting</h2>
         <p className="text-xs text-muted-foreground">
           AI-powered analysis based on your revenue and expense data ({PERIOD_SHORT_LABELS[period]})
         </p>
       </div>
-
-      {/* Current snapshot */}
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <article className="rounded-xl border border-border/70 bg-card p-4">
-          <p className="text-xs text-muted-foreground">Revenue ({PERIOD_SHORT_LABELS[period]})</p>
-          <p className="mt-1 text-xl font-semibold text-green-600 dark:text-green-400">{INR(totalRevenue)}</p>
-        </article>
-        <article className="rounded-xl border border-border/70 bg-card p-4">
-          <p className="text-xs text-muted-foreground">Expenses ({PERIOD_SHORT_LABELS[period]})</p>
-          <p className="mt-1 text-xl font-semibold">{INR(totalExpenses)}</p>
-        </article>
-        <article className="rounded-xl border border-border/70 bg-card p-4">
-          <p className="text-xs text-muted-foreground">Gross Margin</p>
-          <p className={`mt-1 text-xl font-semibold ${parseFloat(grossMargin) >= 50 ? "text-green-600 dark:text-green-400" : parseFloat(grossMargin) >= 25 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
-            {grossMargin}%
-          </p>
-        </article>
-        <article className="rounded-xl border border-border/70 bg-card p-4">
-          <p className="text-xs text-muted-foreground">Overdue Receivables</p>
-          <p className={`mt-1 text-xl font-semibold ${overdueReceivables > 0 ? "text-red-600 dark:text-red-400" : ""}`}>
-            {INR(overdueReceivables)}
-          </p>
-        </article>
-      </section>
 
       {!hasData && (
         <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-900/30 dark:bg-amber-950/20">
