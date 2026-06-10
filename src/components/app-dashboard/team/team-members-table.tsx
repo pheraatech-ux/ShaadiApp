@@ -1,7 +1,6 @@
 "use client";
 
 import { Mail, Phone, Trash2, UserPlus, Users } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { TaskProgressBar } from "@/components/app-dashboard/team/task-progress-bar";
@@ -37,7 +36,9 @@ function RemoveMemberDescription({ member }: { member: TeamMemberSummary }) {
 type TeamMembersTableProps = {
   members: TeamMemberSummary[];
   currentUserId: string;
+  businessName: string;
   onInviteClick?: () => void;
+  onMemberClick?: (memberId: string) => void;
   onCopyInviteLink?: (memberId: string) => Promise<void>;
   onGenerateNewInviteLink?: (memberId: string) => Promise<void>;
   onDeleteMember?: (memberId: string) => Promise<void>;
@@ -49,16 +50,27 @@ function memberIsCurrentUser(member: TeamMemberSummary, currentUserId: string) {
   return member.id === currentUserId || member.linkedUserId === currentUserId;
 }
 
+const DEFAULT_WORKSPACE_NAME = "ShaadiOS Workspace";
+
+function teamMembersTitle(businessName: string) {
+  const trimmed = businessName.trim();
+  if (!trimmed || trimmed === DEFAULT_WORKSPACE_NAME) {
+    return "Team members";
+  }
+  return `${trimmed}'s team members`;
+}
+
 export function TeamMembersTable({
   members,
   currentUserId,
+  businessName,
   onInviteClick,
+  onMemberClick,
   onCopyInviteLink,
   onGenerateNewInviteLink,
   onDeleteMember,
   onMessageMember,
 }: TeamMembersTableProps) {
-  const router = useRouter();
   const [busyAction, setBusyAction] = useState<{ memberId: string; action: "copy" | "new-link" } | null>(null);
   const [busyMessageId, setBusyMessageId] = useState<string | null>(null);
   const [busyDeleteId, setBusyDeleteId] = useState<string | null>(null);
@@ -70,7 +82,12 @@ export function TeamMembersTable({
   return (
     <Card className="gap-0 rounded-2xl border-border/70 pb-0">
       <CardHeader className="flex flex-row items-center justify-between border-b border-border/70 pb-3">
-        <CardTitle className="text-base">All team members</CardTitle>
+        <CardTitle className="flex items-center gap-3 text-base">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-500/15">
+            <Users className="size-5 text-emerald-500" aria-hidden />
+          </div>
+          {teamMembersTitle(businessName)}
+        </CardTitle>
         <Button
           size="sm"
           className="rounded-lg bg-emerald-600 text-white hover:bg-emerald-600/90"
@@ -107,7 +124,7 @@ export function TeamMembersTable({
             <table className="w-full min-w-[58rem] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-border/70 bg-muted/25 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  <th scope="col" className="w-[22%] px-4 py-3 text-center font-medium">
+                  <th scope="col" className="w-[22%] py-3 pl-6 pr-4 text-center font-medium">
                     Team member
                   </th>
                   <th scope="col" className="w-[13%] px-4 py-3 text-center font-medium">
@@ -133,18 +150,18 @@ export function TeamMembersTable({
                     key={member.id}
                     className="cursor-pointer border-b border-border/60 transition-colors last:border-none hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none"
                     tabIndex={0}
-                    role="link"
+                    role="button"
                     aria-label={`Open ${nameLabel} profile`}
-                    onClick={() => router.push(`/app/team/${member.id}`)}
+                    onClick={() => onMemberClick?.(member.id)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
-                        router.push(`/app/team/${member.id}`);
+                        onMemberClick?.(member.id);
                       }
                     }}
                   >
-                    <td className="px-4 py-5 align-middle text-left">
-                      <div className="flex min-w-0 items-center gap-3">
+                    <td className="py-5 pl-6 pr-4 align-middle text-left">
+                      <div className="flex min-w-0 items-center gap-4">
                         <Avatar className="size-11 shrink-0 border border-border/70">
                           <AvatarFallback className="text-xs font-semibold">{member.initials}</AvatarFallback>
                         </Avatar>

@@ -21,6 +21,9 @@ export type TeamMemberSummary = {
   inviteExpiresAt?: string | null;
   /** Company employees only; false for workspace owner and wedding-only members. */
   deletable: boolean;
+  assignedTasks: TeamTaskItem[];
+  /** e.g. "Joined on 12 June, 2026" — omitted when unknown */
+  memberSinceLabel?: string | null;
 };
 
 export type TeamKpiCard = {
@@ -32,6 +35,7 @@ export type TeamKpiCard = {
 
 export type TeamListPageViewModel = {
   workspaceLabel: string;
+  businessName: string;
   kpis: TeamKpiCard[];
   alertText: string;
   members: TeamMemberSummary[];
@@ -47,6 +51,7 @@ export type TeamTaskItem = {
   weddingLabel: string;
   dueLabel: string;
   status: TeamTaskStatus;
+  href?: string;
 };
 
 export type TeamMemberProfileViewModel = {

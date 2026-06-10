@@ -14,7 +14,11 @@ export function MemberProfileView({ view }: MemberProfileViewProps) {
         <p className="text-sm text-muted-foreground">Task ownership and progress across assigned weddings.</p>
       </section>
       <MemberProfileHeader view={view} />
-      <MemberTaskList tasks={view.tasks} />
+      <MemberTaskList
+        tasks={view.tasks}
+        tasksCompleted={view.member.tasksCompleted}
+        tasksTotal={view.member.tasksTotal}
+      />
     </div>
   );
 }

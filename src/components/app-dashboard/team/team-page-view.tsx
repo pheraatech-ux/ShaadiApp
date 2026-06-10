@@ -5,9 +5,10 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { TeamAlertBanner } from "@/components/app-dashboard/team/team-alert-banner";
+import { MemberProfileModal } from "@/components/app-dashboard/team/member-profile-modal";
 import { TeamMembersTable } from "@/components/app-dashboard/team/team-members-table";
 import { TeamSummaryCards } from "@/components/app-dashboard/team/team-summary-cards";
-import { TeamListPageViewModel } from "@/components/app-dashboard/team/team-types";
+import { TeamListPageViewModel, TeamMemberSummary } from "@/components/app-dashboard/team/team-types";
 import { InviteTeamMemberDialog } from "@/components/wedding-workspace/team/invite-team-member-dialog";
 
 type TeamPageViewProps = {
@@ -17,6 +18,7 @@ type TeamPageViewProps = {
 export function TeamPageView({ view }: TeamPageViewProps) {
   const router = useRouter();
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<TeamMemberSummary | null>(null);
 
   async function copyTextToClipboard(text: string) {
     try {
@@ -57,7 +59,11 @@ export function TeamPageView({ view }: TeamPageViewProps) {
       <TeamMembersTable
         members={view.members}
         currentUserId={view.currentUserId}
+        businessName={view.businessName}
         onInviteClick={() => setInviteOpen(true)}
+        onMemberClick={(memberId) => {
+          setSelectedMember(view.members.find((member) => member.id === memberId) ?? null);
+        }}
         onMessageMember={async (memberId) => {
           const response = await fetch(`/api/team/employees/${memberId}/message`, {
             method: "POST",
@@ -99,6 +105,13 @@ export function TeamPageView({ view }: TeamPageViewProps) {
           } catch (error) {
             toast.error(error instanceof Error ? error.message : "Unable to remove team member.");
           }
+        }}
+      />
+      <MemberProfileModal
+        member={selectedMember}
+        open={selectedMember !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedMember(null);
         }}
       />
       <InviteTeamMemberDialog

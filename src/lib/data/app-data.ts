@@ -147,6 +147,7 @@ type WeddingMemberRow = {
   display_name: string | null;
   role: "owner" | "lead" | "coordinator" | "viewer";
   status: "active" | "invited" | "removed";
+  created_at: string;
 };
 
 type CompanyEmployeeRow = {
@@ -198,6 +199,66 @@ function formatDateLabel(dateStr?: string | null) {
     month: "short",
     year: "numeric",
   });
+}
+
+function formatMemberSinceLabel(
+  employmentStatus: TeamMemberSummary["employmentStatus"],
+  dateIso: string | null | undefined,
+): string | null {
+  if (!dateIso) return null;
+  const date = new Date(dateIso);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const formatted = date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).replace(/(\d+\s+\w+)\s(\d{4})$/, "$1, $2");
+
+  const prefix = employmentStatus === "invited" ? "Invited on" : "Joined on";
+  return `${prefix} ${formatted}`;
+}
+
+type TeamListTaskRow = {
+  id: string;
+  title: string;
+  assignee_user_id: string | null;
+  status: "todo" | "in_progress" | "needs_review" | "done";
+  due_date: string | null;
+  wedding_id: string;
+  created_at?: string;
+};
+
+function buildAssignedTasksForMember(
+  tasks: TeamListTaskRow[],
+  assigneeUserId: string | null | undefined,
+  weddingNameById: Map<string, string>,
+  weddingSlugById: Map<string, string>,
+  today: string,
+): TeamTaskItem[] {
+  if (!assigneeUserId) return [];
+
+  return tasks
+    .filter((task) => task.assignee_user_id === assigneeUserId)
+    .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
+    .map((task) => {
+      const weddingSlug = weddingSlugById.get(task.wedding_id);
+      return {
+        id: task.id,
+        title: task.title,
+        weddingLabel: weddingNameById.get(task.wedding_id) ?? "Wedding",
+        dueLabel: task.due_date ? `Due ${formatDateLabel(task.due_date)}` : "No due date",
+        status:
+          task.status === "done"
+            ? "done"
+            : task.due_date && task.due_date < today
+              ? "overdue"
+              : "in-progress",
+        href: weddingSlug
+          ? `/app/weddings/${encodeURIComponent(weddingSlug)}/tasks?task=${task.id}`
+          : undefined,
+      };
+    });
 }
 
 function getInitials(label: string) {
@@ -1229,15 +1290,11 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
         hasWeddings
           ? supabase
               .from("tasks")
-              .select("id, assignee_user_id, status, due_date")
+              .select("id, title, assignee_user_id, status, due_date, wedding_id, created_at")
               .in("wedding_id", weddingIds)
+              .order("created_at", { ascending: false })
           : Promise.resolve({
-              data: [] as {
-                id: string;
-                assignee_user_id: string | null;
-                status: "todo" | "in_progress" | "needs_review" | "done";
-                due_date: string | null;
-              }[] | null,
+              data: [] as TeamListTaskRow[] | null,
             }),
         supabase
           .from("company_employee_invites")
@@ -1246,10 +1303,11 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
           .is("claimed_at", null)
           .is("revoked_at", null)
           .order("created_at", { ascending: false }),
-        supabase.from("profiles").select("phone").eq("id", planner.userId).maybeSingle(),
+        supabase.from("profiles").select("phone, created_at").eq("id", planner.userId).maybeSingle(),
       ]);
 
     const weddingNameById = new Map(weddings.map((wedding) => [wedding.id, wedding.couple_name]));
+    const weddingSlugById = new Map(weddings.map((wedding) => [wedding.id, wedding.slug]));
     const weddingsByUserId = new Map<string, string[]>();
     for (const row of weddingMemberRows ?? []) {
       if (!row.user_id) continue;
@@ -1261,7 +1319,7 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
       weddingsByUserId.set(row.user_id, existing);
     }
 
-    const tasks = (taskRows ?? []) as { id: string; assignee_user_id: string | null; status: "todo" | "in_progress" | "needs_review" | "done"; due_date: string | null }[];
+    const tasks = (taskRows ?? []) as TeamListTaskRow[];
     const invites = (inviteRows ?? []) as CompanyEmployeeInviteRow[];
     const today = new Date().toISOString().slice(0, 10);
     const nowTimestamp = Date.now();
@@ -1318,6 +1376,19 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
         employmentStatus: employee.employment_status,
         inviteExpiresAt: latestInvite?.expires_at ?? null,
         deletable: employee.user_id !== planner.userId,
+        assignedTasks: buildAssignedTasksForMember(
+          tasks,
+          employee.user_id,
+          weddingNameById,
+          weddingSlugById,
+          today,
+        ),
+        memberSinceLabel: formatMemberSinceLabel(
+          employee.employment_status,
+          employee.employment_status === "invited"
+            ? (employee.invited_at ?? employee.created_at)
+            : employee.created_at,
+        ),
       };
     });
 
@@ -1355,6 +1426,14 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
         employmentStatus: "active",
         inviteExpiresAt: null,
         deletable: false,
+        assignedTasks: buildAssignedTasksForMember(
+          tasks,
+          planner.userId,
+          weddingNameById,
+          weddingSlugById,
+          today,
+        ),
+        memberSinceLabel: formatMemberSinceLabel("active", ownerProfileRow?.created_at),
       };
       return [ownerRow, ...employeeMemberRows];
     })();
@@ -1386,12 +1465,14 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
         totalOverdue > 0 ? `${totalOverdue} tasks are overdue. Send reminders from member profiles.` : "No overdue team tasks right now.",
       members: teamMembers,
       currentUserId: planner.userId,
+      businessName: planner.workspaceName,
     };
   }
 
   if (!weddingIds.length) {
     return {
       workspaceLabel: "All staff across your business",
+      businessName: planner.workspaceName,
       kpis: [
         { id: "members", title: "Team members", value: "0", helperText: "No members added yet" },
         { id: "upcoming", title: "Upcoming load", value: "0", helperText: "Tasks due in 7 days · 0 critical" },
@@ -1407,17 +1488,18 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
   const [{ data: memberRows }, { data: taskRows }] = await Promise.all([
     supabase
       .from("wedding_members")
-      .select("id, wedding_id, user_id, invited_email, display_name, role, status")
+      .select("id, wedding_id, user_id, invited_email, display_name, role, status, created_at")
       .in("wedding_id", weddingIds)
       .neq("status", "removed"),
     supabase
       .from("tasks")
-      .select("id, wedding_id, assignee_user_id, status, due_date")
-      .in("wedding_id", weddingIds),
+      .select("id, title, wedding_id, assignee_user_id, status, due_date, created_at")
+      .in("wedding_id", weddingIds)
+      .order("created_at", { ascending: false }),
   ]);
 
   const members = (memberRows ?? []) as WeddingMemberRow[];
-  const tasks = (taskRows ?? []) as { id: string; wedding_id: string; assignee_user_id: string | null; status: "todo" | "in_progress" | "needs_review" | "done"; due_date: string | null }[];
+  const tasks = (taskRows ?? []) as TeamListTaskRow[];
   const userIds = [...new Set(members.map((row) => row.user_id).filter(Boolean))] as string[];
   const { data: profileRows } =
     userIds.length > 0
@@ -1437,14 +1519,20 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
     ]),
   );
   const weddingNameById = new Map(weddings.map((wedding) => [wedding.id, wedding.couple_name]));
+  const weddingSlugById = new Map(weddings.map((wedding) => [wedding.id, wedding.slug]));
   const today = new Date().toISOString().slice(0, 10);
 
   const membersByUser = new Map<string, WeddingMemberRow[]>();
+  const earliestJoinedByUser = new Map<string, string>();
   for (const member of members) {
     if (!member.user_id) continue;
     const list = membersByUser.get(member.user_id) ?? [];
     list.push(member);
     membersByUser.set(member.user_id, list);
+    const existing = earliestJoinedByUser.get(member.user_id);
+    if (!existing || member.created_at < existing) {
+      earliestJoinedByUser.set(member.user_id, member.created_at);
+    }
   }
 
   const teamMembers: TeamMemberSummary[] = [...membersByUser.entries()].map(([userId, rows]) => {
@@ -1487,6 +1575,8 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
       employmentStatus: "active",
       inviteExpiresAt: null,
       deletable: false,
+      assignedTasks: buildAssignedTasksForMember(tasks, userId, weddingNameById, weddingSlugById, today),
+      memberSinceLabel: formatMemberSinceLabel("active", earliestJoinedByUser.get(userId)),
     };
   });
 
@@ -1516,6 +1606,7 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
       totalOverdue > 0 ? `${totalOverdue} tasks are overdue. Send reminders from member profiles.` : "No overdue team tasks right now.",
     members: teamMembers,
     currentUserId: planner.userId,
+    businessName: planner.workspaceName,
   };
 });
 
@@ -1525,39 +1616,9 @@ export const getTeamMemberProfileView = cache(
     const member = team.members.find((item) => item.id === memberId);
     if (!member) return null;
 
-    const planner = await getPlannerContext();
-    const weddings = await getAccessibleWeddings(planner.userId);
-    const weddingIds = weddings.map((wedding) => wedding.id);
-    const targetUserId = member.linkedUserId ?? null;
-    if (!weddingIds.length || !targetUserId) {
-      return { member, completionPercent: 0, tasks: [] };
-    }
-
-    const supabase = await createSupabaseServerClient();
-    const { data: taskRows } = await supabase
-      .from("tasks")
-      .select("id, title, status, due_date, wedding_id")
-      .eq("assignee_user_id", targetUserId)
-      .in("wedding_id", weddingIds)
-      .order("created_at", { ascending: false });
-
-    const weddingNameById = new Map(weddings.map((wedding) => [wedding.id, wedding.couple_name]));
-    const tasks: TeamTaskItem[] = ((taskRows ?? []) as { id: string; title: string; status: "todo" | "in_progress" | "needs_review" | "done"; due_date: string | null; wedding_id: string }[]).map((task) => ({
-      id: task.id,
-      title: task.title,
-      weddingLabel: weddingNameById.get(task.wedding_id) ?? "Wedding",
-      dueLabel: task.due_date ? `Due ${formatDateLabel(task.due_date)}` : "No due date",
-      status:
-        task.status === "done"
-          ? "done"
-          : task.due_date && task.due_date < new Date().toISOString().slice(0, 10)
-            ? "overdue"
-            : "in-progress",
-    }));
-
     const completionPercent = member.tasksTotal > 0 ? Math.round((member.tasksCompleted / member.tasksTotal) * 100) : 0;
 
-    return { member, completionPercent, tasks };
+    return { member, completionPercent, tasks: member.assignedTasks };
   },
 );
 
