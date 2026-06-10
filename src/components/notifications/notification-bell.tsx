@@ -10,7 +10,9 @@ import {
   useNotificationStore,
 } from "@knocklabs/react";
 
+import { topbarIconButtonClassName } from "@/components/app-dashboard/dashboard/topbar-control-styles";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 function NotificationButton({
   onClick,
@@ -33,10 +35,10 @@ function NotificationButton({
       ref={buttonRef}
       type="button"
       variant="outline"
-      size="icon"
+      size="icon-lg"
       aria-label="Notifications"
       onClick={onClick}
-      className="relative"
+      className={cn(topbarIconButtonClassName, "relative rounded-xl")}
     >
       <Bell />
       {unread > 0 && (

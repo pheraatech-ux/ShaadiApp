@@ -55,3 +55,15 @@ export function buildTimeOfDayGreeting(displayName: string): string {
 
   return `${prefix}, ${displayName}`;
 }
+
+export function parseGreetingDisplay(greeting: string) {
+  const [salutation, ...nameParts] = greeting.split(",");
+  const fullName = nameParts.join(",").trim();
+  const greetedName = fullName.split(/\s+/)[0] ?? fullName;
+
+  return {
+    salutation: salutation?.trim() || "Welcome",
+    greetedName,
+    fullGreeting: greeting,
+  };
+}

@@ -4,7 +4,9 @@ import { Moon, Sun } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 
+import { topbarIconButtonClassName } from "@/components/app-dashboard/dashboard/topbar-control-styles";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const emptySubscribe = () => () => {};
 
@@ -18,8 +20,9 @@ export function ThemeToggle() {
     <Button
       type="button"
       variant="outline"
-      size="icon"
+      size="icon-lg"
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      className={cn(topbarIconButtonClassName, "rounded-xl")}
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
       {isDark ? <Sun /> : <Moon />}

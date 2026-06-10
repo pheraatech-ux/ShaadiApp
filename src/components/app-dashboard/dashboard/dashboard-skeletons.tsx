@@ -1,22 +1,15 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-function GreetingBarSkeleton() {
+function StatsBarSkeleton() {
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-16">
-      <div className="shrink-0 space-y-1.5">
-        <Skeleton className="h-3.5 w-16" />
-        <Skeleton className="h-9 w-36 sm:h-10" />
-        <Skeleton className="h-3.5 w-28" />
-      </div>
-      <div className="flex flex-1 divide-x divide-border/70 overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="flex flex-1 flex-col items-center px-4 py-3">
-            <Skeleton className="h-2.5 w-16" />
-            <Skeleton className="mt-2 h-7 w-10" />
-            <Skeleton className="mt-1 h-2.5 w-14" />
-          </div>
-        ))}
-      </div>
+    <div className="flex divide-x divide-border/70 overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="flex flex-1 flex-col items-center px-4 py-3">
+          <Skeleton className="h-2.5 w-16" />
+          <Skeleton className="mt-2 h-7 w-10" />
+          <Skeleton className="mt-1 h-2.5 w-14" />
+        </div>
+      ))}
     </div>
   );
 }
@@ -44,7 +37,7 @@ function PanelSkeleton({ className }: { className?: string }) {
 export function DashboardSkeleton() {
   return (
     <div className="space-y-4 sm:space-y-5">
-      <GreetingBarSkeleton />
+      <StatsBarSkeleton />
       <div className="grid gap-4 lg:grid-cols-2">
         <PanelSkeleton className="h-[400px]" />
         <PanelSkeleton className="h-[400px]" />
@@ -60,7 +53,7 @@ export function DashboardSkeleton() {
 export function EmployeeDashboardSkeleton() {
   return (
     <div className="space-y-4 sm:space-y-5">
-      <GreetingBarSkeleton />
+      <StatsBarSkeleton />
       <div className="grid h-[380px] items-stretch gap-4 lg:grid-cols-2">
         <PanelSkeleton />
         <PanelSkeleton />
@@ -99,7 +92,7 @@ export function SidebarChromeSkeleton() {
 export function DashboardTopbarSkeleton() {
   return (
     <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <Skeleton className="h-7 w-48 sm:h-8" />
+      <Skeleton className="h-7 w-52 sm:h-8 sm:w-60" />
       <div className="flex items-center gap-2 sm:gap-3">
         <Skeleton className="hidden h-9 max-w-sm flex-1 rounded-xl sm:block sm:w-64" />
         <Skeleton className="h-9 w-28 rounded-xl" />

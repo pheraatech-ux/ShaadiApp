@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { BookHeart, ClipboardList, Loader2, Search, Store } from "lucide-react";
 
+import { topbarControlClassName } from "@/components/app-dashboard/dashboard/topbar-control-styles";
 import { cn } from "@/lib/utils";
 import type { SearchResult } from "@/app/api/search/route";
 
@@ -95,7 +96,10 @@ export function GlobalSearch() {
       )}
       <input
         type="text"
-        className="h-9 w-full rounded-xl border border-border/70 bg-muted/40 pl-9 pr-9 text-sm outline-none placeholder:text-muted-foreground focus:border-border focus:bg-background focus:ring-0"
+        className={cn(
+          "h-9 w-full pl-9 pr-9 text-sm text-foreground/70 outline-none placeholder:text-muted-foreground focus:border-border focus:bg-card focus:ring-0",
+          topbarControlClassName,
+        )}
         placeholder="Search weddings, tasks, vendors..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}

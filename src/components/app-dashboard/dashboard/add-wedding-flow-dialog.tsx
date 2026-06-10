@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, X } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -28,6 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { WorkspaceSetupOverlay } from "@/components/app-dashboard/dashboard/workspace-setup-overlay";
 import { cn } from "@/lib/utils";
 import {
   type CultureId,
@@ -61,6 +62,11 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
   const [reviewEvents, setReviewEvents] = useState<WeddingEvent[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [pendingWorkspace, setPendingWorkspace] = useState<{
+    slug: string;
+    coupleLabel: string;
+  } | null>(null);
+  const pendingWorkspaceSlugRef = useRef<string | null>(null);
   const [totalBudgetPaise, setTotalBudgetPaise] = useState(0);
   const [coupleForm, setCoupleForm] = useState<AddWeddingCoupleForm>({
     brideName: "",
@@ -126,9 +132,10 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
       }
 
       const payload = (await response.json()) as { weddingSlug: string };
+      const coupleLabel = `${coupleForm.brideName.trim()} & ${coupleForm.groomName.trim()}`;
       handleOpenChange(false);
-      router.refresh();
-      router.push(`/app/weddings/${payload.weddingSlug}`);
+      pendingWorkspaceSlugRef.current = payload.weddingSlug;
+      setPendingWorkspace({ slug: payload.weddingSlug, coupleLabel });
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Unable to create wedding.");
     } finally {
@@ -149,7 +156,23 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
   const coupleLabel = `${coupleForm.brideName || "Bride"} & ${coupleForm.groomName || "Groom"}`;
   const cityVenueLabel = [coupleForm.city || "City", coupleForm.venueName || "Venue"].join(" · ");
 
+  const handleWorkspaceSetupComplete = useCallback(() => {
+    const slug = pendingWorkspaceSlugRef.current;
+    if (!slug) return;
+    router.refresh();
+    router.push(`/app/weddings/${slug}`);
+    pendingWorkspaceSlugRef.current = null;
+    setPendingWorkspace(null);
+  }, [router]);
+
   return (
+    <>
+    {pendingWorkspace ? (
+      <WorkspaceSetupOverlay
+        coupleLabel={pendingWorkspace.coupleLabel}
+        onComplete={handleWorkspaceSetupComplete}
+      />
+    ) : null}
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[90vh] w-full max-w-[860px] gap-0 overflow-hidden rounded-2xl bg-card p-0 sm:max-w-[860px]" showCloseButton={false}>
         <DialogHeader className="border-b px-6 py-4">
@@ -273,5 +296,6 @@ export function AddWeddingFlowDialog({ open, onOpenChange }: AddWeddingFlowDialo
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </>
   );
 }

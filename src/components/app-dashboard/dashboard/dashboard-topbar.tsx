@@ -7,6 +7,7 @@ import { ReactNode, useCallback, useRef } from "react";
 import { GlobalSearch } from "@/components/app-dashboard/dashboard/global-search";
 import { PageTitle } from "@/components/app-dashboard/dashboard/page-title";
 import { ThemeToggle } from "@/components/app-dashboard/dashboard/theme-toggle";
+import { topbarControlClassName } from "@/components/app-dashboard/dashboard/topbar-control-styles";
 
 type DashboardTopbarProps = {
   greeting: string;
@@ -41,9 +42,8 @@ function BusinessNamePill({ name }: { name: string }) {
       type="button"
       onClick={fireConfetti}
       className={[
-        "hidden cursor-pointer items-center gap-1.5 rounded-xl border border-border/60 bg-card px-3.5 py-2 lg:flex",
-        "shadow-[0_1px_2px_rgba(0,0,0,0.04),_0_2px_8px_rgba(0,0,0,0.05)]",
-        "transition-all duration-150 hover:border-border hover:shadow-[0_1px_4px_rgba(0,0,0,0.07),_0_4px_12px_rgba(0,0,0,0.07)]",
+        "hidden cursor-pointer items-center gap-1.5 px-3.5 py-2 lg:flex",
+        topbarControlClassName,
       ].join(" ")}
       title="🎉"
     >
@@ -55,10 +55,10 @@ function BusinessNamePill({ name }: { name: string }) {
   );
 }
 
-export function DashboardTopbar({ greeting: _greeting, workspaceName, actions }: DashboardTopbarProps) {
+export function DashboardTopbar({ greeting, workspaceName, actions }: DashboardTopbarProps) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <PageTitle />
+      <PageTitle greeting={greeting} />
       <div className="flex items-center gap-2 sm:gap-3">
         <GlobalSearch />
         {actions}
