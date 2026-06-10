@@ -65,3 +65,22 @@ export const PERIOD_SHORT_LABELS: Record<PeriodFilter, string> = {
   quarter: "Quarter",
   month: "Month",
 };
+
+export function getPeriodDisplayLabel(
+  period: PeriodFilter,
+  referenceDate: Date = new Date(),
+): string {
+  const year = referenceDate.getFullYear();
+  const quarter = Math.floor(referenceDate.getMonth() / 3) + 1;
+
+  switch (period) {
+    case "ytd":
+      return `YTD | ${year}`;
+    case "quarter":
+      return `Quarter | Q${quarter} ${year}`;
+    case "month": {
+      const monthName = referenceDate.toLocaleString("en-US", { month: "long" });
+      return `Month | ${monthName} ${year}`;
+    }
+  }
+}

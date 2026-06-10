@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
 import { FinancialKpiCard } from "./financial-kpi-card";
-import { REVENUE_CATEGORIES, DEFAULT_EXPENSE_CATEGORIES, PERIOD_SHORT_LABELS, type PeriodFilter } from "./types";
+import { DEFAULT_EXPENSE_CATEGORIES, getPeriodDisplayLabel, REVENUE_CATEGORIES, type PeriodFilter } from "./types";
 import { filterByPeriod, sumRupees, useFinancialData } from "./use-financial-data";
 
 const INR = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
@@ -69,6 +69,8 @@ export function ForecastingTab({
 
   const hasData = totalRevenue > 0 || totalExpenses > 0;
 
+  const periodLabel = getPeriodDisplayLabel(period);
+
   async function generateForecast(message?: string) {
     setLoading(true);
     setError("");
@@ -84,7 +86,7 @@ export function ForecastingTab({
           expensesByCategory,
           overdueReceivables,
           activeWeddings: totalWeddings,
-          period: PERIOD_SHORT_LABELS[period],
+          period: periodLabel,
           userMessage: message ?? "",
         }),
       });
@@ -106,15 +108,20 @@ export function ForecastingTab({
     <div className="space-y-6">
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <FinancialKpiCard
-          label={`Revenue (${PERIOD_SHORT_LABELS[period]})`}
+          centered
+          label="Revenue"
           value={INR(totalRevenue)}
+          sub={periodLabel}
           valueClassName="text-green-600 dark:text-green-400"
         />
         <FinancialKpiCard
-          label={`Expenses (${PERIOD_SHORT_LABELS[period]})`}
+          centered
+          label="Expenses"
           value={INR(totalExpenses)}
+          sub={periodLabel}
         />
         <FinancialKpiCard
+          centered
           label="Gross Margin"
           value={`${grossMargin}%`}
           valueClassName={
@@ -126,6 +133,7 @@ export function ForecastingTab({
           }
         />
         <FinancialKpiCard
+          centered
           label="Overdue Receivables"
           value={INR(overdueReceivables)}
           valueClassName={overdueReceivables > 0 ? "text-red-600 dark:text-red-400" : undefined}
@@ -135,7 +143,7 @@ export function ForecastingTab({
       <div>
         <h2 className="text-sm font-semibold">Financial Forecasting</h2>
         <p className="text-xs text-muted-foreground">
-          AI-powered analysis based on your revenue and expense data ({PERIOD_SHORT_LABELS[period]})
+          AI-powered analysis based on your revenue and expense data ({periodLabel})
         </p>
       </div>
 

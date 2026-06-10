@@ -5,6 +5,10 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { TasksToolbar, type TasksTopFilter } from "@/components/app-dashboard/tasks/tasks-toolbar";
+import {
+  getAllTasksEmptyState,
+  TasksBoardEmptyState,
+} from "@/components/app-dashboard/tasks/tasks-board-empty-state";
 import { useAllTasksQuery, useInvalidateAllTasks } from "@/components/app-dashboard/tasks/use-all-tasks-query";
 import { useToolbarScrollExpand } from "@/components/app-dashboard/use-toolbar-scroll-expand";
 import { NewTaskDialog } from "@/components/wedding-workspace/tasks/new-task-dialog";
@@ -168,6 +172,15 @@ export function AllTasksWorkspace({ view }: AllTasksWorkspaceProps) {
 
   const createForWedding = view.weddings.find((w) => w.slug === createForWeddingSlug) ?? view.weddings[0];
   const unassignedCount = tasks.filter((t) => t.assigneeIds.length === 0).length;
+  const emptyState = getAllTasksEmptyState({
+    totalTasks: tasks.length,
+    activeFilter,
+    search,
+    weddingFilters,
+    assigneeFilters,
+    priorityFilters,
+    canCreateTask: Boolean(createForWedding),
+  });
 
   return (
     <div className="space-y-5 pb-[100vh]">
@@ -224,7 +237,14 @@ export function AllTasksWorkspace({ view }: AllTasksWorkspaceProps) {
         </div>
       )}
 
-      {displayMode === "list" ? (
+      {filteredTasks.length === 0 ? (
+        <div className="mt-4">
+          <TasksBoardEmptyState
+            {...emptyState}
+            onCtaClick={createForWedding ? () => setTaskDialogOpen(true) : undefined}
+          />
+        </div>
+      ) : displayMode === "list" ? (
         <div className="mt-4">
           <TaskListView tasks={filteredTasks} onTaskClick={setSelectedTaskId} showWeddingBadge />
         </div>

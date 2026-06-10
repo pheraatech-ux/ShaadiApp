@@ -10,7 +10,11 @@ import { Input } from "@/components/ui/input";
 import { REVENUE_CATEGORIES } from "./types";
 import { useFinancialData } from "./use-financial-data";
 
-export function AddRevenueDialog() {
+type AddRevenueDialogProps = {
+  compact?: boolean;
+};
+
+export function AddRevenueDialog({ compact = false }: AddRevenueDialogProps) {
   const { addRevenueEntry } = useFinancialData();
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState(REVENUE_CATEGORIES[0].id);
@@ -29,10 +33,22 @@ export function AddRevenueDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="default" className="h-10 shrink-0 gap-1.5 px-4 shadow-sm" />}>
-        <PlusIcon className="size-4" />
-        <span className="hidden sm:inline">Add Revenue</span>
-        <span className="sm:hidden">Revenue</span>
+      <DialogTrigger
+        render={
+          compact ? (
+            <Button size="sm" variant="outline" />
+          ) : (
+            <Button size="default" className="h-10 shrink-0 gap-1.5 px-4 shadow-sm" />
+          )
+        }
+      >
+        <PlusIcon className={compact ? "h-3.5 w-3.5" : "size-4"} />
+        {compact ? "Add" : (
+          <>
+            <span className="hidden sm:inline">Add Revenue</span>
+            <span className="sm:hidden">Revenue</span>
+          </>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

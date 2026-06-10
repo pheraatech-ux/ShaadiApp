@@ -50,21 +50,25 @@ function WeddingPortfolioTab({
     <div className="space-y-5">
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <FinancialKpiCard
+          centered
           label="Portfolio total"
           value={toInr(totalBudgetPaise)}
           sub="Across all accessible weddings"
         />
         <FinancialKpiCard
+          centered
           label="Allocated"
           value={toInr(totalAllocatedPaise)}
           sub="Planner line items planned"
         />
         <FinancialKpiCard
+          centered
           label="Spent"
           value={toInr(totalSpentPaise)}
           sub={`${portfolioUtilizationPercent}% utilization`}
         />
         <FinancialKpiCard
+          centered
           label="Weddings at risk"
           value={weddingsAtRisk}
           sub="Watch and overrun status combined"

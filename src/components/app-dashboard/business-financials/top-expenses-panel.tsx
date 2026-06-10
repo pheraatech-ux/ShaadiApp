@@ -2,17 +2,11 @@
 
 import { Receipt } from "lucide-react";
 
-import { type PeriodFilter } from "./types";
+import { getPeriodDisplayLabel, type PeriodFilter } from "./types";
 import { filterByPeriod, sumRupees, useFinancialData } from "./use-financial-data";
 import { BreakdownDonutChart } from "./breakdown-donut-chart";
 
 const EXPENSE_COLORS = ["#4f46e5", "#f59e0b", "#10b981", "#3b82f6", "#9ca3af"];
-
-const PERIOD_LABEL: Record<PeriodFilter, string> = {
-  ytd: "YTD",
-  quarter: "Quarter",
-  month: "Month",
-};
 
 type Props = { period: PeriodFilter };
 
@@ -20,7 +14,7 @@ export function TopExpensesPanel({ period }: Props) {
   const { data, ready } = useFinancialData();
 
   if (!ready) {
-    return <div className="h-52 animate-pulse rounded-xl bg-muted/40" />;
+    return <div className="h-52 animate-pulse rounded-2xl border border-border/70 bg-muted/40" />;
   }
 
   const expensesInPeriod = filterByPeriod(data.expenseEntries, period);
@@ -55,7 +49,13 @@ export function TopExpensesPanel({ period }: Props) {
       centerLabel="Total Expenses"
       title="Top Expenses"
       icon={Receipt}
-      period={PERIOD_LABEL[period]}
+      period={getPeriodDisplayLabel(period)}
+      emptyTitle="No expenses yet"
+      emptyDescription="Add expense entries for this period to see your top categories."
+      iconBoxClassName="bg-amber-500/15"
+      iconClassName="text-amber-600 dark:text-amber-500"
+      emptyIconBoxClassName="border-amber-400/40 bg-amber-500/10"
+      countBadgeClassName="bg-amber-500/12 text-amber-700 dark:text-amber-400"
     />
   );
 }
