@@ -85,17 +85,21 @@ export function CalendarEventFilter({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         className={cn(
-          "flex h-9 min-w-[130px] items-center justify-between gap-2 rounded-lg border border-border/70 bg-card px-3 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent/50 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+          "flex h-9 shrink-0 items-center justify-between gap-1.5 rounded-lg border border-border/70 bg-card px-2.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent/50 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
           className,
         )}
       >
-        <span className="flex min-w-0 items-center gap-2">
-          <ListFilter className="size-4 shrink-0 text-muted-foreground" />
+        <span className="flex min-w-0 items-center gap-1.5">
+          <ListFilter className="size-3.5 shrink-0 text-muted-foreground" />
           <span className="truncate">{triggerLabel}</span>
         </span>
-        <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+        <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
       </PopoverTrigger>
-      <PopoverContent align="end" className="min-w-[220px] gap-0 p-1">
+      <PopoverContent
+        align="start"
+        side="bottom"
+        className="w-[184px] gap-0 p-1"
+      >
         {visibleOptions.map(({ value, label, color, faded }) => {
           const isSelected = selected.has(value);
           return (
@@ -104,7 +108,7 @@ export function CalendarEventFilter({
               type="button"
               onClick={() => toggleType(value)}
               className={cn(
-                "flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm transition-colors hover:bg-accent",
+                "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent",
                 isSelected && "bg-accent/70",
               )}
             >

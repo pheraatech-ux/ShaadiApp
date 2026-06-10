@@ -335,7 +335,6 @@ export function CalendarView({
   const radius = 12 * (1 - progress);
   const padX = 8 + progress * (layout.paddingX - 8);
   const padY = 8 + progress * 4;
-  const stickyTop = isFloating ? layout.top + barHeight : barHeight;
 
   return (
     <div className="overflow-visible rounded-xl border border-border/70 bg-card">
@@ -443,21 +442,14 @@ export function CalendarView({
         </div>
       </div>
 
-      <div
-        className="calendar-wrapper mt-3 px-3 pb-3 sm:px-4 sm:pb-4"
-        style={{ "--calendar-sticky-top": `${stickyTop}px` } as React.CSSProperties}
-      >
+      <div className="calendar-wrapper mt-3 px-3 pb-3 sm:px-4 sm:pb-4">
         <FullCalendar
           ref={calRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
           headerToolbar={false}
           height="auto"
-          views={{
-            dayGridMonth: { dayMinHeight: 128 },
-            timeGridWeek: { slotMinHeight: 48 },
-            timeGridDay: { slotMinHeight: 48 },
-          }}
+          stickyHeaderDates={false}
           events={events}
           editable={true}
           selectable={true}

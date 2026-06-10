@@ -75,11 +75,11 @@ function MenuTooltip({
   children,
 }: {
   label: string;
-  children: React.ReactNode;
+  children: React.ReactElement;
 }) {
   return (
     <Tooltip>
-      <TooltipTrigger>{children}</TooltipTrigger>
+      <TooltipTrigger render={children} />
       <TooltipContent side="top">{label}</TooltipContent>
     </Tooltip>
   );
@@ -128,7 +128,8 @@ export function GoogleCalMenu({
 
         <PopoverContent align="end" className="w-[400px] gap-0 p-0">
           <div className="flex items-center justify-between px-4 pt-4 pb-2">
-            <p className="text-[11px] font-semibold tracking-wider text-muted-foreground">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider text-muted-foreground">
+              <GoogleIcon className="size-3.5 shrink-0" />
               CALENDARS
             </p>
             {connected && (
@@ -166,7 +167,7 @@ export function GoogleCalMenu({
                     aria-checked={gcalVisible}
                     onClick={() => onGcalVisibleChange(!gcalVisible)}
                     className={cn(
-                      "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
+                      "relative mr-1.5 inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
                       gcalVisible ? "bg-primary" : "bg-muted",
                     )}
                   >

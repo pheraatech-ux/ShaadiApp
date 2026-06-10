@@ -228,26 +228,14 @@ html .os-theme-light {
   height: auto !important;
   max-height: none !important;
 }
-/* Round the inner scrollgrid — overflow visible so sticky column headers work */
+/* Round the inner scrollgrid */
 .calendar-wrapper .fc-scrollgrid {
   border-radius: 0.625rem !important;
-  overflow: visible !important;
+  overflow: hidden !important;
 }
-.calendar-wrapper .fc-scrollgrid-section-header > * {
-  overflow: visible !important;
-}
-/* Sticky day/date row below the calendar toolbar while page scrolls */
-.calendar-wrapper .fc-col-header-cell {
-  position: sticky;
-  top: var(--calendar-sticky-top, 0px);
-  z-index: 20;
-  background: var(--card);
-}
-.calendar-wrapper .fc-timegrid .fc-timegrid-axis {
-  position: sticky;
-  top: var(--calendar-sticky-top, 0px);
-  z-index: 21;
-  background: var(--card);
+/* Body axis overlay must stay transparent so left time labels show through */
+.calendar-wrapper .fc-timegrid-body .fc-timegrid-col.fc-timegrid-axis {
+  background: transparent !important;
 }
 .calendar-wrapper .fc-daygrid-day-frame {
   min-height: 8rem;
