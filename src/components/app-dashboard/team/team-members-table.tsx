@@ -46,11 +46,14 @@ type TeamMembersTableProps = {
   onMessageMember?: (memberId: string) => Promise<void>;
 };
 
-function MemberSinceBadge({ label }: { label: string }) {
+function MemberSinceBadge({ label, className }: { label: string; className?: string }) {
   return (
     <Badge
       variant="secondary"
-      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-violet-500/20 bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300"
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1 rounded-full border border-violet-500/20 bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300",
+        className,
+      )}
     >
       <Calendar className="size-3 shrink-0 text-violet-500" aria-hidden />
       {label}
@@ -82,35 +85,59 @@ function avatarPaletteForName(name: string) {
 }
 
 const MAX_VISIBLE_WEDDING_PILLS = 3;
+const MAX_VISIBLE_WEDDING_PILLS_COMPACT = 2;
+
+const weddingPillClassName =
+  "h-auto min-h-6 max-w-full truncate rounded-md px-2.5 py-1 text-[10px] leading-snug";
+const weddingMoreClassName =
+  "h-auto min-h-6 shrink-0 rounded-md px-2.5 py-1 text-[10px] leading-snug text-muted-foreground";
 
 function ActiveWeddingPills({ weddings }: { weddings: string[] }) {
-  const visible = weddings.slice(0, MAX_VISIBLE_WEDDING_PILLS);
-  const overflow = weddings.length - visible.length;
-
   if (weddings.length === 0) {
     return <p className="min-h-14 text-xs text-muted-foreground">None</p>;
   }
 
+  const visibleWide = weddings.slice(0, MAX_VISIBLE_WEDDING_PILLS);
+  const overflowWide = weddings.length - visibleWide.length;
+  const overflowCompact = Math.max(0, weddings.length - MAX_VISIBLE_WEDDING_PILLS_COMPACT);
+
   return (
-    <div className="flex min-h-14 flex-wrap content-start gap-1">
-      {visible.map((wedding) => (
-        <Badge
-          key={wedding}
-          variant="secondary"
-          className="h-auto min-h-6 max-w-full truncate rounded-md px-2.5 py-1 text-[10px] leading-snug"
-        >
-          {wedding}
-        </Badge>
-      ))}
-      {overflow > 0 ? (
-        <Badge
-          variant="secondary"
-          className="h-auto min-h-6 shrink-0 rounded-md px-2.5 py-1 text-[10px] leading-snug text-muted-foreground"
-        >
-          +{overflow} more
-        </Badge>
-      ) : null}
-    </div>
+    <>
+      <div className="flex min-h-14 flex-col justify-start gap-1 min-[1440px]:hidden">
+        {weddings[0] ? (
+          <Badge variant="secondary" className={weddingPillClassName}>
+            {weddings[0]}
+          </Badge>
+        ) : null}
+        {weddings[1] || overflowCompact > 0 ? (
+          <div className="flex flex-wrap items-center gap-1">
+            {weddings[1] ? (
+              <Badge variant="secondary" className={weddingPillClassName}>
+                {weddings[1]}
+              </Badge>
+            ) : null}
+            {overflowCompact > 0 ? (
+              <Badge variant="secondary" className={weddingMoreClassName}>
+                +{overflowCompact} more
+              </Badge>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="hidden min-h-14 flex-wrap content-start gap-1 min-[1440px]:flex">
+        {visibleWide.map((wedding) => (
+          <Badge key={wedding} variant="secondary" className={weddingPillClassName}>
+            {wedding}
+          </Badge>
+        ))}
+        {overflowWide > 0 ? (
+          <Badge variant="secondary" className={weddingMoreClassName}>
+            +{overflowWide} more
+          </Badge>
+        ) : null}
+      </div>
+    </>
   );
 }
 
@@ -383,7 +410,7 @@ function TeamMemberCard({
             </div>
           </div>
           {member.memberSinceLabel ? (
-            <MemberSinceBadge label={member.memberSinceLabel} />
+            <MemberSinceBadge label={member.memberSinceLabel} className="hidden min-[1440px]:inline-flex" />
           ) : null}
         </div>
       </div>
@@ -450,6 +477,33 @@ function TeamMemberCard({
         setBusyMessageId={setBusyMessageId}
       />
     </article>
+  );
+}
+
+function InviteTeamMemberCard({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        "group flex h-full min-h-[280px] w-full flex-col items-center justify-center gap-3 rounded-xl",
+        "border border-dashed border-emerald-400/40 bg-muted/10 px-6 py-8 text-center transition-all",
+        "hover:border-emerald-500/50 hover:bg-emerald-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40",
+      )}
+      onClick={onClick}
+    >
+      <span className="flex size-12 items-center justify-center rounded-full border border-dashed border-emerald-400/40 bg-emerald-500/10 transition-colors group-hover:bg-emerald-500/15">
+        <UserPlus className="size-5 text-emerald-500" aria-hidden />
+      </span>
+      <div className="space-y-1">
+        <p className="text-sm font-semibold text-foreground">Invite teammate</p>
+        <p className="max-w-[200px] text-xs leading-relaxed text-muted-foreground">
+          Add someone to your company team and assign them to weddings.
+        </p>
+      </div>
+      <span className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors group-hover:bg-emerald-600/90">
+        + Invite
+      </span>
+    </button>
   );
 }
 
@@ -533,6 +587,9 @@ export function TeamMembersTable({
                 setBusyMessageId={setBusyMessageId}
               />
             ))}
+            {onInviteClick && members.length <= 2 ? (
+              <InviteTeamMemberCard onClick={onInviteClick} />
+            ) : null}
           </div>
         )}
       </CardContent>
