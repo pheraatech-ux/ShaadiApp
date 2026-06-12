@@ -1,7 +1,7 @@
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { AiInsight, DashboardViewModel, FinancialSnapshot, RecentActivityItem, WeddingItem } from "@/components/app-dashboard/dashboard/types";
+import type { AiInsight, DashboardViewModel, FinancialSnapshot, InsightsCache, RecentActivityItem, WeddingItem } from "@/components/app-dashboard/dashboard/types";
 import type {
   TeamListPageViewModel,
   TeamMemberProfileViewModel,
@@ -692,11 +692,16 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
   const weddingIds = weddings.map((w) => w.id);
   const supabase = await createSupabaseServerClient();
 
-  const [tasks, { data: vendorRows }] = await Promise.all([
+  const [tasks, { data: vendorRows }, { data: cachedInsightsRow }] = await Promise.all([
     getAccessibleTasks(),
     weddingIds.length
       ? supabase.from("vendors").select("status, wedding_id, advance_paid_paise").in("wedding_id", weddingIds)
       : Promise.resolve({ data: [] as { status: "pending" | "confirmed" | "declined"; wedding_id: string; advance_paid_paise: number | null }[] }),
+    supabase
+      .from("ai_insights_cache")
+      .select("insights, generated_at")
+      .eq("planner_id", planner.userId)
+      .maybeSingle(),
   ]);
 
   const today = new Date().toISOString().slice(0, 10);
@@ -764,38 +769,12 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
 
   const urgentTasks = buildUrgentTaskItems(overdueTasks, weddings, "/app", commentCountByTask, eventTitleById);
 
-  const weddingsWithOverdueTasks = new Set(overdueTasks.map((t) => t.wedding_id));
-  const aiInsights: AiInsight[] = [];
-  if (weddingsWithOverdueTasks.size > 0) {
-    aiInsights.push({
-      id: "weddings-at-risk",
-      variant: "risk",
-      title: `${weddingsWithOverdueTasks.size} ${weddingsWithOverdueTasks.size === 1 ? "wedding is" : "weddings are"} at risk`,
-      description: "Due to overdue tasks and vendor delays",
-      ctaLabel: "View details",
-      ctaHref: "/app/tasks",
-    });
-  }
-  if (overBudgetCount > 0) {
-    aiInsights.push({
-      id: "budget-at-risk",
-      variant: "budget",
-      title: `${toInrLakh(budgetTotal)} at risk`,
-      description: "Potential impact if issues aren't resolved",
-      ctaLabel: "View report",
-      ctaHref: "/app/budget",
-    });
-  }
-  if (vendorPending > 0) {
-    aiInsights.push({
-      id: "vendor-pending",
-      variant: "vendor",
-      title: "Vendor confirmation pending",
-      description: `${vendorPending} ${vendorPending === 1 ? "critical vendor" : "vendors"} awaiting confirmation`,
-      ctaLabel: "Follow up",
-      ctaHref: "/app/vendors",
-    });
-  }
+  const insightsCache: InsightsCache = cachedInsightsRow
+    ? {
+        insights: cachedInsightsRow.insights as AiInsight[],
+        generatedAt: cachedInsightsRow.generated_at,
+      }
+    : null;
 
   const weekdayIds = [
     { id: "monday", label: "M" },
@@ -865,7 +844,7 @@ export const getDashboardView = cache(async (): Promise<DashboardViewModel> => {
     urgentTasks,
     weeklyCompletion,
     recentActivity,
-    aiInsights,
+    insightsCache,
     financialSnapshot: {
       totalBudgetPaise: budgetTotal,
       totalSpendPaise: spendTotal,
@@ -1012,16 +991,7 @@ export const getEmployeeDashboardView = cache(async (): Promise<DashboardViewMod
         ? Math.round((weddings.reduce((s, w) => s + w.spent_budget_paise, 0) / weddings.reduce((s, w) => s + w.total_budget_paise, 0)) * 100)
         : 0,
     } satisfies FinancialSnapshot,
-    aiInsights: overdueTasks.length > 0
-      ? [{
-          id: "tasks-overdue",
-          variant: "task" as const,
-          title: `${overdueTasks.length} ${overdueTasks.length === 1 ? "task is" : "tasks are"} overdue`,
-          description: "Across your assigned weddings",
-          ctaLabel: "View tasks",
-          ctaHref: "/app/employee/tasks",
-        }]
-      : [],
+    insightsCache: null,
   };
 });
 

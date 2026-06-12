@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_insights_cache: {
+        Row: {
+          id: string
+          planner_id: string
+          insights: Json
+          generated_at: string
+        }
+        Insert: {
+          id?: string
+          planner_id: string
+          insights?: Json
+          generated_at?: string
+        }
+        Update: {
+          id?: string
+          planner_id?: string
+          insights?: Json
+          generated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insights_cache_planner_id_fkey"
+            columns: ["planner_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_chat_messages: {
         Row: {
           content: Json

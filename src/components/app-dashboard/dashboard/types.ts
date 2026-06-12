@@ -59,6 +59,8 @@ export type RecentActivityItem = {
   time: string;
 };
 
+export type AiInsightCtaAction = "add-wedding";
+
 export type AiInsight = {
   id: string;
   variant: "risk" | "budget" | "vendor" | "task";
@@ -66,6 +68,8 @@ export type AiInsight = {
   description: string;
   ctaLabel: string;
   ctaHref?: string;
+  /** Opens an in-app flow instead of navigating via ctaHref. */
+  ctaAction?: AiInsightCtaAction;
 };
 
 export type FinancialSnapshot = {
@@ -74,6 +78,11 @@ export type FinancialSnapshot = {
   committedPaise: number;
   utilizationPct: number;
 };
+
+export type InsightsCache = {
+  insights: AiInsight[];
+  generatedAt: string;
+} | null;
 
 export type DashboardViewModel = {
   greeting: string;
@@ -86,6 +95,6 @@ export type DashboardViewModel = {
   urgentTasks: UrgentTaskItem[];
   weeklyCompletion: WeeklyCompletionDay[];
   recentActivity: RecentActivityItem[];
-  aiInsights: AiInsight[];
+  insightsCache: InsightsCache;
   financialSnapshot: FinancialSnapshot;
 };

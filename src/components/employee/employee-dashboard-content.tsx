@@ -12,7 +12,7 @@ export async function EmployeeDashboardContent() {
       <div className="grid h-[380px] items-stretch gap-4 lg:grid-cols-2">
         <UrgentTasksWidget items={data.urgentTasks} allTasksHref="/app/employee/tasks" />
         <AiInsightsWidget
-          insights={data.aiInsights}
+          insightsCache={data.insightsCache}
           tasksHref="/app/employee/tasks"
           messagesHref="/app/messages"
           vendorsHref="/app/vendors"

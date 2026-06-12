@@ -19,7 +19,7 @@ export async function DashboardContent() {
           <UrgentTasksWidget items={data.urgentTasks} />
         </div>
         <div className="h-[400px]">
-          <AiInsightsWidget insights={data.aiInsights} />
+          <AiInsightsWidget insightsCache={data.insightsCache} />
         </div>
       </div>
 
