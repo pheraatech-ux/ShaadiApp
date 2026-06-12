@@ -10,7 +10,8 @@ const PATH_LABELS: { prefix: string; label: string }[] = [
   { prefix: "/app/employee/budget", label: "Financials" },
   { prefix: "/app/budget", label: "Financials" },
   { prefix: "/app/team", label: "Team" },
-  { prefix: "/app/messages", label: "Messages" },
+  { prefix: "/app/employee/notes", label: "Notes" },
+  { prefix: "/app/notes", label: "Notes" },
   { prefix: "/app/calendar", label: "Calendar" },
   { prefix: "/app/dashboard", label: "Dashboard" },
 ];

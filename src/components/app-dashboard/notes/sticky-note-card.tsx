@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Pin, PinOff, Trash2, Palette } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,7 +18,6 @@ export function StickyNoteCard({ note, onUpdate, onDelete }: StickyNoteCardProps
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.content);
   const [showPalette, setShowPalette] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -69,15 +68,9 @@ export function StickyNoteCard({ note, onUpdate, onDelete }: StickyNoteCardProps
     }
   }
 
-  async function handleDelete() {
-    setIsDeleting(true);
-    try {
-      await onDelete(note.id);
-    } catch {
-      setIsDeleting(false);
-      toast.error("Failed to delete note.");
-    }
-  }
+  // onDelete removes the note from cache instantly — card unmounts before the
+  // promise resolves, so no local loading state is needed here.
+  const handleDelete = useCallback(() => { void onDelete(note.id); }, [onDelete, note.id]);
 
   function formatDate(iso: string) {
     return new Date(iso).toLocaleDateString("en-GB", {
@@ -94,7 +87,6 @@ export function StickyNoteCard({ note, onUpdate, onDelete }: StickyNoteCardProps
         "group relative flex flex-col rounded-2xl border p-4 shadow-sm transition-shadow hover:shadow-md",
         colors.card,
         colors.border,
-        isDeleting && "pointer-events-none opacity-40",
       )}
     >
       {/* Top toolbar — visible on hover or when palette open */}
@@ -155,7 +147,7 @@ export function StickyNoteCard({ note, onUpdate, onDelete }: StickyNoteCardProps
           {/* Delete — only author can delete */}
           {note.isCurrentUser && (
             <button
-              onClick={() => void handleDelete()}
+              onClick={handleDelete}
               className="flex size-6 items-center justify-center rounded-lg text-foreground/40 transition-colors hover:text-rose-500"
               aria-label="Delete note"
             >

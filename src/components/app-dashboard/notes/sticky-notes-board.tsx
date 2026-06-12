@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, StickyNote as StickyNoteIcon, Globe, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 import type { NoteColor, NoteVisibility, StickyNote, StickyNotesBoardViewModel } from "@/components/app-dashboard/notes/types";
-import { NOTE_COLOR_CLASSES, NOTE_COLORS } from "@/components/app-dashboard/notes/types";
 import { StickyNoteCard } from "@/components/app-dashboard/notes/sticky-note-card";
-import { useStickyNotesQuery, useInvalidateNotes } from "@/components/app-dashboard/notes/use-sticky-notes-query";
+import { useStickyNotesQuery, useNotesCache } from "@/components/app-dashboard/notes/use-sticky-notes-query";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -15,23 +14,34 @@ const COLOR_CYCLE: NoteColor[] = ["yellow", "pink", "blue", "green", "purple"];
 
 type Tab = "public" | "private";
 
-type StickyNotesBoardProps = {
-  view: StickyNotesBoardViewModel;
+type RealtimeRow = {
+  id?: string;
+  author_user_id?: string;
+  owner_user_id?: string;
+  content?: string;
+  color?: string;
+  visibility?: string;
+  pinned?: boolean;
+  created_at?: string;
+  updated_at?: string;
 };
 
-export function StickyNotesBoard({ view }: StickyNotesBoardProps) {
+export function StickyNotesBoard({ view }: { view: StickyNotesBoardViewModel }) {
   const [activeTab, setActiveTab] = useState<Tab>("public");
-  const [optimisticNotes, setOptimisticNotes] = useState<{ public: StickyNote[]; private: StickyNote[] }>({
-    public: [],
-    private: [],
-  });
   const [nextColor, setNextColor] = useState<NoteColor>("yellow");
 
   const { data: publicNotes } = useStickyNotesQuery("public", view.publicNotes);
   const { data: privateNotes } = useStickyNotesQuery("private", view.privateNotes);
-  const invalidate = useInvalidateNotes();
+  const cache = useNotesCache();
 
-  // Realtime: invalidate when any team member posts a public note
+  const notes = activeTab === "public" ? publicNotes : privateNotes;
+  const sorted = [...notes].sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
+  // Realtime: directly push/patch/remove from cache so changes are instant.
+  // No invalidation on the hot path — let the background refetch reconcile.
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     const channel = supabase
@@ -40,42 +50,64 @@ export function StickyNotesBoard({ view }: StickyNotesBoardProps) {
         "postgres_changes",
         { event: "*", schema: "public", table: "sticky_notes" },
         (payload) => {
-          const row = (payload.new ?? payload.old) as { author_user_id?: string; visibility?: string } | undefined;
-          if (!row) return;
-          const vis = row.visibility as NoteVisibility | undefined;
-          if (vis === "public") {
-            if (row.author_user_id !== view.currentUserId) invalidate("public");
-          } else if (vis === "private" && row.author_user_id === view.currentUserId) {
-            invalidate("private");
+          const isInsert = payload.eventType === "INSERT";
+          const isUpdate = payload.eventType === "UPDATE";
+          const isDelete = payload.eventType === "DELETE";
+
+          if (isInsert || isUpdate) {
+            const row = payload.new as RealtimeRow;
+            if (!row.id) return;
+            // Skip our own writes — we already applied optimistic updates
+            if (row.author_user_id === view.currentUserId) return;
+
+            const vis = row.visibility as NoteVisibility | undefined;
+            if (vis !== "public" && vis !== "private") return;
+
+            const note: StickyNote = {
+              id: row.id,
+              ownerUserId: row.owner_user_id ?? "",
+              authorUserId: row.author_user_id ?? "",
+              authorLabel: "Team Member",
+              content: row.content ?? "",
+              color: (row.color ?? "yellow") as NoteColor,
+              visibility: vis,
+              pinned: row.pinned ?? false,
+              createdAt: row.created_at ?? new Date().toISOString(),
+              updatedAt: row.updated_at ?? new Date().toISOString(),
+              isCurrentUser: false,
+            };
+
+            if (isInsert) {
+              cache.pushNote(note);
+            } else {
+              cache.patchNote(row.id, note);
+            }
+
+            // Background refetch to fill in real author label
+            cache.invalidate(vis);
+          }
+
+          if (isDelete) {
+            const row = payload.old as RealtimeRow;
+            if (row.id) cache.removeNote(row.id);
           }
         },
       )
       .subscribe();
 
     return () => { void supabase.removeChannel(channel); };
-  }, [view.currentUserId, invalidate]);
-
-  // Merge server + optimistic, dedup by id
-  const mergedNotes = useMemo(() => {
-    const serverById = new Map((activeTab === "public" ? publicNotes : privateNotes).map((n) => [n.id, n]));
-    for (const n of optimisticNotes[activeTab]) {
-      if (!serverById.has(n.id)) serverById.set(n.id, n);
-    }
-    const all = [...serverById.values()];
-    return all.sort((a, b) => {
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-  }, [activeTab, publicNotes, privateNotes, optimisticNotes]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view.currentUserId]);
 
   async function handleAddNote() {
-    const tempId = crypto.randomUUID();
+    const tempId = `temp-${crypto.randomUUID()}`;
     const color = nextColor;
     setNextColor((prev) => {
       const idx = COLOR_CYCLE.indexOf(prev);
       return COLOR_CYCLE[(idx + 1) % COLOR_CYCLE.length];
     });
 
+    // Instant — appears in the grid immediately
     const optimistic: StickyNote = {
       id: tempId,
       ownerUserId: "",
@@ -89,8 +121,7 @@ export function StickyNotesBoard({ view }: StickyNotesBoardProps) {
       updatedAt: new Date().toISOString(),
       isCurrentUser: true,
     };
-
-    setOptimisticNotes((prev) => ({ ...prev, [activeTab]: [optimistic, ...prev[activeTab]] }));
+    cache.pushNote(optimistic);
 
     try {
       const res = await fetch("/api/notes", {
@@ -101,61 +132,65 @@ export function StickyNotesBoard({ view }: StickyNotesBoardProps) {
       });
       if (!res.ok) throw new Error("Create failed");
       const { note } = (await res.json()) as { note: StickyNote };
-      // Replace temp with real
-      setOptimisticNotes((prev) => ({
-        ...prev,
-        [activeTab]: prev[activeTab].map((n) => (n.id === tempId ? note : n)),
-      }));
-      invalidate(activeTab);
+      cache.confirmNote(tempId, { ...note, authorLabel: view.currentUserLabel, isCurrentUser: true });
     } catch {
-      setOptimisticNotes((prev) => ({
-        ...prev,
-        [activeTab]: prev[activeTab].filter((n) => n.id !== tempId),
-      }));
+      cache.removeNote(tempId);
       toast.error("Failed to create note.");
     }
   }
 
   async function handleUpdate(id: string, patch: { content?: string; color?: NoteColor; pinned?: boolean }) {
-    const tab = activeTab;
-    // Optimistic update across both server+optimistic sets
-    const applyPatch = (notes: StickyNote[]) =>
-      notes.map((n) => (n.id === id ? { ...n, ...patch, updatedAt: new Date().toISOString() } : n));
+    // Snapshot for rollback
+    const snap = {
+      public: cache.getSnapshot("public"),
+      private: cache.getSnapshot("private"),
+    };
 
-    setOptimisticNotes((prev) => ({ ...prev, [tab]: applyPatch(prev[tab]) }));
+    // Instant patch
+    cache.patchNote(id, { ...patch, updatedAt: new Date().toISOString() });
 
-    const res = await fetch(`/api/notes/${id}`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    });
-    if (!res.ok) {
-      setOptimisticNotes((prev) => prev);
+    try {
+      const res = await fetch(`/api/notes/${id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) throw new Error("Update failed");
+    } catch {
+      // Rollback
+      cache.setNotes("public", () => snap.public);
+      cache.setNotes("private", () => snap.private);
       throw new Error("Update failed");
     }
-    invalidate(tab);
   }
 
   async function handleDelete(id: string) {
-    const tab = activeTab;
-    const res = await fetch(`/api/notes/${id}`, { method: "DELETE", credentials: "include" });
-    if (!res.ok) throw new Error("Delete failed");
-    setOptimisticNotes((prev) => ({
-      ...prev,
-      [tab]: prev[tab].filter((n) => n.id !== id),
-    }));
-    invalidate(tab);
+    const snap = {
+      public: cache.getSnapshot("public"),
+      private: cache.getSnapshot("private"),
+    };
+
+    // Instant removal
+    cache.removeNote(id);
+
+    try {
+      const res = await fetch(`/api/notes/${id}`, { method: "DELETE", credentials: "include" });
+      if (!res.ok) throw new Error("Delete failed");
+    } catch {
+      cache.setNotes("public", () => snap.public);
+      cache.setNotes("private", () => snap.private);
+      toast.error("Failed to delete note.");
+    }
   }
 
   const tabs: { key: Tab; label: string; Icon: React.ElementType; description: string }[] = [
-    { key: "public",  label: "Team Board",  Icon: Globe, description: "Visible to everyone in your company" },
-    { key: "private", label: "My Notes",    Icon: Lock,  description: "Only visible to you" },
+    { key: "public",  label: "Team Board", Icon: Globe, description: "Visible to everyone in your company" },
+    { key: "private", label: "My Notes",   Icon: Lock,  description: "Only visible to you" },
   ];
 
   return (
     <div className="flex h-full flex-col gap-6">
-      {/* Tab bar */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex gap-1 rounded-xl border border-border/60 bg-muted/40 p-1">
           {tabs.map(({ key, label, Icon }) => (
@@ -188,17 +223,15 @@ export function StickyNotesBoard({ view }: StickyNotesBoardProps) {
         </button>
       </div>
 
-      {/* Sub-description */}
       <p className="text-xs text-muted-foreground -mt-4">
         {tabs.find((t) => t.key === activeTab)?.description}
       </p>
 
-      {/* Board grid */}
-      {mergedNotes.length === 0 ? (
+      {sorted.length === 0 ? (
         <EmptyState tab={activeTab} onAdd={() => void handleAddNote()} />
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
-          {mergedNotes.map((note) => (
+          {sorted.map((note) => (
             <StickyNoteCard
               key={note.id}
               note={note}

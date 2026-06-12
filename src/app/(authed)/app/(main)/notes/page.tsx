@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 
-import { AppPageHeader } from "@/components/app-dashboard/dashboard/app-page-header";
 import { StickyNotesBoard } from "@/components/app-dashboard/notes/sticky-notes-board";
 import { getStickyNotesViewModel } from "@/components/app-dashboard/notes/notes-data";
 
@@ -13,11 +12,7 @@ async function NotesPageContent() {
 
 export default function NotesPage() {
   return (
-    <div className="flex h-full flex-col gap-5 p-6">
-      <AppPageHeader
-        title="Notes"
-        description="Team-wide announcements and personal reminders in one place."
-      />
+    <div className="flex h-full flex-col p-6">
       <Suspense fallback={<NotesBoardSkeleton />}>
         <NotesPageContent />
       </Suspense>
