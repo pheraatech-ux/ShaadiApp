@@ -103,7 +103,7 @@ function ActiveWeddingPills({ weddings }: { weddings: string[] }) {
 
   return (
     <>
-      <div className="flex min-h-14 flex-col justify-start gap-1 min-[1440px]:hidden">
+      <div className="flex min-h-14 flex-col justify-start gap-1 min-[1680px]:hidden">
         {weddings[0] ? (
           <Badge variant="secondary" className={weddingPillClassName}>
             {weddings[0]}
@@ -125,7 +125,7 @@ function ActiveWeddingPills({ weddings }: { weddings: string[] }) {
         ) : null}
       </div>
 
-      <div className="hidden min-h-14 flex-wrap content-start gap-1 min-[1440px]:flex">
+      <div className="hidden min-h-14 flex-wrap content-start gap-1 min-[1680px]:flex">
         {visibleWide.map((wedding) => (
           <Badge key={wedding} variant="secondary" className={weddingPillClassName}>
             {wedding}
@@ -410,7 +410,7 @@ function TeamMemberCard({
             </div>
           </div>
           {member.memberSinceLabel ? (
-            <MemberSinceBadge label={member.memberSinceLabel} className="hidden min-[1440px]:inline-flex" />
+            <MemberSinceBadge label={member.memberSinceLabel} className="hidden min-[1680px]:inline-flex" />
           ) : null}
         </div>
       </div>
