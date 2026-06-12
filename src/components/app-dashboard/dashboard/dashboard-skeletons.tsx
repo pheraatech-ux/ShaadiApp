@@ -52,11 +52,15 @@ export function DashboardSkeleton() {
 
 export function EmployeeDashboardSkeleton() {
   return (
-    <div className="space-y-4 sm:space-y-5">
+    <div className="space-y-5 sm:space-y-6">
       <StatsBarSkeleton />
-      <div className="grid h-[380px] items-stretch gap-4 lg:grid-cols-2">
-        <PanelSkeleton />
-        <PanelSkeleton />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <PanelSkeleton className="h-[400px]" />
+        <PanelSkeleton className="h-[400px]" />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <PanelSkeleton className="h-[340px]" />
+        <PanelSkeleton className="h-[340px]" />
       </div>
     </div>
   );

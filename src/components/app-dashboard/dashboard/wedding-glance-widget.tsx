@@ -36,9 +36,14 @@ const AVATAR_PALETTES = [
 type WeddingGlanceWidgetProps = {
   items: WeddingItem[];
   basePath?: string;
+  canCreateWedding?: boolean;
 };
 
-export function WeddingGlanceWidget({ items, basePath = "/app" }: WeddingGlanceWidgetProps) {
+export function WeddingGlanceWidget({
+  items,
+  basePath = "/app",
+  canCreateWedding = true,
+}: WeddingGlanceWidgetProps) {
   const [addWeddingOpen, setAddWeddingOpen] = useState(false);
 
   const sorted = [...items].sort((a, b) => {
@@ -71,15 +76,17 @@ export function WeddingGlanceWidget({ items, basePath = "/app" }: WeddingGlanceW
           >
             View all
           </Link>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 rounded-xl text-xs"
-            onClick={() => setAddWeddingOpen(true)}
-          >
-            <Plus />
-            New wedding
-          </Button>
+          {canCreateWedding ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 rounded-xl text-xs"
+              onClick={() => setAddWeddingOpen(true)}
+            >
+              <Plus />
+              New wedding
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -106,20 +113,26 @@ export function WeddingGlanceWidget({ items, basePath = "/app" }: WeddingGlanceW
               <Heart className="size-4 text-rose-500" aria-hidden />
             </span>
             <div className="space-y-1">
-              <p className="text-sm font-medium text-foreground">No weddings yet</p>
+              <p className="text-sm font-medium text-foreground">
+                {canCreateWedding ? "No weddings yet" : "No weddings assigned"}
+              </p>
               <p className="max-w-[260px] text-xs leading-relaxed text-muted-foreground">
-                Add your first couple to start planning tasks, budgets, and timelines in one place.
+                {canCreateWedding
+                  ? "Add your first couple to start planning tasks, budgets, and timelines in one place."
+                  : "Weddings you are added to will appear here."}
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-1 rounded-xl text-xs"
-              onClick={() => setAddWeddingOpen(true)}
-            >
-              <Plus />
-              Add your first wedding
-            </Button>
+            {canCreateWedding ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-1 rounded-xl text-xs"
+                onClick={() => setAddWeddingOpen(true)}
+              >
+                <Plus />
+                Add your first wedding
+              </Button>
+            ) : null}
           </div>
         </div>
       ) : (
@@ -201,7 +214,9 @@ export function WeddingGlanceWidget({ items, basePath = "/app" }: WeddingGlanceW
         </OverlayScrollbarsComponent>
       )}
 
-      <AddWeddingFlowDialog open={addWeddingOpen} onOpenChange={setAddWeddingOpen} />
+      {canCreateWedding ? (
+        <AddWeddingFlowDialog open={addWeddingOpen} onOpenChange={setAddWeddingOpen} />
+      ) : null}
     </div>
   );
 }

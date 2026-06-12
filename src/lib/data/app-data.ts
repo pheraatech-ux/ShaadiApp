@@ -30,6 +30,7 @@ import {
 } from "@/lib/budget-recommendations";
 import { resolvePersonaFromUser, type AppPersona } from "@/lib/employee/persona";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { taskTouchesWorkspaceUser } from "@/lib/wedding-task-scope";
 import type { Database } from "@/types/database";
 import type { UpcomingEventItem } from "@/components/app-dashboard/upcoming-events/types";
@@ -262,12 +263,123 @@ function buildAssignedTasksForMember(
 }
 
 function getInitials(label: string) {
-  return label
-    .split("&")
-    .map((part) => part.trim().charAt(0))
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const trimmed = label.trim();
+  if (!trimmed) return "?";
+
+  if (trimmed.includes("&")) {
+    return trimmed
+      .split("&")
+      .map((part) => part.trim().charAt(0))
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+  }
+
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  }
+
+  return parts[0].charAt(0).toUpperCase();
+}
+
+async function resolveUserAuthEmail(userId: string): Promise<string | null> {
+  try {
+    const admin = getSupabaseAdminClient();
+    const { data, error } = await admin.auth.admin.getUserById(userId);
+    if (error || !data.user?.email) return null;
+    return data.user.email;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveCompanyOwnerEmail(
+  ownerUserId: string,
+  viewerUserId: string,
+  viewerEmail: string,
+): Promise<string> {
+  if (ownerUserId === viewerUserId) {
+    return viewerEmail || "No email";
+  }
+  return (await resolveUserAuthEmail(ownerUserId)) ?? "No email";
+}
+
+async function resolveCompanyTeamWeddingsByUserId(
+  companyOwnerUserId: string,
+  viewerUserId: string,
+  teamUserIds: string[],
+  fallback: Map<string, string[]>,
+): Promise<Map<string, string[]>> {
+  if (companyOwnerUserId === viewerUserId) return fallback;
+  if (!teamUserIds.length) return fallback;
+
+  try {
+    const admin = getSupabaseAdminClient();
+
+    const [{ data: ownerMemberRows }, { data: createdWeddingRows }] = await Promise.all([
+      admin
+        .from("wedding_members")
+        .select("wedding_id")
+        .eq("user_id", companyOwnerUserId)
+        .eq("status", "active"),
+      admin.from("weddings").select("id, couple_name, created_at").eq("creator_id", companyOwnerUserId),
+    ]);
+
+    const weddingMeta = new Map<string, string>();
+    for (const wedding of createdWeddingRows ?? []) {
+      if (wedding.couple_name?.trim()) {
+        weddingMeta.set(wedding.id, wedding.couple_name.trim());
+      }
+    }
+
+    const companyWeddingIds = [...new Set([
+      ...(createdWeddingRows ?? []).map((row) => row.id),
+      ...(ownerMemberRows ?? []).map((row) => row.wedding_id),
+    ])];
+
+    if (!companyWeddingIds.length) return fallback;
+
+    const missingNameIds = companyWeddingIds.filter((id) => !weddingMeta.has(id));
+    if (missingNameIds.length) {
+      const { data: extraWeddingRows } = await admin
+        .from("weddings")
+        .select("id, couple_name")
+        .in("id", missingNameIds);
+      for (const wedding of extraWeddingRows ?? []) {
+        if (wedding.couple_name?.trim()) {
+          weddingMeta.set(wedding.id, wedding.couple_name.trim());
+        }
+      }
+    }
+
+    const { data: memberRows } = await admin
+      .from("wedding_members")
+      .select("wedding_id, user_id")
+      .in("wedding_id", companyWeddingIds)
+      .in("user_id", teamUserIds)
+      .eq("status", "active");
+
+    const result = new Map<string, string[]>();
+    for (const row of memberRows ?? []) {
+      if (!row.user_id) continue;
+      const label = weddingMeta.get(row.wedding_id);
+      if (!label) continue;
+      const existing = result.get(row.user_id) ?? [];
+      if (!existing.includes(label)) existing.push(label);
+      result.set(row.user_id, existing);
+    }
+
+    for (const [userId, labels] of fallback) {
+      if (!result.has(userId) && labels.length > 0) {
+        result.set(userId, labels);
+      }
+    }
+
+    return result;
+  } catch {
+    return fallback;
+  }
 }
 
 function daysUntil(dateStr?: string | null) {
@@ -371,6 +483,8 @@ async function getPlannerContextFromSupabase(supabase: SupabaseClient<Database>)
     throw new Error("Unauthorized");
   }
 
+  const persona = resolvePersonaFromUser(user);
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("first_name, last_name, business_name")
@@ -378,14 +492,35 @@ async function getPlannerContextFromSupabase(supabase: SupabaseClient<Database>)
     .maybeSingle();
 
   const displayName = resolvePlannerDisplayName(profile ?? null, user);
-  const workspaceName = profile?.business_name?.trim() || "ShaadiOS Workspace";
+
+  let workspaceName = profile?.business_name?.trim() ?? "";
+  if (persona === "employee") {
+    const { data: empRow } = await supabase
+      .from("company_employees")
+      .select("owner_user_id")
+      .eq("user_id", user.id)
+      .eq("employment_status", "active")
+      .maybeSingle();
+
+    if (empRow?.owner_user_id) {
+      const { data: ownerProfile } = await supabase
+        .from("profiles")
+        .select("business_name")
+        .eq("id", empRow.owner_user_id)
+        .maybeSingle();
+      workspaceName = ownerProfile?.business_name?.trim() ?? "";
+    }
+  }
+  if (!workspaceName) {
+    workspaceName = "ShaadiOS Workspace";
+  }
 
   return {
     userId: user.id,
     email: user.email ?? "",
     displayName,
     workspaceName,
-    persona: resolvePersonaFromUser(user),
+    persona,
   };
 }
 
@@ -1225,14 +1360,28 @@ export const getWorkspaceSidebarCounts = cache(
 
 export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> => {
   const planner = await getPlannerContext();
+  const supabase = await createSupabaseServerClient();
+
+  let companyOwnerUserId = planner.userId;
+  if (planner.persona === "employee") {
+    const { data: empRow } = await supabase
+      .from("company_employees")
+      .select("owner_user_id")
+      .eq("user_id", planner.userId)
+      .eq("employment_status", "active")
+      .maybeSingle();
+    if (empRow?.owner_user_id) {
+      companyOwnerUserId = empRow.owner_user_id;
+    }
+  }
+
   const weddings = await getAccessibleWeddings(planner.userId);
   const weddingIds = weddings.map((wedding) => wedding.id);
 
-  const supabase = await createSupabaseServerClient();
   const { data: companyEmployeeRows, error: companyEmployeesError } = await supabase
     .from("company_employees")
     .select("id, owner_user_id, user_id, name, phone, email, role, employment_status, invited_at, created_at")
-    .eq("owner_user_id", planner.userId)
+    .eq("owner_user_id", companyOwnerUserId)
     .order("created_at", { ascending: false });
 
   if (companyEmployeesError && companyEmployeesError.code !== "42P01") {
@@ -1244,7 +1393,7 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
     const linkedUserIds = [...new Set(companyEmployees.map((row) => row.user_id).filter(Boolean))] as string[];
     const employeeIds = companyEmployees.map((row) => row.id);
     /** Include the workspace owner so their weddings/tasks load even when every invite is still pending (no linked user ids). */
-    const weddingAndTaskUserIds = [...new Set([...linkedUserIds, planner.userId])];
+    const weddingAndTaskUserIds = [...new Set([...linkedUserIds, companyOwnerUserId])];
 
     const hasWeddings = weddingIds.length > 0;
     const [{ data: weddingMemberRows }, { data: taskRows }, { data: inviteRows }, { data: ownerProfileRow }] =
@@ -1273,7 +1422,7 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
           .is("claimed_at", null)
           .is("revoked_at", null)
           .order("created_at", { ascending: false }),
-        supabase.from("profiles").select("phone, created_at").eq("id", planner.userId).maybeSingle(),
+        supabase.from("profiles").select("first_name, last_name, phone, created_at").eq("id", companyOwnerUserId).maybeSingle(),
       ]);
 
     const weddingNameById = new Map(weddings.map((wedding) => [wedding.id, wedding.couple_name]));
@@ -1288,6 +1437,13 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
       }
       weddingsByUserId.set(row.user_id, existing);
     }
+
+    const companyWeddingsByUserId = await resolveCompanyTeamWeddingsByUserId(
+      companyOwnerUserId,
+      planner.userId,
+      weddingAndTaskUserIds,
+      weddingsByUserId,
+    );
 
     const tasks = (taskRows ?? []) as TeamListTaskRow[];
     const invites = (inviteRows ?? []) as CompanyEmployeeInviteRow[];
@@ -1305,7 +1461,7 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
       const linkedUserTasks = employee.user_id ? tasks.filter((task) => task.assignee_user_id === employee.user_id) : [];
       const doneCount = linkedUserTasks.filter((task) => task.status === "done").length;
       const overdueCount = linkedUserTasks.filter((task) => task.status !== "done" && task.due_date && task.due_date < today).length;
-      const activeWeddings = employee.user_id ? (weddingsByUserId.get(employee.user_id) ?? []) : [];
+      const activeWeddings = employee.user_id ? (companyWeddingsByUserId.get(employee.user_id) ?? []) : [];
       const roleLabel =
         employee.role === "coordinator"
           ? "Coordinator"
@@ -1337,7 +1493,7 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
         initials: getInitials(employee.name || "TM"),
         roleLabel,
         role: employee.role,
-        activeWeddings: activeWeddings.slice(0, 3),
+        activeWeddings,
         tasksCompleted: doneCount,
         tasksTotal: linkedUserTasks.length,
         overdueTasks: overdueCount,
@@ -1362,32 +1518,50 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
       };
     });
 
-    const ownerHasCompanyRow = companyEmployees.some((row) => row.user_id === planner.userId);
+    const ownerHasCompanyRow = companyEmployees.some((row) => row.user_id === companyOwnerUserId);
     const ownerPhone =
       ownerProfileRow && typeof ownerProfileRow.phone === "string" && ownerProfileRow.phone.trim()
         ? ownerProfileRow.phone.trim()
         : "No phone";
+    const ownerEmail = await resolveCompanyOwnerEmail(
+      companyOwnerUserId,
+      planner.userId,
+      planner.email,
+    );
 
     const teamMembers: TeamMemberSummary[] = (() => {
       if (ownerHasCompanyRow) {
-        return employeeMemberRows;
+        return employeeMemberRows.map((row) => {
+          if (row.linkedUserId !== companyOwnerUserId) return row;
+          return {
+            ...row,
+            email: !row.email || row.email === "No email" ? ownerEmail : row.email,
+            activeWeddings: companyWeddingsByUserId.get(companyOwnerUserId) ?? row.activeWeddings,
+            roleLabel: "Owner / admin",
+            role: "owner-admin" as const,
+          };
+        });
       }
-      const ownerTasks = tasks.filter((task) => task.assignee_user_id === planner.userId);
+      const ownerTasks = tasks.filter((task) => task.assignee_user_id === companyOwnerUserId);
       const ownerDone = ownerTasks.filter((task) => task.status === "done").length;
       const ownerOverdue = ownerTasks.filter(
         (task) => task.status !== "done" && task.due_date && task.due_date < today,
       ).length;
-      const ownerWeddings = weddingsByUserId.get(planner.userId) ?? [];
+      const ownerWeddings = companyWeddingsByUserId.get(companyOwnerUserId) ?? [];
+      const ownerDisplayName =
+        companyOwnerUserId === planner.userId
+          ? planner.displayName
+          : [ownerProfileRow?.first_name, ownerProfileRow?.last_name].filter(Boolean).join(" ").trim() || "Owner";
       const ownerRow: TeamMemberSummary = {
-        id: planner.userId,
-        linkedUserId: planner.userId,
-        name: planner.displayName,
-        email: planner.email || "No email",
+        id: companyOwnerUserId,
+        linkedUserId: companyOwnerUserId,
+        name: ownerDisplayName,
+        email: ownerEmail,
         phone: ownerPhone,
-        initials: getInitials(planner.displayName || "YO"),
+        initials: getInitials(ownerDisplayName || "YO"),
         roleLabel: "Owner / admin",
         role: "owner-admin",
-        activeWeddings: ownerWeddings.slice(0, 3),
+        activeWeddings: ownerWeddings,
         tasksCompleted: ownerDone,
         tasksTotal: ownerTasks.length,
         overdueTasks: ownerOverdue,
@@ -1398,7 +1572,7 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
         deletable: false,
         assignedTasks: buildAssignedTasksForMember(
           tasks,
-          planner.userId,
+          companyOwnerUserId,
           weddingNameById,
           weddingSlugById,
           today,
@@ -1536,7 +1710,7 @@ export const getTeamListView = cache(async (): Promise<TeamListPageViewModel> =>
               ? "Coordinator"
               : "Viewer",
       role,
-      activeWeddings: assignedWeddings.slice(0, 3),
+      activeWeddings: assignedWeddings,
       tasksCompleted: doneCount,
       tasksTotal: userTasks.length,
       overdueTasks: overdueCount,
@@ -2864,7 +3038,19 @@ export const getUpcomingEventsPanelData = cache(async (): Promise<UpcomingEventI
   const weddingIds = weddings.map((w) => w.id);
   const weddingById = new Map(weddings.map((w) => [w.id, w]));
 
-  const [{ data: calRows }, { data: ceremonyRows }] = await Promise.all([
+  const employeeRecordId =
+    planner.persona === "employee"
+      ? (
+          await supabase
+            .from("company_employees")
+            .select("id")
+            .eq("user_id", planner.userId)
+            .eq("employment_status", "active")
+            .maybeSingle()
+        ).data?.id ?? null
+      : null;
+
+  const [{ data: ownCalRows }, { data: attendedCalRows }, { data: ceremonyRows }] = await Promise.all([
     supabase
       .from("calendar_events")
       .select("id, title, start_at, all_day, color, wedding_id")
@@ -2872,6 +3058,16 @@ export const getUpcomingEventsPanelData = cache(async (): Promise<UpcomingEventI
       .gte("start_at", today.toISOString())
       .lte("start_at", in7Days.toISOString())
       .order("start_at", { ascending: true }),
+    employeeRecordId
+      ? supabase
+          .from("calendar_events")
+          .select("id, title, start_at, all_day, color, wedding_id")
+          .contains("attendee_ids", [employeeRecordId])
+          .neq("user_id", planner.userId)
+          .gte("start_at", today.toISOString())
+          .lte("start_at", in7Days.toISOString())
+          .order("start_at", { ascending: true })
+      : Promise.resolve({ data: [] as { id: string; title: string; start_at: string; all_day: boolean; color: string | null; wedding_id: string | null }[] }),
     weddingIds.length
       ? supabase
           .from("wedding_events")
@@ -2883,9 +3079,16 @@ export const getUpcomingEventsPanelData = cache(async (): Promise<UpcomingEventI
       : Promise.resolve({ data: [] as { id: string; title: string; event_date: string | null; culture_label: string | null; wedding_id: string }[] }),
   ]);
 
+  const seenCalIds = new Set<string>();
+  const uniqueCalRows = [...(ownCalRows ?? []), ...(attendedCalRows ?? [])].filter((row) => {
+    if (seenCalIds.has(row.id)) return false;
+    seenCalIds.add(row.id);
+    return true;
+  });
+
   const items: UpcomingEventItem[] = [];
 
-  for (const r of calRows ?? []) {
+  for (const r of uniqueCalRows) {
     const wedding = r.wedding_id ? weddingById.get(r.wedding_id) : null;
     items.push({
       id: `cal-${r.id}`,

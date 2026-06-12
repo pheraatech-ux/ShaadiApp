@@ -4,16 +4,17 @@ import { TeamMemberProfileViewModel } from "@/components/app-dashboard/team/team
 
 type MemberProfileViewProps = {
   view: TeamMemberProfileViewModel;
+  teamBackHref?: string;
 };
 
-export function MemberProfileView({ view }: MemberProfileViewProps) {
+export function MemberProfileView({ view, teamBackHref }: MemberProfileViewProps) {
   return (
     <div className="space-y-5">
       <section className="space-y-1">
         <h1 className="text-xl font-semibold tracking-tight">Employee profile</h1>
         <p className="text-sm text-muted-foreground">Task ownership and progress across assigned weddings.</p>
       </section>
-      <MemberProfileHeader view={view} />
+      <MemberProfileHeader view={view} teamBackHref={teamBackHref} />
       <MemberTaskList
         tasks={view.tasks}
         tasksCompleted={view.member.tasksCompleted}

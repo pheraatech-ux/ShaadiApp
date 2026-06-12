@@ -16,7 +16,6 @@ export async function EmployeeSidebarLive() {
       weddingIds={weddingIds}
       basePath="/app/employee"
       hideBudgetTab
-      hideTeamTab
     />
   );
 }

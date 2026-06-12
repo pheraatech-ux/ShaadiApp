@@ -12,6 +12,7 @@ type MemberProfileHeaderProps = {
   view: TeamMemberProfileViewModel;
   showBackLink?: boolean;
   compact?: boolean;
+  teamBackHref?: string;
 };
 
 function MemberSinceBadge({ label }: { label: string }) {
@@ -23,7 +24,12 @@ function MemberSinceBadge({ label }: { label: string }) {
   );
 }
 
-export function MemberProfileHeader({ view, showBackLink = true, compact = false }: MemberProfileHeaderProps) {
+export function MemberProfileHeader({
+  view,
+  showBackLink = true,
+  compact = false,
+  teamBackHref = "/app/team",
+}: MemberProfileHeaderProps) {
   const memberSinceLabel = view.member.memberSinceLabel;
 
   return (
@@ -56,9 +62,9 @@ export function MemberProfileHeader({ view, showBackLink = true, compact = false
           <MemberSinceBadge label={memberSinceLabel} />
         ) : null}
         {showBackLink ? (
-          <Link href="/app/team">
+          <Link href={teamBackHref}>
             <Button variant="outline" size="sm" className="rounded-lg">
-              Back to teams
+              Back to team
             </Button>
           </Link>
         ) : null}

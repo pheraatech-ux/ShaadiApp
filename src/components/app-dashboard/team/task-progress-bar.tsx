@@ -5,9 +5,16 @@ type TaskProgressBarProps = {
   total: number;
   className?: string;
   layout?: "stacked" | "inline";
+  overdueTasks?: number;
 };
 
-export function TaskProgressBar({ completed, total, className, layout = "stacked" }: TaskProgressBarProps) {
+export function TaskProgressBar({
+  completed,
+  total,
+  className,
+  layout = "stacked",
+  overdueTasks,
+}: TaskProgressBarProps) {
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   const bar = (
@@ -17,12 +24,19 @@ export function TaskProgressBar({ completed, total, className, layout = "stacked
   );
 
   const label = (
-    <p className="text-xs whitespace-nowrap text-muted-foreground">
-      <span className="font-semibold text-foreground">
-        {completed}/{total}
-      </span>{" "}
-      tasks done
-    </p>
+    <div className="flex items-center justify-between gap-2">
+      <p className="text-xs whitespace-nowrap text-muted-foreground">
+        <span className="font-semibold text-foreground">
+          {completed}/{total}
+        </span>{" "}
+        tasks done
+      </p>
+      {overdueTasks && overdueTasks > 0 ? (
+        <p className="shrink-0 text-xs font-medium text-red-600 dark:text-red-300">
+          {overdueTasks} overdue tasks
+        </p>
+      ) : null}
+    </div>
   );
 
   if (layout === "inline") {

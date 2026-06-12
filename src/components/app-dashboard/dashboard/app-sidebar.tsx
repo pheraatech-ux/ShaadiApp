@@ -52,7 +52,7 @@ export function AppSidebar({
     { label: "Dashboard", href: `${basePath}/dashboard`, icon: LayoutGrid },
     { label: "All Weddings", href: `${basePath}/weddings`, icon: BookHeart, badgeCount: counts.weddings },
     { label: "Calendar", href: `${basePath}/calendar`, icon: CalendarDays },
-    ...(!hideTeamTab ? [{ label: "Teams", href: `${basePath}/team`, icon: Users, badgeCount: counts.team } as SidebarItem] : []),
+    ...(!hideTeamTab ? [{ label: "Team", href: `${basePath}/team`, icon: Users, badgeCount: counts.team } as SidebarItem] : []),
     { label: "Tasks", href: `${basePath}/tasks`, icon: ClipboardList },
     { label: "Notes", href: `${basePath}/notes`, icon: StickyNote },
   ];
@@ -96,8 +96,8 @@ export function AppSidebar({
                   ? "onborda-nav-notes"
                   : item.label === "Financials"
                   ? "onborda-nav-financials"
-                  : item.label === "Teams"
-                  ? "onborda-nav-teams"
+                  : item.label === "Team"
+                  ? "onborda-nav-team"
                   : item.label === "Calendar"
                   ? "onborda-nav-calendar"
                   : undefined;

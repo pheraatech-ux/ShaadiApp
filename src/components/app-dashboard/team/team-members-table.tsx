@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail, Phone, Trash2, UserPlus, Users } from "lucide-react";
+import { Calendar, ContactRound, Heart, ListTodo, Mail, Phone, Trash2, UserPlus, Users } from "lucide-react";
 import { useState } from "react";
 
 import { TaskProgressBar } from "@/components/app-dashboard/team/task-progress-bar";
@@ -20,6 +20,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
 function RemoveMemberDescription({ member }: { member: TeamMemberSummary }) {
   const name = <strong className="font-semibold text-foreground">{member.name}</strong>;
   return member.employmentStatus === "invited" ? (
@@ -27,9 +29,7 @@ function RemoveMemberDescription({ member }: { member: TeamMemberSummary }) {
       Remove {name} from your team? Their invite and record will be deleted. <br></br>This cannot be undone.
     </>
   ) : (
-    <>
-      Remove {name} from your team? This cannot be undone.
-    </>
+    <>Remove {name} from your team? This cannot be undone.</>
   );
 }
 
@@ -37,6 +37,7 @@ type TeamMembersTableProps = {
   members: TeamMemberSummary[];
   currentUserId: string;
   businessName: string;
+  showActionsColumn?: boolean;
   onInviteClick?: () => void;
   onMemberClick?: (memberId: string) => void;
   onCopyInviteLink?: (memberId: string) => Promise<void>;
@@ -45,6 +46,105 @@ type TeamMembersTableProps = {
   onMessageMember?: (memberId: string) => Promise<void>;
 };
 
+function MemberSinceBadge({ label }: { label: string }) {
+  return (
+    <Badge
+      variant="secondary"
+      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-violet-500/20 bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300"
+    >
+      <Calendar className="size-3 shrink-0 text-violet-500" aria-hidden />
+      {label}
+    </Badge>
+  );
+}
+
+type SectionAccent = "sky" | "rose" | "amber" | "emerald";
+
+const SECTION_ACCENTS: Record<SectionAccent, { iconBg: string; iconClass: string }> = {
+  sky: { iconBg: "bg-sky-500/12 dark:bg-sky-500/18", iconClass: "text-sky-500" },
+  rose: { iconBg: "bg-rose-500/12 dark:bg-rose-500/18", iconClass: "text-rose-500" },
+  amber: { iconBg: "bg-amber-500/12 dark:bg-amber-500/18", iconClass: "text-amber-500" },
+  emerald: { iconBg: "bg-emerald-500/12 dark:bg-emerald-500/18", iconClass: "text-emerald-500" },
+};
+
+const AVATAR_PALETTES = [
+  { bg: "bg-violet-500/15 dark:bg-violet-500/20", text: "text-violet-600 dark:text-violet-400", ring: "ring-violet-400/30" },
+  { bg: "bg-rose-500/15 dark:bg-rose-500/20", text: "text-rose-600 dark:text-rose-400", ring: "ring-rose-400/30" },
+  { bg: "bg-sky-500/15 dark:bg-sky-500/20", text: "text-sky-600 dark:text-sky-400", ring: "ring-sky-400/30" },
+  { bg: "bg-emerald-500/15 dark:bg-emerald-500/20", text: "text-emerald-600 dark:text-emerald-400", ring: "ring-emerald-400/30" },
+  { bg: "bg-amber-500/15 dark:bg-amber-500/20", text: "text-amber-600 dark:text-amber-400", ring: "ring-amber-400/30" },
+];
+
+function avatarPaletteForName(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) % AVATAR_PALETTES.length;
+  return AVATAR_PALETTES[Math.abs(hash)];
+}
+
+const MAX_VISIBLE_WEDDING_PILLS = 3;
+
+function ActiveWeddingPills({ weddings }: { weddings: string[] }) {
+  const visible = weddings.slice(0, MAX_VISIBLE_WEDDING_PILLS);
+  const overflow = weddings.length - visible.length;
+
+  if (weddings.length === 0) {
+    return <p className="min-h-14 text-xs text-muted-foreground">None</p>;
+  }
+
+  return (
+    <div className="flex min-h-14 flex-wrap content-start gap-1">
+      {visible.map((wedding) => (
+        <Badge
+          key={wedding}
+          variant="secondary"
+          className="h-auto min-h-6 max-w-full truncate rounded-md px-2.5 py-1 text-[10px] leading-snug"
+        >
+          {wedding}
+        </Badge>
+      ))}
+      {overflow > 0 ? (
+        <Badge
+          variant="secondary"
+          className="h-auto min-h-6 shrink-0 rounded-md px-2.5 py-1 text-[10px] leading-snug text-muted-foreground"
+        >
+          +{overflow} more
+        </Badge>
+      ) : null}
+    </div>
+  );
+}
+
+function CardSectionTitle({
+  icon: Icon,
+  children,
+  className,
+  accent = "emerald",
+}: {
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  children: React.ReactNode;
+  className?: string;
+  accent?: SectionAccent;
+}) {
+  const { iconBg, iconClass } = SECTION_ACCENTS[accent];
+  return (
+    <p
+      className={cn(
+        "mb-2.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground",
+        className,
+      )}
+    >
+      <span
+        className={cn(
+          "flex size-5 shrink-0 items-center justify-center rounded-md ring-1 ring-inset ring-black/5 dark:ring-white/8",
+          iconBg,
+        )}
+      >
+        <Icon className={cn("size-3", iconClass)} aria-hidden />
+      </span>
+      {children}
+    </p>
+  );
+}
 
 function memberIsCurrentUser(member: TeamMemberSummary, currentUserId: string) {
   return member.id === currentUserId || member.linkedUserId === currentUserId;
@@ -60,10 +160,304 @@ function teamMembersTitle(businessName: string) {
   return `${trimmed}'s team members`;
 }
 
+type MemberCardActionsProps = {
+  member: TeamMemberSummary;
+  currentUserId: string;
+  showActions: boolean;
+  busyAction: { memberId: string; action: "copy" | "new-link" } | null;
+  busyMessageId: string | null;
+  busyDeleteId: string | null;
+  onCopyInviteLink?: (memberId: string) => Promise<void>;
+  onGenerateNewInviteLink?: (memberId: string) => Promise<void>;
+  onDeleteMember?: (memberId: string) => Promise<void>;
+  onMessageMember?: (memberId: string) => Promise<void>;
+  onDeleteClick: (member: TeamMemberSummary) => void;
+  setBusyAction: (action: { memberId: string; action: "copy" | "new-link" } | null) => void;
+  setBusyMessageId: (id: string | null) => void;
+};
+
+function MemberCardActions({
+  member,
+  currentUserId,
+  showActions,
+  busyAction,
+  busyMessageId,
+  busyDeleteId,
+  onCopyInviteLink,
+  onGenerateNewInviteLink,
+  onDeleteMember,
+  onMessageMember,
+  onDeleteClick,
+  setBusyAction,
+  setBusyMessageId,
+}: MemberCardActionsProps) {
+  if (!showActions) return null;
+
+  const canRunAction = (action: "copy" | "new-link") =>
+    busyAction?.memberId === member.id && busyAction.action === action;
+
+  return (
+    <div
+      className="mt-4 border-t border-border/60 pt-3"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
+      {member.employmentStatus === "invited" ? (
+        onCopyInviteLink || onGenerateNewInviteLink || onDeleteMember ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {onCopyInviteLink ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 rounded-md px-2 text-xs"
+                disabled={canRunAction("copy")}
+                onClick={async () => {
+                  setBusyAction({ memberId: member.id, action: "copy" });
+                  try {
+                    await onCopyInviteLink(member.id);
+                  } finally {
+                    setBusyAction(null);
+                  }
+                }}
+              >
+                {canRunAction("copy") ? "Copying..." : "Copy link"}
+              </Button>
+            ) : null}
+            {onGenerateNewInviteLink ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 rounded-md px-2 text-xs"
+                disabled={canRunAction("new-link")}
+                onClick={async () => {
+                  setBusyAction({ memberId: member.id, action: "new-link" });
+                  try {
+                    await onGenerateNewInviteLink(member.id);
+                  } finally {
+                    setBusyAction(null);
+                  }
+                }}
+              >
+                {canRunAction("new-link") ? "Generating..." : "New link"}
+              </Button>
+            ) : null}
+            {member.deletable && onDeleteMember ? (
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="outline"
+                className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                disabled={busyDeleteId === member.id}
+                aria-label={`Remove ${member.name}`}
+                onClick={() => onDeleteClick(member)}
+              >
+                <Trash2 className="size-3.5" aria-hidden />
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          <span className="text-xs text-muted-foreground">Invite pending</span>
+        )
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" className="h-7 rounded-md px-2 text-xs">
+            Remind
+          </Button>
+          {onMessageMember && !memberIsCurrentUser(member, currentUserId) && member.linkedUserId ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 rounded-md px-2 text-xs"
+              disabled={busyMessageId === member.id}
+              onClick={async () => {
+                setBusyMessageId(member.id);
+                try {
+                  await onMessageMember(member.id);
+                } finally {
+                  setBusyMessageId(null);
+                }
+              }}
+            >
+              {busyMessageId === member.id ? "Opening…" : "Message"}
+            </Button>
+          ) : null}
+          {member.deletable ? (
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="outline"
+              className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              disabled={busyDeleteId === member.id}
+              aria-label={`Remove ${member.name}`}
+              onClick={() => {
+                if (!onDeleteMember) return;
+                onDeleteClick(member);
+              }}
+            >
+              <Trash2 className="size-3.5" aria-hidden />
+            </Button>
+          ) : null}
+        </div>
+      )}
+      {member.employmentStatus === "invited" && member.inviteExpiresAt ? (
+        <p className="mt-2 text-[10px] text-muted-foreground">
+          Expires {new Date(member.inviteExpiresAt).toLocaleDateString("en-GB")}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+type TeamMemberCardProps = {
+  member: TeamMemberSummary;
+  currentUserId: string;
+  showActions: boolean;
+  busyAction: { memberId: string; action: "copy" | "new-link" } | null;
+  busyMessageId: string | null;
+  busyDeleteId: string | null;
+  onMemberClick?: (memberId: string) => void;
+  onCopyInviteLink?: (memberId: string) => Promise<void>;
+  onGenerateNewInviteLink?: (memberId: string) => Promise<void>;
+  onDeleteMember?: (memberId: string) => Promise<void>;
+  onMessageMember?: (memberId: string) => Promise<void>;
+  onDeleteClick: (member: TeamMemberSummary) => void;
+  setBusyAction: (action: { memberId: string; action: "copy" | "new-link" } | null) => void;
+  setBusyMessageId: (id: string | null) => void;
+};
+
+function TeamMemberCard({
+  member,
+  currentUserId,
+  showActions,
+  busyAction,
+  busyMessageId,
+  busyDeleteId,
+  onMemberClick,
+  onCopyInviteLink,
+  onGenerateNewInviteLink,
+  onDeleteMember,
+  onMessageMember,
+  onDeleteClick,
+  setBusyAction,
+  setBusyMessageId,
+}: TeamMemberCardProps) {
+  const isYou = memberIsCurrentUser(member, currentUserId);
+  const nameLabel = isYou ? `${member.name} (You)` : member.name;
+  const avatarPalette = avatarPaletteForName(member.name);
+
+  return (
+    <article
+      className={cn(
+        "group relative flex h-full flex-col overflow-hidden rounded-xl border border-border/70 bg-card px-5 py-4 transition-all",
+        "shadow-[0_1px_3px_rgba(0,0,0,0.04),_0_4px_16px_rgba(0,0,0,0.06)]",
+        "cursor-pointer hover:border-emerald-500/25 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),_0_8px_24px_rgba(0,0,0,0.08)]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40",
+      )}
+      tabIndex={0}
+      role="button"
+      aria-label={`Open ${nameLabel} profile`}
+      onClick={() => onMemberClick?.(member.id)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onMemberClick?.(member.id);
+        }
+      }}
+    >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent dark:via-white/10" />
+
+      <div className="-mx-5 -mt-4 mb-4 border-b border-border/60 bg-gradient-to-b from-muted/40 to-transparent px-5 pb-4 pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Avatar className={cn("size-12 shrink-0 ring-2", avatarPalette.ring)}>
+              <AvatarFallback className={cn("text-sm font-semibold", avatarPalette.bg, avatarPalette.text)}>
+                {member.initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                <p className="truncate text-sm font-semibold leading-snug">{member.name}</p>
+                {isYou ? <span className="shrink-0 text-xs font-medium text-muted-foreground">(You)</span> : null}
+              </div>
+              <p className="mt-0.5 text-xs text-muted-foreground">{member.roleLabel}</p>
+            </div>
+          </div>
+          {member.memberSinceLabel ? (
+            <MemberSinceBadge label={member.memberSinceLabel} />
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mb-4 grid grid-cols-2 gap-0 border-b border-border/60 pb-4">
+        <div className="min-w-0 border-r border-border/60 pr-3">
+          <CardSectionTitle icon={ContactRound} accent="sky">
+            Contact Info
+          </CardSectionTitle>
+          <div className="space-y-1.5 pl-0.5">
+            <a
+              href={`mailto:${member.email}`}
+              className="flex items-center gap-2 truncate text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <Mail className="size-3.5 shrink-0" aria-hidden />
+              <span className="truncate">{member.email}</span>
+            </a>
+            {member.phone ? (
+              <a
+                href={`tel:${member.phone.replace(/[^\d+]/g, "")}`}
+                className="flex items-center gap-2 truncate text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <Phone className="size-3.5 shrink-0" aria-hidden />
+                <span className="truncate">{member.phone}</span>
+              </a>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="min-w-0 pl-3">
+          <CardSectionTitle icon={Heart} accent="rose">
+            Active weddings
+          </CardSectionTitle>
+          <ActiveWeddingPills weddings={member.activeWeddings} />
+        </div>
+      </div>
+
+      <div className="flex-1">
+        <CardSectionTitle icon={ListTodo} accent="amber">
+          Tasks this month
+        </CardSectionTitle>
+        <TaskProgressBar
+          completed={member.tasksCompleted}
+          total={member.tasksTotal}
+          overdueTasks={member.overdueTasks}
+        />
+      </div>
+
+      <MemberCardActions
+        member={member}
+        currentUserId={currentUserId}
+        showActions={showActions}
+        busyAction={busyAction}
+        busyMessageId={busyMessageId}
+        busyDeleteId={busyDeleteId}
+        onCopyInviteLink={onCopyInviteLink}
+        onGenerateNewInviteLink={onGenerateNewInviteLink}
+        onDeleteMember={onDeleteMember}
+        onMessageMember={onMessageMember}
+        onDeleteClick={onDeleteClick}
+        setBusyAction={setBusyAction}
+        setBusyMessageId={setBusyMessageId}
+      />
+    </article>
+  );
+}
+
 export function TeamMembersTable({
   members,
   currentUserId,
   businessName,
+  showActionsColumn = true,
   onInviteClick,
   onMemberClick,
   onCopyInviteLink,
@@ -76,9 +470,6 @@ export function TeamMembersTable({
   const [busyDeleteId, setBusyDeleteId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TeamMemberSummary | null>(null);
 
-  const canRunAction = (memberId: string, action: "copy" | "new-link") =>
-    busyAction?.memberId === memberId && busyAction.action === action;
-
   return (
     <Card className="gap-0 rounded-2xl border-border/70 pb-0">
       <CardHeader className="flex flex-row items-center justify-between border-b border-border/70 pb-3">
@@ -88,17 +479,19 @@ export function TeamMembersTable({
           </div>
           {teamMembersTitle(businessName)}
         </CardTitle>
-        <Button
-          size="sm"
-          className="rounded-lg bg-emerald-600 text-white hover:bg-emerald-600/90"
-          onClick={onInviteClick}
-        >
-          + Invite
-        </Button>
+        {onInviteClick ? (
+          <Button
+            size="sm"
+            className="rounded-lg bg-emerald-600 text-white hover:bg-emerald-600/90"
+            onClick={onInviteClick}
+          >
+            + Invite
+          </Button>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-0 p-0">
         {members.length === 0 ? (
-          <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 px-6 py-14 m-4 rounded-xl border border-dashed border-border/70 bg-muted/15 text-center">
+          <div className="m-4 flex min-h-[280px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/70 bg-muted/15 px-6 py-14 text-center">
             <span className="flex size-10 items-center justify-center rounded-full border border-dashed border-emerald-400/40 bg-emerald-500/10">
               <Users className="size-4 text-emerald-500" aria-hidden />
             </span>
@@ -120,221 +513,26 @@ export function TeamMembersTable({
             ) : null}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[58rem] border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-border/70 bg-muted/25 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  <th scope="col" className="w-[22%] py-3 pl-6 pr-4 text-center font-medium">
-                    Team member
-                  </th>
-                  <th scope="col" className="w-[13%] px-4 py-3 text-center font-medium">
-                    Business role
-                  </th>
-                  <th scope="col" className="w-[15%] px-4 py-3 text-center font-medium">
-                    Active weddings
-                  </th>
-                  <th scope="col" className="w-[18%] px-4 py-3 text-center font-medium">
-                    Tasks this month
-                  </th>
-                  <th scope="col" className="w-[20%] px-4 py-3 text-center font-medium">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((member) => {
-                  const isYou = memberIsCurrentUser(member, currentUserId);
-                  const nameLabel = isYou ? `${member.name} (You)` : member.name;
-                  return (
-                  <tr
-                    key={member.id}
-                    className="cursor-pointer border-b border-border/60 transition-colors last:border-none hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none"
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`Open ${nameLabel} profile`}
-                    onClick={() => onMemberClick?.(member.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        onMemberClick?.(member.id);
-                      }
-                    }}
-                  >
-                    <td className="py-5 pl-6 pr-4 align-middle text-left">
-                      <div className="flex min-w-0 items-center gap-4">
-                        <Avatar className="size-11 shrink-0 border border-border/70">
-                          <AvatarFallback className="text-xs font-semibold">{member.initials}</AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0 max-w-[14rem] flex flex-col items-start gap-0.5 text-left">
-                          <div className="flex items-center gap-1.5">
-                            <p className="truncate text-sm font-semibold leading-snug">{member.name}</p>
-                            {isYou && <span className="shrink-0 text-xs font-medium text-muted-foreground">(You)</span>}
-                          </div>
-                          <a
-                            href={`mailto:${member.email}`}
-                            className="flex items-center gap-1 break-all text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            <Mail className="size-3 shrink-0" />
-                            {member.email}
-                          </a>
-                          {member.phone ? (
-                            <a
-                              href={`tel:${member.phone.replace(/[^\d+]/g, "")}`}
-                              className="flex items-center gap-1 break-all text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              <Phone className="size-3 shrink-0" />
-                              {member.phone}
-                            </a>
-                          ) : null}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-5 align-middle">
-                      <div className="flex min-w-0 flex-col items-center justify-center gap-1.5 text-center">
-                        <p className="text-sm font-medium leading-snug">{member.roleLabel}</p>
-                        <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          {member.employmentStatus}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-5 align-middle">
-                      <div className="flex min-w-0 flex-col items-center justify-center">
-                        <div className="flex flex-wrap justify-center gap-1">
-                          {member.activeWeddings.map((wedding) => (
-                            <Badge key={wedding} variant="secondary" className="rounded-full text-[10px]">
-                              {wedding}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-5 align-middle">
-                      <div className="flex min-w-0 flex-col items-center justify-center gap-1 text-center">
-                        <div className="mx-auto w-[12rem] shrink-0">
-                          <TaskProgressBar
-                            completed={member.tasksCompleted}
-                            total={member.tasksTotal}
-                            className="w-full text-center [&_p]:text-center"
-                          />
-                        </div>
-                        {member.overdueTasks > 0 ? (
-                          <p className="text-xs font-medium text-red-600 dark:text-red-300">{member.overdueTasks} overdue tasks</p>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td className="px-4 py-5 align-middle" onClick={(event) => event.stopPropagation()}>
-                      <div className="flex min-w-0 flex-col items-center justify-center gap-2 text-center">
-                        {member.employmentStatus === "invited" ? (
-                          <div className="flex flex-wrap items-center justify-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 rounded-md px-2 text-xs"
-                              disabled={canRunAction(member.id, "copy")}
-                              onClick={async () => {
-                                if (!onCopyInviteLink) return;
-                                setBusyAction({ memberId: member.id, action: "copy" });
-                                try {
-                                  await onCopyInviteLink(member.id);
-                                } finally {
-                                  setBusyAction(null);
-                                }
-                              }}
-                            >
-                              {canRunAction(member.id, "copy") ? "Copying..." : "Copy link"}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 rounded-md px-2 text-xs"
-                              disabled={canRunAction(member.id, "new-link")}
-                              onClick={async () => {
-                                if (!onGenerateNewInviteLink) return;
-                                setBusyAction({ memberId: member.id, action: "new-link" });
-                                try {
-                                  await onGenerateNewInviteLink(member.id);
-                                } finally {
-                                  setBusyAction(null);
-                                }
-                              }}
-                            >
-                              {canRunAction(member.id, "new-link") ? "Generating..." : "New link"}
-                            </Button>
-                            {member.deletable ? (
-                              <Button
-                                type="button"
-                                size="icon-sm"
-                                variant="outline"
-                                className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                disabled={busyDeleteId === member.id}
-                                aria-label={`Remove ${member.name}`}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  if (!onDeleteMember) return;
-                                  setDeleteTarget(member);
-                                }}
-                              >
-                                <Trash2 className="size-3.5" aria-hidden />
-                              </Button>
-                            ) : null}
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap items-center justify-center gap-2">
-                            <Button size="sm" variant="outline" className="h-7 rounded-md px-2 text-xs">
-                              Remind
-                            </Button>
-                            {onMessageMember && !memberIsCurrentUser(member, currentUserId) && member.linkedUserId ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 rounded-md px-2 text-xs"
-                                disabled={busyMessageId === member.id}
-                                onClick={async (event) => {
-                                  event.stopPropagation();
-                                  setBusyMessageId(member.id);
-                                  try {
-                                    await onMessageMember(member.id);
-                                  } finally {
-                                    setBusyMessageId(null);
-                                  }
-                                }}
-                              >
-                                {busyMessageId === member.id ? "Opening…" : "Message"}
-                              </Button>
-                            ) : null}
-                            {member.deletable ? (
-                              <Button
-                                type="button"
-                                size="icon-sm"
-                                variant="outline"
-                                className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                disabled={busyDeleteId === member.id}
-                                aria-label={`Remove ${member.name}`}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  if (!onDeleteMember) return;
-                                  setDeleteTarget(member);
-                                }}
-                              >
-                                <Trash2 className="size-3.5" aria-hidden />
-                              </Button>
-                            ) : null}
-                          </div>
-                        )}
-                        {member.employmentStatus === "invited" && member.inviteExpiresAt ? (
-                          <p className="text-[10px] text-muted-foreground">
-                            Expires {new Date(member.inviteExpiresAt).toLocaleDateString("en-GB")}
-                          </p>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3">
+            {members.map((member) => (
+              <TeamMemberCard
+                key={member.id}
+                member={member}
+                currentUserId={currentUserId}
+                showActions={showActionsColumn}
+                busyAction={busyAction}
+                busyMessageId={busyMessageId}
+                busyDeleteId={busyDeleteId}
+                onMemberClick={onMemberClick}
+                onCopyInviteLink={onCopyInviteLink}
+                onGenerateNewInviteLink={onGenerateNewInviteLink}
+                onDeleteMember={onDeleteMember}
+                onMessageMember={onMessageMember}
+                onDeleteClick={setDeleteTarget}
+                setBusyAction={setBusyAction}
+                setBusyMessageId={setBusyMessageId}
+              />
+            ))}
           </div>
         )}
       </CardContent>
