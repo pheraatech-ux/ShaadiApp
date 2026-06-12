@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Globe, Lock } from "lucide-react";
+import { Globe, Lock, Minus, Plus, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -15,6 +15,10 @@ import type { NoteColor, NoteVisibility, StickyNote, StickyNotesBoardViewModel }
 import {
   DEFAULT_NOTE_HEIGHT_PCT,
   DEFAULT_NOTE_WIDTH_PCT,
+  CANVAS_ZOOM_STEP,
+  DEFAULT_CANVAS_ZOOM,
+  MAX_CANVAS_ZOOM,
+  MIN_CANVAS_ZOOM,
 } from "@/components/app-dashboard/notes/types";
 import { StickyNoteCard } from "@/components/app-dashboard/notes/sticky-note-card";
 import { useStickyNotesQuery, useNotesCache } from "@/components/app-dashboard/notes/use-sticky-notes-query";
@@ -52,8 +56,11 @@ export function StickyNotesBoard({ view }: { view: StickyNotesBoardViewModel }) 
   const [activeTab, setActiveTab] = useState<Tab>("public");
   const [nextColor, setNextColor] = useState<NoteColor>("yellow");
   const [focusNoteId, setFocusNoteId] = useState<string | null>(null);
-  const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 });
+  const [viewportSize, setViewportSize] = useState({ w: 0, h: 0 });
+  const [zoom, setZoom] = useState(DEFAULT_CANVAS_ZOOM);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const skipRealtimeRef = useRef(new Set<string>());
 
   const { data: publicNotes } = useStickyNotesQuery("public", view.publicNotes);
   const { data: privateNotes } = useStickyNotesQuery("private", view.privateNotes);
@@ -66,19 +73,50 @@ export function StickyNotesBoard({ view }: { view: StickyNotesBoardViewModel }) 
   });
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const viewport = viewportRef.current;
+    if (!viewport) return;
 
     const update = () => {
-      const rect = canvas.getBoundingClientRect();
-      setCanvasSize({ w: rect.width, h: rect.height });
+      const rect = viewport.getBoundingClientRect();
+      setViewportSize({ w: rect.width, h: rect.height });
     };
 
     update();
     const observer = new ResizeObserver(update);
-    observer.observe(canvas);
+    observer.observe(viewport);
     return () => observer.disconnect();
   }, []);
+
+  const canvasBounds = {
+    w: viewportSize.w / zoom,
+    h: viewportSize.h / zoom,
+  };
+
+  function clampZoom(value: number) {
+    return Math.min(MAX_CANVAS_ZOOM, Math.max(MIN_CANVAS_ZOOM, Math.round(value * 100) / 100));
+  }
+
+  function zoomOut() {
+    setZoom((z) => clampZoom(z - CANVAS_ZOOM_STEP));
+  }
+
+  function zoomIn() {
+    setZoom((z) => clampZoom(z + CANVAS_ZOOM_STEP));
+  }
+
+  function resetZoom() {
+    setZoom(DEFAULT_CANVAS_ZOOM);
+  }
+
+  function clientToLogical(clientX: number, clientY: number) {
+    const viewport = viewportRef.current;
+    if (!viewport) return null;
+    const rect = viewport.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left + viewport.scrollLeft) / zoom,
+      y: (clientY - rect.top + viewport.scrollTop) / zoom,
+    };
+  }
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -95,7 +133,8 @@ export function StickyNotesBoard({ view }: { view: StickyNotesBoardViewModel }) 
           if (isInsert || isUpdate) {
             const row = payload.new as RealtimeRow;
             if (!row.id) return;
-            if (row.author_user_id === view.currentUserId) return;
+            if (skipRealtimeRef.current.has(row.id)) return;
+            if (isInsert && row.author_user_id === view.currentUserId) return;
 
             const vis = row.visibility as NoteVisibility | undefined;
             if (vis !== "public" && vis !== "private") return;
@@ -142,6 +181,7 @@ export function StickyNotesBoard({ view }: { view: StickyNotesBoardViewModel }) 
       private: cache.getSnapshot("private"),
     };
 
+    skipRealtimeRef.current.add(id);
     cache.patchNote(id, patch);
 
     try {
@@ -156,20 +196,30 @@ export function StickyNotesBoard({ view }: { view: StickyNotesBoardViewModel }) 
       cache.setNotes("public", () => snap.public);
       cache.setNotes("private", () => snap.private);
       toast.error("Failed to save note position.");
+    } finally {
+      skipRealtimeRef.current.delete(id);
     }
   }
 
   async function handleAddNote(clientX: number, clientY: number) {
-    const canvas = canvasRef.current;
-    if (!canvas || canvasSize.w === 0) return;
+    const logical = clientToLogical(clientX, clientY);
+    if (!logical || viewportSize.w === 0) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const noteW = pctToPixels(null, canvasSize.w, DEFAULT_NOTE_WIDTH_PCT);
-    const noteH = pctToPixels(null, canvasSize.h, DEFAULT_NOTE_HEIGHT_PCT);
-    const rawX = clientX - rect.left - noteW / 2;
-    const rawY = clientY - rect.top - 24;
-    const { x, y } = clampNotePosition(rawX, rawY, noteW, noteH, canvasSize.w, canvasSize.h);
-    const pct = layoutToPct({ x, y, w: noteW, h: noteH }, canvasSize.w, canvasSize.h);
+    const noteW = pctToPixels(null, viewportSize.w, DEFAULT_NOTE_WIDTH_PCT);
+    const noteH = pctToPixels(null, viewportSize.h, DEFAULT_NOTE_HEIGHT_PCT);
+    const rawX = logical.x - noteW / 2;
+    const rawY = logical.y - 24;
+    const { x, y } = clampNotePosition(
+      rawX,
+      rawY,
+      noteW,
+      noteH,
+      canvasBounds.w,
+      canvasBounds.h,
+      viewportSize.w,
+      viewportSize.h,
+    );
+    const pct = layoutToPct({ x, y, w: noteW, h: noteH }, viewportSize.w, viewportSize.h);
 
     const tempId = `temp-${crypto.randomUUID()}`;
     const color = nextColor;
@@ -247,6 +297,7 @@ export function StickyNotesBoard({ view }: { view: StickyNotesBoardViewModel }) 
       private: cache.getSnapshot("private"),
     };
 
+    skipRealtimeRef.current.add(id);
     cache.patchNote(id, { ...patch, updatedAt: new Date().toISOString() });
 
     try {
@@ -261,6 +312,8 @@ export function StickyNotesBoard({ view }: { view: StickyNotesBoardViewModel }) 
       cache.setNotes("public", () => snap.public);
       cache.setNotes("private", () => snap.private);
       throw new Error("Update failed");
+    } finally {
+      skipRealtimeRef.current.delete(id);
     }
   }
 
@@ -284,7 +337,7 @@ export function StickyNotesBoard({ view }: { view: StickyNotesBoardViewModel }) 
   }
 
   function handleLayoutChange(id: string, layout: NoteLayoutPixels) {
-    void persistLayout(id, layoutToPct(layout, canvasSize.w, canvasSize.h));
+    void persistLayout(id, layoutToPct(layout, viewportSize.w, viewportSize.h));
   }
 
   const tabs: { key: Tab; label: string; Icon: React.ElementType }[] = [
@@ -292,8 +345,12 @@ export function StickyNotesBoard({ view }: { view: StickyNotesBoardViewModel }) 
     { key: "private", label: "My Notes", Icon: Lock },
   ];
 
+  const zoomPct = Math.round(zoom * 100);
+  const canZoomOut = zoom > MIN_CANVAS_ZOOM;
+  const canZoomIn = zoom < MAX_CANVAS_ZOOM;
+
   return (
-    <div className="relative h-full w-full overflow-hidden">
+    <div className="relative flex h-full w-full flex-col overflow-hidden">
       <div
         className="absolute left-4 top-4 z-30 flex gap-1 rounded-xl border border-border/60 bg-background/90 p-1 shadow-sm backdrop-blur-sm"
         onClick={(e) => e.stopPropagation()}
@@ -318,42 +375,97 @@ export function StickyNotesBoard({ view }: { view: StickyNotesBoardViewModel }) 
       </div>
 
       <div
-        ref={canvasRef}
-        role="presentation"
-        onClick={handleCanvasClick}
-        className={cn(
-          "relative h-full w-full cursor-crosshair overflow-hidden",
-          "bg-[radial-gradient(circle_at_1px_1px,rgba(0,0,0,0.07)_1px,transparent_0)]",
-          "bg-[length:24px_24px] bg-muted/40 dark:bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.06)_1px,transparent_0)]",
-        )}
+        className="absolute bottom-4 right-4 z-30 flex items-center gap-1 rounded-xl border border-border/60 bg-background/90 p-1 shadow-sm backdrop-blur-sm"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
       >
-        {sorted.length === 0 && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <p className="rounded-xl border border-dashed border-border/50 bg-background/60 px-4 py-2 text-sm text-muted-foreground backdrop-blur-sm">
-              Click anywhere to drop a note
-            </p>
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={zoomOut}
+          disabled={!canZoomOut}
+          className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+          aria-label="Zoom out"
+        >
+          <Minus className="size-4" />
+        </button>
+        <span className="min-w-12 px-1 text-center text-xs font-medium tabular-nums text-foreground">
+          {zoomPct}%
+        </span>
+        <button
+          type="button"
+          onClick={zoomIn}
+          disabled={!canZoomIn}
+          className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+          aria-label="Zoom in"
+        >
+          <Plus className="size-4" />
+        </button>
+        <button
+          type="button"
+          onClick={resetZoom}
+          disabled={zoom === DEFAULT_CANVAS_ZOOM}
+          className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+          aria-label="Reset zoom to 100%"
+        >
+          <Maximize2 className="size-4" />
+        </button>
+      </div>
 
-        {canvasSize.w > 0 && sorted.map((note, index) => {
-          const layout = resolveNoteLayout(note, index, canvasSize.w, canvasSize.h);
-          return (
-            <StickyNoteCard
-              key={note.id}
-              note={note}
-              layout={layout}
-              canvasSize={canvasSize}
-              zIndex={note.pinned ? 25 : 10 + index}
-              autoFocus={focusNoteId === note.id}
-              onAutoFocusHandled={() => {
-                if (focusNoteId === note.id) setFocusNoteId(null);
-              }}
-              onUpdate={handleUpdate}
-              onDelete={handleDelete}
-              onLayoutChange={(next) => handleLayoutChange(note.id, next)}
-            />
-          );
-        })}
+      <div ref={viewportRef} className="min-h-0 flex-1 overflow-auto">
+        <div
+          ref={canvasRef}
+          role="presentation"
+          onClick={handleCanvasClick}
+          style={{
+            width: canvasBounds.w || undefined,
+            height: canvasBounds.h || undefined,
+            transform: `scale(${zoom})`,
+            transformOrigin: "top left",
+          }}
+          className={cn(
+            "relative cursor-crosshair",
+            viewportSize.w > 0 ? undefined : "h-full w-full",
+            "bg-[radial-gradient(circle_at_1px_1px,rgba(0,0,0,0.07)_1px,transparent_0)]",
+            "bg-[length:24px_24px] bg-muted/40 dark:bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.06)_1px,transparent_0)]",
+          )}
+        >
+          {sorted.length === 0 && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <p className="rounded-xl border border-dashed border-border/50 bg-background/60 px-4 py-2 text-sm text-muted-foreground backdrop-blur-sm">
+                Click anywhere to drop a note
+              </p>
+            </div>
+          )}
+
+          {viewportSize.w > 0 && sorted.map((note, index) => {
+            const layout = resolveNoteLayout(
+              note,
+              index,
+              viewportSize.w,
+              viewportSize.h,
+              canvasBounds.w,
+              canvasBounds.h,
+            );
+            return (
+              <StickyNoteCard
+                key={note.id}
+                note={note}
+                layout={layout}
+                canvasBounds={canvasBounds}
+                canvasReference={viewportSize}
+                canvasZoom={zoom}
+                zIndex={note.pinned ? 25 : 10 + index}
+                autoFocus={focusNoteId === note.id}
+                onAutoFocusHandled={() => {
+                  if (focusNoteId === note.id) setFocusNoteId(null);
+                }}
+                onUpdate={handleUpdate}
+                onDelete={handleDelete}
+                onLayoutChange={(next) => handleLayoutChange(note.id, next)}
+              />
+            );
+          })}
+        </div>
       </div>
     </div>
   );

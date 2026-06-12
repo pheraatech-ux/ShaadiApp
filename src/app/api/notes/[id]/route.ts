@@ -49,12 +49,40 @@ export async function PATCH(
     return NextResponse.json({ error: "No valid fields to update." }, { status: 400 });
   }
 
-  const { data, error } = await supabase
-    .from("sticky_notes")
-    .update(updates)
-    .eq("id", id)
-    .eq("author_user_id", user.id)
-    .select("id, content, color, pinned, updated_at")
+  const isLayoutOnly =
+    updates.pos_x !== undefined ||
+    updates.pos_y !== undefined ||
+    updates.width_pct !== undefined ||
+    updates.height_pct !== undefined
+      ? updates.content === undefined &&
+        updates.color === undefined &&
+        updates.pinned === undefined
+      : false;
+
+  if (isLayoutOnly) {
+    const { data: existing, error: fetchError } = await supabase
+      .from("sticky_notes")
+      .select("id, visibility, author_user_id")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !existing) {
+      return NextResponse.json({ error: "Note not found." }, { status: 404 });
+    }
+
+    const isAuthor = existing.author_user_id === user.id;
+    if (!isAuthor && existing.visibility !== "public") {
+      return NextResponse.json({ error: "Not authorised." }, { status: 403 });
+    }
+  }
+
+  let query = supabase.from("sticky_notes").update(updates).eq("id", id);
+  if (!isLayoutOnly) {
+    query = query.eq("author_user_id", user.id);
+  }
+
+  const { data, error } = await query
+    .select("id, content, color, pinned, pos_x, pos_y, width_pct, height_pct, updated_at")
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

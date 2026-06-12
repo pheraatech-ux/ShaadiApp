@@ -21,10 +21,15 @@ export type StickyNote = {
 
 export const NOTE_CANVAS_WIDTH = 280;
 export const NOTE_CANVAS_HEIGHT = 220;
-export const DEFAULT_NOTE_WIDTH_PCT = 0.24;
-export const DEFAULT_NOTE_HEIGHT_PCT = 0.32;
+export const DEFAULT_NOTE_WIDTH_PCT = 0.18;
+export const DEFAULT_NOTE_HEIGHT_PCT = 0.24;
 export const MIN_NOTE_WIDTH_PCT = 0.14;
 export const MIN_NOTE_HEIGHT_PCT = 0.18;
+
+export const DEFAULT_CANVAS_ZOOM = 1;
+export const MIN_CANVAS_ZOOM = 0.25;
+export const MAX_CANVAS_ZOOM = 1;
+export const CANVAS_ZOOM_STEP = 0.25;
 
 export type StickyNotesBoardViewModel = {
   currentUserId: string;
