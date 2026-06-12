@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookHeart, CalendarDays, ClipboardList, DollarSign, LayoutGrid, MessageSquare, Users } from "lucide-react";
+import { BookHeart, CalendarDays, ClipboardList, DollarSign, LayoutGrid, StickyNote, Users } from "lucide-react";
 import { ComponentType } from "react";
 
 import { SidebarProfileMenu } from "@/components/app-dashboard/dashboard/sidebar-profile-menu";
@@ -54,7 +54,7 @@ export function AppSidebar({
     { label: "Calendar", href: `${basePath}/calendar`, icon: CalendarDays },
     ...(!hideTeamTab ? [{ label: "Teams", href: `${basePath}/team`, icon: Users, badgeCount: counts.team } as SidebarItem] : []),
     { label: "Tasks", href: `${basePath}/tasks`, icon: ClipboardList },
-    { label: "Messages", href: `${basePath}/messages`, icon: MessageSquare },
+    { label: "Notes", href: `${basePath}/notes`, icon: StickyNote },
   ];
   if (!hideBudgetTab) {
     sidebarItems.splice(5, 0, { label: "Financials", href: `${basePath}/budget`, icon: DollarSign });
@@ -92,8 +92,8 @@ export function AppSidebar({
                   ? "onborda-nav-weddings"
                   : item.label === "Tasks"
                   ? "onborda-nav-tasks"
-                  : item.label === "Messages"
-                  ? "onborda-nav-messages"
+                  : item.label === "Notes"
+                  ? "onborda-nav-notes"
                   : item.label === "Financials"
                   ? "onborda-nav-financials"
                   : item.label === "Teams"

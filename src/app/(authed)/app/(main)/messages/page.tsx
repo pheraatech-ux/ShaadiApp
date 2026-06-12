@@ -1,7 +1,5 @@
-import { MessagesOverview } from "@/components/app-dashboard/messages/messages-overview";
-
-export const metadata = { title: "Messages" };
+import { redirect } from "next/navigation";
 
 export default function MessagesPage() {
-  return <MessagesOverview />;
+  redirect("/app/notes");
 }

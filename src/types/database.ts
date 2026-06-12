@@ -12,37 +12,33 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
-      ai_insights_cache: {
-        Row: {
-          id: string
-          planner_id: string
-          insights: Json
-          generated_at: string
-        }
-        Insert: {
-          id?: string
-          planner_id: string
-          insights?: Json
-          generated_at?: string
-        }
-        Update: {
-          id?: string
-          planner_id?: string
-          insights?: Json
-          generated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_insights_cache_planner_id_fkey"
-            columns: ["planner_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       ai_chat_messages: {
         Row: {
           content: Json
@@ -120,158 +116,34 @@ export type Database = {
           },
         ]
       }
-      calendar_events: {
+      ai_insights_cache: {
         Row: {
+          generated_at: string
           id: string
-          user_id: string
-          title: string
-          description: string | null
-          start_at: string
-          end_at: string | null
-          all_day: boolean
-          color: string | null
-          wedding_id: string | null
-          event_type: string
-          location: string | null
-          attendee_ids: string[]
-          guest_emails: string[]
-          gcal_event_id: string | null
-          created_at: string
-          updated_at: string
+          insights: Json
+          planner_id: string
         }
         Insert: {
+          generated_at?: string
           id?: string
-          user_id: string
-          title: string
-          description?: string | null
-          start_at: string
-          end_at?: string | null
-          all_day?: boolean
-          color?: string | null
-          wedding_id?: string | null
-          event_type?: string
-          location?: string | null
-          attendee_ids?: string[]
-          guest_emails?: string[]
-          gcal_event_id?: string | null
-          created_at?: string
-          updated_at?: string
+          insights?: Json
+          planner_id: string
         }
         Update: {
+          generated_at?: string
           id?: string
-          user_id?: string
-          title?: string
-          description?: string | null
-          start_at?: string
-          end_at?: string | null
-          all_day?: boolean
-          color?: string | null
-          wedding_id?: string | null
-          event_type?: string
-          location?: string | null
-          attendee_ids?: string[]
-          guest_emails?: string[]
-          gcal_event_id?: string | null
-          created_at?: string
-          updated_at?: string
+          insights?: Json
+          planner_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "calendar_events_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
+            foreignKeyName: "ai_insights_cache_planner_id_fkey"
+            columns: ["planner_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "calendar_events_wedding_id_fkey"
-            columns: ["wedding_id"]
-            isOneToOne: false
-            referencedRelation: "weddings"
-            referencedColumns: ["id"]
-          },
         ]
-      }
-      google_calendar_tokens: {
-        Row: {
-          user_id: string
-          access_token: string
-          refresh_token: string | null
-          expiry_date: number | null
-          scope: string | null
-          token_type: string | null
-          calendar_id: string
-          connected_email: string | null
-          connected_at: string
-          updated_at: string
-        }
-        Insert: {
-          user_id: string
-          access_token: string
-          refresh_token?: string | null
-          expiry_date?: number | null
-          scope?: string | null
-          token_type?: string | null
-          calendar_id?: string
-          connected_email?: string | null
-          connected_at?: string
-          updated_at?: string
-        }
-        Update: {
-          user_id?: string
-          access_token?: string
-          refresh_token?: string | null
-          expiry_date?: number | null
-          scope?: string | null
-          token_type?: string | null
-          calendar_id?: string
-          connected_email?: string | null
-          connected_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      google_calendar_cached_events: {
-        Row: {
-          id: string
-          user_id: string
-          title: string
-          description: string | null
-          start_at: string
-          end_at: string | null
-          all_day: boolean
-          location: string | null
-          html_link: string | null
-          calendar_id: string
-          synced_at: string
-        }
-        Insert: {
-          id: string
-          user_id: string
-          title?: string
-          description?: string | null
-          start_at: string
-          end_at?: string | null
-          all_day?: boolean
-          location?: string | null
-          html_link?: string | null
-          calendar_id?: string
-          synced_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          title?: string
-          description?: string | null
-          start_at?: string
-          end_at?: string | null
-          all_day?: boolean
-          location?: string | null
-          html_link?: string | null
-          calendar_id?: string
-          synced_at?: string
-        }
-        Relationships: []
       }
       budget_expenses: {
         Row: {
@@ -505,6 +377,71 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          all_day: boolean
+          attendee_ids: string[]
+          color: string | null
+          created_at: string
+          description: string | null
+          end_at: string | null
+          event_type: string
+          gcal_event_id: string | null
+          guest_emails: string[]
+          id: string
+          location: string | null
+          start_at: string
+          title: string
+          updated_at: string
+          user_id: string
+          wedding_id: string | null
+        }
+        Insert: {
+          all_day?: boolean
+          attendee_ids?: string[]
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          end_at?: string | null
+          event_type?: string
+          gcal_event_id?: string | null
+          guest_emails?: string[]
+          id?: string
+          location?: string | null
+          start_at: string
+          title: string
+          updated_at?: string
+          user_id: string
+          wedding_id?: string | null
+        }
+        Update: {
+          all_day?: boolean
+          attendee_ids?: string[]
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          end_at?: string | null
+          event_type?: string
+          gcal_event_id?: string | null
+          guest_emails?: string[]
+          id?: string
+          location?: string | null
+          start_at?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          wedding_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_employee_invites: {
         Row: {
           claimed_at: string | null
@@ -693,6 +630,87 @@ export type Database = {
           },
         ]
       }
+      google_calendar_cached_events: {
+        Row: {
+          all_day: boolean
+          calendar_id: string
+          description: string | null
+          end_at: string | null
+          html_link: string | null
+          id: string
+          location: string | null
+          start_at: string
+          synced_at: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          all_day?: boolean
+          calendar_id?: string
+          description?: string | null
+          end_at?: string | null
+          html_link?: string | null
+          id: string
+          location?: string | null
+          start_at: string
+          synced_at?: string
+          title?: string
+          user_id: string
+        }
+        Update: {
+          all_day?: boolean
+          calendar_id?: string
+          description?: string | null
+          end_at?: string | null
+          html_link?: string | null
+          id?: string
+          location?: string | null
+          start_at?: string
+          synced_at?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      google_calendar_tokens: {
+        Row: {
+          access_token: string
+          calendar_id: string
+          connected_at: string
+          connected_email: string | null
+          expiry_date: number | null
+          refresh_token: string | null
+          scope: string | null
+          token_type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          calendar_id?: string
+          connected_at?: string
+          connected_email?: string | null
+          expiry_date?: number | null
+          refresh_token?: string | null
+          scope?: string | null
+          token_type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          calendar_id?: string
+          connected_at?: string
+          connected_email?: string | null
+          expiry_date?: number | null
+          refresh_token?: string | null
+          scope?: string | null
+          token_type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       message_thread_members: {
         Row: {
           added_by_user_id: string | null
@@ -856,6 +874,57 @@ export type Database = {
           role?: string
         }
         Relationships: []
+      }
+      sticky_notes: {
+        Row: {
+          author_user_id: string
+          color: string
+          content: string
+          created_at: string
+          id: string
+          owner_user_id: string
+          pinned: boolean
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          author_user_id: string
+          color?: string
+          content?: string
+          created_at?: string
+          id?: string
+          owner_user_id: string
+          pinned?: boolean
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          author_user_id?: string
+          color?: string
+          content?: string
+          created_at?: string
+          id?: string
+          owner_user_id?: string
+          pinned?: boolean
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sticky_notes_author_user_id_fkey"
+            columns: ["author_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sticky_notes_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       task_comments: {
         Row: {
@@ -1389,6 +1458,7 @@ export type Database = {
           slug: string
         }[]
       }
+      get_my_company_owner_id: { Args: never; Returns: string }
       is_message_thread_member: {
         Args: { target_thread_id: string }
         Returns: boolean
@@ -1537,6 +1607,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       company_employee_role: ["coordinator", "assistant", "viewer"],
