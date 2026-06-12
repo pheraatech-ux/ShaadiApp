@@ -10,10 +10,21 @@ export type StickyNote = {
   color: NoteColor;
   visibility: NoteVisibility;
   pinned: boolean;
+  posX: number | null;
+  posY: number | null;
+  widthPct: number | null;
+  heightPct: number | null;
   createdAt: string;
   updatedAt: string;
   isCurrentUser: boolean;
 };
+
+export const NOTE_CANVAS_WIDTH = 280;
+export const NOTE_CANVAS_HEIGHT = 220;
+export const DEFAULT_NOTE_WIDTH_PCT = 0.24;
+export const DEFAULT_NOTE_HEIGHT_PCT = 0.32;
+export const MIN_NOTE_WIDTH_PCT = 0.14;
+export const MIN_NOTE_HEIGHT_PCT = 0.18;
 
 export type StickyNotesBoardViewModel = {
   currentUserId: string;

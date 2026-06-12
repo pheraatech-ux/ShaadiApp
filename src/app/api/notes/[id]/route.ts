@@ -6,6 +6,10 @@ type PatchPayload = {
   content?: string;
   color?: string;
   pinned?: boolean;
+  posX?: number;
+  posY?: number;
+  widthPct?: number;
+  heightPct?: number;
 };
 
 export async function PATCH(
@@ -23,6 +27,10 @@ export async function PATCH(
     content?: string;
     color?: string;
     pinned?: boolean;
+    pos_x?: number;
+    pos_y?: number;
+    width_pct?: number;
+    height_pct?: number;
   };
 
   const updates: StickyNoteUpdate = {};
@@ -32,6 +40,10 @@ export async function PATCH(
     updates.color = payload.color;
   }
   if (typeof payload.pinned === "boolean") updates.pinned = payload.pinned;
+  if (typeof payload.posX === "number") updates.pos_x = payload.posX;
+  if (typeof payload.posY === "number") updates.pos_y = payload.posY;
+  if (typeof payload.widthPct === "number") updates.width_pct = payload.widthPct;
+  if (typeof payload.heightPct === "number") updates.height_pct = payload.heightPct;
 
   if (!Object.keys(updates).length) {
     return NextResponse.json({ error: "No valid fields to update." }, { status: 400 });

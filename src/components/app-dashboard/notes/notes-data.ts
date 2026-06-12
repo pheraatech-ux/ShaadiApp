@@ -14,6 +14,10 @@ type NoteRow = {
   color: string;
   visibility: string;
   pinned: boolean;
+  pos_x: number | null;
+  pos_y: number | null;
+  width_pct: number | null;
+  height_pct: number | null;
   created_at: string;
   updated_at: string;
   profiles: { first_name: string | null; last_name: string | null } | null;
@@ -33,6 +37,10 @@ function rowToNote(row: NoteRow, currentUserId: string): StickyNote {
     color: row.color as StickyNote["color"],
     visibility: row.visibility as StickyNote["visibility"],
     pinned: row.pinned,
+    posX: row.pos_x,
+    posY: row.pos_y,
+    widthPct: row.width_pct,
+    heightPct: row.height_pct,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     isCurrentUser: row.author_user_id === currentUserId,
@@ -54,7 +62,7 @@ export const getStickyNotesViewModel = cache(async (): Promise<StickyNotesBoardV
 
   const { data: rows, error } = await supabase
     .from("sticky_notes")
-    .select("id, owner_user_id, author_user_id, content, color, visibility, pinned, created_at, updated_at, profiles!sticky_notes_author_user_id_fkey(first_name, last_name)")
+    .select("id, owner_user_id, author_user_id, content, color, visibility, pinned, pos_x, pos_y, width_pct, height_pct, created_at, updated_at, profiles!sticky_notes_author_user_id_fkey(first_name, last_name)")
     .order("pinned", { ascending: false })
     .order("created_at", { ascending: false });
 

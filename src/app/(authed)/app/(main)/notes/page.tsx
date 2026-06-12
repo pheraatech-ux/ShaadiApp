@@ -12,7 +12,7 @@ async function NotesPageContent() {
 
 export default function NotesPage() {
   return (
-    <div className="flex h-full flex-col p-6">
+    <div className="relative -mx-4 -my-5 h-[calc(100svh-4rem)] overflow-hidden sm:-mx-6 sm:-my-6">
       <Suspense fallback={<NotesBoardSkeleton />}>
         <NotesPageContent />
       </Suspense>
@@ -22,16 +22,8 @@ export default function NotesPage() {
 
 function NotesBoardSkeleton() {
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="h-9 w-56 animate-pulse rounded-xl bg-muted/60" />
-        <div className="h-8 w-24 animate-pulse rounded-xl bg-muted/60" />
-      </div>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-36 animate-pulse rounded-2xl bg-muted/60" />
-        ))}
-      </div>
+    <div className="relative h-full w-full overflow-hidden bg-muted/40">
+      <div className="absolute left-4 top-4 h-9 w-56 animate-pulse rounded-xl bg-muted/60" />
     </div>
   );
 }

@@ -884,30 +884,42 @@ export type Database = {
           id: string
           owner_user_id: string
           pinned: boolean
+          pos_x: number | null
+          pos_y: number | null
           updated_at: string
           visibility: string
+          width_pct: number | null
+          height_pct: number | null
         }
         Insert: {
           author_user_id: string
           color?: string
           content?: string
           created_at?: string
+          height_pct?: number | null
           id?: string
           owner_user_id: string
           pinned?: boolean
+          pos_x?: number | null
+          pos_y?: number | null
           updated_at?: string
           visibility?: string
+          width_pct?: number | null
         }
         Update: {
           author_user_id?: string
           color?: string
           content?: string
           created_at?: string
+          height_pct?: number | null
           id?: string
           owner_user_id?: string
           pinned?: boolean
+          pos_x?: number | null
+          pos_y?: number | null
           updated_at?: string
           visibility?: string
+          width_pct?: number | null
         }
         Relationships: [
           {
