@@ -11,6 +11,7 @@ import {
 } from "@knocklabs/react";
 
 import { topbarIconButtonClassName } from "@/components/app-dashboard/dashboard/topbar-control-styles";
+import { NotificationFeedItem } from "@/components/notifications/notification-feed-item";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +51,22 @@ function NotificationButton({
   );
 }
 
+function NotificationFeedEmptyState() {
+  return (
+    <div className="flex h-full flex-col px-3 py-3">
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/15 px-4 py-8 text-center">
+        <span className="flex size-10 items-center justify-center rounded-full border border-dashed border-sky-400/40 bg-sky-500/10">
+          <Bell className="size-4 text-sky-500" aria-hidden />
+        </span>
+        <p className="text-sm font-medium text-foreground">No notifications yet</p>
+        <p className="max-w-[240px] text-xs leading-relaxed text-muted-foreground">
+          We&apos;ll let you know when we&apos;ve got something new for you.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function PopoverPortal({
   buttonRef,
   isOpen,
@@ -68,6 +85,8 @@ function PopoverPortal({
       buttonRef={buttonRef}
       isVisible={isOpen}
       onClose={onClose}
+      EmptyComponent={<NotificationFeedEmptyState />}
+      renderItem={(props) => <NotificationFeedItem {...props} />}
     />,
     document.body
   );

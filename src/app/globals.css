@@ -212,6 +212,45 @@ html .os-theme-light {
   --os-padding-perpendicular: 0px !important;
 }
 
+/* Knock feed: hide "Powered by Knock" (included automatically on paid Knock plans) */
+.rnf-notification-feed__knock-branding {
+  display: none !important;
+}
+
+/* Match dashboard empty-state rounding (rounded-xl) */
+.rnf-notification-feed-popover {
+  --rnf-notification-feed-popover-border-radius: var(--radius-xl, 0.75rem);
+}
+
+.rnf-notification-feed-popover__inner {
+  border-radius: var(--rnf-notification-feed-popover-border-radius) !important;
+  overflow: hidden;
+}
+
+.rnf-notification-feed__header {
+  border-bottom: 1px solid var(--border, #e4e8ee) !important;
+}
+
+.rnf-notification-feed--dark .rnf-notification-feed__header {
+  border-bottom: 1px solid rgba(105, 115, 134, 0.45) !important;
+}
+
+.shaadi-notification-item .rnf-notification-cell {
+  border-bottom: none !important;
+}
+
+.shaadi-notification-item {
+  border-bottom: 1px solid var(--border, #e4e8ee);
+}
+
+.shaadi-notification-item:last-child {
+  border-bottom: none;
+}
+
+.rnf-notification-feed--dark .shaadi-notification-item {
+  border-bottom-color: rgba(105, 115, 134, 0.45);
+}
+
 /* FullCalendar theme overrides */
 .calendar-wrapper {
   overflow: visible;
