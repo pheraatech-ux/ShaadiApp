@@ -37,7 +37,9 @@ export function NotificationFeedItem({
   const quoteDisplay = quoteRaw ? stripMentionMarkup(quoteRaw) : null;
 
   const bodyBlock = item.blocks.find((block) => block.name === "body");
-  const headlineHtml = getNotificationHeadlineHtml(bodyBlock?.rendered, quoteRaw);
+  const bodyHtml =
+    bodyBlock && "rendered" in bodyBlock ? bodyBlock.rendered : undefined;
+  const headlineHtml = getNotificationHeadlineHtml(bodyHtml, quoteRaw);
   const displayItem = useMemo(
     () => patchNotificationItem(item, headlineHtml),
     [item, headlineHtml],
